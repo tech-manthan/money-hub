@@ -1,0 +1,76 @@
+{% macro header(style, title, sub='') -%}
+<div class="hdr {{ style.header }}"><h2>{{ title }}</h2>{% if sub %}<div class="sub">{{ sub }}</div>{% endif %}</div>
+{%- endmacro %}
+
+{% macro lines(n=6) -%}
+<div class="lines">{% for i in range(n) %}<div></div>{% endfor %}</div>
+{%- endmacro %}
+
+{% macro box(label, n=5, cls='') -%}
+<div class="card {{ cls }}"><div class="label">{{ label }}</div>{{ lines(n) }}</div>
+{%- endmacro %}
+
+{% macro footer(left, nav=false, right='') -%}
+<div class="footer"><span>{{ left }}</span>
+{% if nav %}<span class="nav"><a href="#home">Home</a><a href="#goals">Goals</a><a href="#months">Months</a><a href="#week-1">Weeks</a><a href="#notes">Notes</a></span>{% else %}<span>{{ right }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{# cover art: pure-CSS geometry, three layouts picked by style.seed #}
+{% macro cover_art(style) -%}
+{% set v = style.seed % 3 %}
+{% if v == 0 %}
+<div style="position:absolute;right:-9em;top:-9em;width:30em;height:30em;border-radius:50%;background:var(--soft);"></div>
+<div style="position:absolute;right:2em;top:3em;width:11em;height:11em;border-radius:50%;background:var(--accent);"></div>
+<div style="position:absolute;right:12em;top:11em;width:5em;height:5em;border-radius:50%;background:var(--accent2);"></div>
+{% elif v == 1 %}
+<div style="position:absolute;left:0;top:0;bottom:0;width:7em;background:var(--accent);"></div>
+<div style="position:absolute;left:7em;top:0;bottom:0;width:1.1em;background:var(--accent2);"></div>
+<div style="position:absolute;right:-6em;bottom:-6em;width:24em;height:24em;border-radius:50%;background:var(--soft);"></div>
+{% else %}
+<div style="position:absolute;left:0;right:0;top:0;height:46%;background:var(--accent);"></div>
+<div style="position:absolute;left:3.4em;top:calc(46% - 2.4em);width:4.8em;height:4.8em;border-radius:50%;background:var(--accent2);"></div>
+<div style="position:absolute;right:-5em;bottom:-5em;width:20em;height:20em;border-radius:50%;background:var(--soft);"></div>
+{% endif %}
+{%- endmacro %}
+
+{# faux planner pages drawn in CSS: gives covers a recognisable product motif #}
+{% macro cover_motif(style, left='50%', top='36%') -%}
+<div style="position:absolute;left:{{ left }};top:{{ top }};width:0;height:0;z-index:1;">
+  <div style="position:absolute;left:-9.5em;top:0;width:15em;height:19.5em;background:var(--soft);border-radius:calc(var(--radius) + 4px);transform:rotate(-9deg);"></div>
+  <div style="position:absolute;left:-5em;top:.8em;width:15em;height:19.5em;background:var(--paper);border:1.5px solid var(--line);border-radius:calc(var(--radius) + 4px);transform:rotate(6deg);overflow:hidden;">
+    <div style="height:2.6em;background:var(--accent);"></div>
+    <div style="margin:1em 1.1em 0;height:11em;background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 1.7em, var(--line) 1.7em, var(--line) 1.78em);"></div>
+    <div style="margin:.4em 1.1em 0;display:flex;gap:.5em;">
+      <span style="flex:1;height:2.6em;background:var(--soft);border-radius:4px;"></span>
+      <span style="flex:1;height:2.6em;background:var(--soft);border-radius:4px;"></span>
+      <span style="flex:1;height:2.6em;background:var(--accent2);opacity:.85;border-radius:4px;"></span>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+
+{# shared cover page used by every PDF product #}
+{% macro cover_page(style, page, title, subtitle, tagline, chips, nav=none) -%}
+{% set v = style.seed % 3 %}
+{% set land = page.landscape %}
+{% set padl = '11em' if v == 1 else '3.4em' %}
+<section class="page cover" id="home" style="bookmark-level:1;bookmark-label:'Cover';padding:0;">
+  {{ cover_art(style) }}
+  {{ cover_motif(style, '58%' if v == 1 else '50%', ('30%' if not land else '8%') if v != 2 else ('46%' if not land else '30%')) }}
+  {% set padr = '13em' if (v == 0 and not land) else ('16em' if (v == 0 and land) else '3.4em') %}
+  <div style="position:relative;z-index:2;padding:0 {{ padr }} 0 {{ padl }};margin-top:{% if v == 2 %}5em{% else %}{{ '9em' if not land else '4em' }}{% endif %};">
+    <div class="label" style="{% if v == 2 %}color:var(--accent-ink);{% endif %}">{{ subtitle }}</div>
+    <h1 class="h" style="font-size:{{ '3.4em' if not land else '3em' }};margin-top:.35em;{% if v == 2 %}color:var(--accent-ink);{% endif %}">{{ title }}</h1>
+  </div>
+  <div style="position:relative;z-index:2;padding:0 3.4em 0 {{ padl }};margin-top:{% if v == 2 %}{{ '16em' if not land else '9em' }}{% else %}2em{% endif %};">
+    <div class="script" style="font-size:1.7em;color:var(--accent);max-width:22em;">{{ tagline }}</div>
+  </div>
+  <div style="position:absolute;z-index:3;left:{{ padl }};bottom:{{ '4.6em' if not nav else '5.4em' }};right:3.4em;">
+    <div style="display:flex;flex-wrap:wrap;gap:.5em;">
+      {% for chip in chips %}<span style="border:1.5px solid var(--accent);color:var(--accent);border-radius:99em;padding:.25em .9em;font-size:.72em;font-weight:700;letter-spacing:.06em;background:var(--paper);">{{ chip }}</span>{% endfor %}
+    </div>
+  </div>
+  {% if nav %}<div class="nav" style="position:absolute;left:{{ padl }};bottom:3em;z-index:3;font-size:.8em;">{% for label, href in nav %}<a href="{{ href }}" {% if loop.first %}style="margin-left:0"{% endif %}>{{ label }}</a>{% endfor %}</div>{% endif %}
+</section>
+{%- endmacro %}

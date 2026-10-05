@@ -1,0 +1,37 @@
+{% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.sheets|length ~ ' worksheets', 'Answer key included', content.level]) }}
+
+{% for sh in content.sheets %}
+<section class="page">
+  {{ header(style, sh.title, content.level) }}
+  <div style="display:flex;justify-content:space-between;font-size:.8em;margin-bottom:.8em;"><span>Name: ______________________</span><span>Date: ______________</span></div>
+  <div class="card soft" style="margin-bottom:.9em;"><div class="label">Directions</div>{{ sh.instructions }}</div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:.55em;min-height:0;">
+    {% for q in sh['items'] %}
+    <div class="card" style="flex:1;flex-direction:row;align-items:flex-start;">
+      <div style="flex:none;width:1.8em;height:1.8em;border-radius:50%;background:var(--accent);color:var(--accent-ink);text-align:center;line-height:1.8em;font-weight:700;margin-right:.7em;">{{ loop.index }}</div>
+      <div style="flex:1;display:flex;flex-direction:column;height:100%;">
+        <div style="font-weight:500;">{{ q.question }}</div>
+        {% if q.choices %}
+        <div style="display:flex;flex-wrap:wrap;gap:.3em 1.4em;margin-top:.35em;font-size:.9em;">{% for c in q.choices %}<span><i class="sq"></i> {{ c }}</span>{% endfor %}</div>
+        {% else %}<div style="flex:1;margin-top:.2em;">{{ lines(2) }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {{ footer(content.title, false, content.topic) }}
+</section>
+{% endfor %}
+
+<section class="page">
+  {{ header(style, 'Answer key', 'For the teacher or parent') }}
+  <div style="columns:2;column-gap:2em;font-size:.9em;">
+    {% for sh in content.sheets %}
+    <div style="break-inside:avoid;margin-bottom:1em;">
+      <div class="label">{{ sh.title }}</div>
+      {% for q in sh['items'] %}<div style="margin:.15em 0;"><b>{{ loop.index }}.</b> {{ q.answer }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {{ footer(content.title) }}
+</section>

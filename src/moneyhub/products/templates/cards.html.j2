@@ -1,0 +1,17 @@
+{% from '_macros.html.j2' import header, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.cards|length ~ ' cards', 'Cut & use', 'Print at home']) }}
+{% set per = 9 %}
+{% for start in range(0, content.cards|length, per) %}
+<section class="page" style="padding:2.2em;">
+  <div class="cardsheet">
+    {% for c in content.cards[start:start+per] %}
+    <div class="deckcard {{ ['a','b','c'][(start + loop.index0) % 3] }}">
+      <div class="label dc-top">{{ c.category or content.subtitle }}</div>
+      <div class="dc-text h">{{ c.text }}</div>
+      {% if c.hint %}<div class="dc-hint script">{{ c.hint }}</div>{% endif %}
+      <div class="dc-num">{{ start + loop.index }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}

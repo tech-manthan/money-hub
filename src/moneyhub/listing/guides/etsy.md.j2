@@ -1,0 +1,59 @@
+# Etsy upload guide - {{ title }}
+
+Time needed: about 20 minutes. Open **Shop Manager > Listings > Add a listing**.
+
+## 1. Photos (upload in this order, 10 max)
+{% for img in images -%}
+{{ loop.index }}. `{{ img }}`
+{% endfor %}
+- Etsy recommends images at least 2000 px on the shortest side (4:3 ratio, 2700 x 2025 works well). These are already sized.
+- The first image is your thumbnail in search - check it is readable at a small size.
+{% if has_xlsx %}- **Spreadsheet products:** add 1-2 real screenshots of the workbook open in Excel or Google Sheets (Dashboard + Budget/Tracker sheet) as photos 7 and 8. Buyers trust real screenshots.
+{% endif %}
+## 2. Title (max 140 characters)
+```
+{{ copy.title }}
+```
+({{ copy.title|length }} characters)
+
+## 3. About this listing
+- Who made it: **I did**  | What is it: **A finished product**  | When was it made: **2020 - 2026**
+- **AI content disclosure:** tick that AI tools were used and paste the disclosure line into the description (included below). Etsy requires disclosure in the listing description, not in tags or photos.
+- Category: pick the closest match Etsy suggests for a printable/planner (e.g. under **Paper & Party Supplies > Paper**). Browse similar best-selling listings to confirm.
+
+## 4. Type and files
+- Choose **Digital** and upload your files (up to 5 files, 20 MB each, total 100 MB):
+{% for f in files -%}
+  - `{{ f }}`
+{% endfor %}
+## 5. Price
+**${{ "%.2f"|format(price) }}**  - {{ price_note }}
+
+## 6. Tags (13 max, 20 characters each)
+```
+{{ copy.tags|join(', ') }}
+```
+
+## 7. Description
+Paste this (it includes the AI disclosure and terms):
+```
+{{ description }}
+```
+
+## 8. Attributes & settings
+- Primary colour: {{ colour }}
+- Occasion/holiday: leave blank unless it truly applies.
+- Renewal: **Automatic** (4 months), Quantity: 999.
+- Turn on **Etsy Ads** only after the first sales; keep the first two weeks organic + Pinterest.
+
+## 9. Publish checklist
+- [ ] Open each downloadable file and check it opens correctly
+- [ ] Preview the listing on mobile
+- [ ] Title reads naturally (no keyword stuffing)
+- [ ] AI disclosure included in the description
+- [ ] Save a draft, wait, and re-read before publishing
+
+## 10. After publishing
+1. Share the listing link into your Pinterest pins (see `guide-pinterest.md`).
+2. Log the listing in the MoneyHub dashboard so sales can be matched to this product.
+3. After 4 weeks compare views, favourites and sales, then decide: tweak title/photos, change price, or make a variation in this niche.

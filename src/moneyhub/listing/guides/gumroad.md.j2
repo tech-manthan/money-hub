@@ -1,0 +1,33 @@
+# Gumroad upload guide - {{ title }}
+
+Open **Products > New product**. Gumroad does not offer a product-creation API, so creation is manual.
+
+## 1. Basics
+- Product type: **Digital product**
+- Name: `{{ copy.short_title }}`
+- Price: **${{ "%.2f"|format(price) }}** (Gumroad charges a flat 10% fee; 30% on sales through Gumroad Discover - fees can change, check their pricing page).
+
+## 2. Cover & thumbnail
+- Cover: `{{ cover }}` (1280 x 720 px, 16:9)
+- Thumbnail: `{{ thumb }}` (600 x 600 px). Gumroad crops the thumbnail from the centre, so keep key content centred.
+
+## 3. Description
+```
+{{ description }}
+```
+
+## 4. Content
+Upload:
+{% for f in files -%}
+- `{{ f }}`
+{% endfor %}
+## 5. Settings
+- Add 3-5 tags/categories relevant to: {{ copy.tags[:5]|join(', ') }}
+- Turn on a short **discount code** for your first customers (e.g. 25% off for two weeks).
+- Enable **"Let customers pay what they want"** only if you want a minimum-price test.
+- Write a short **receipt message** thanking the buyer and linking to your shop/Pinterest.
+
+## 6. Publish checklist
+- [ ] Download your own product after publishing to test the delivery
+- [ ] Check the product page on mobile
+- [ ] Link the Gumroad page from your Pinterest pins and bio

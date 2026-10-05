@@ -1,0 +1,45 @@
+# MoneyHub configuration. Copy to moneyhub.local.yaml for private overrides (git-ignored).
+output_dir: out
+
+llm:
+  # Each task tries its providers in order and falls through on error/unavailability.
+  # "builtin" is an offline deterministic fallback that always works.
+  tasks:
+    content: [claude_cli, anthropic, gemini, groq, openrouter, ollama, builtin]
+    listing: [groq, gemini, claude_cli, anthropic, openrouter, ollama, builtin]
+    research: [claude_cli, anthropic, gemini, groq, openrouter, ollama, builtin]
+  providers:
+    claude_cli:            # `claude -p` (Claude Code headless). Personal use / your own pipeline.
+      command: claude
+      model: null
+      timeout: 600
+    anthropic:             # Anthropic API (pay per token). Needs ANTHROPIC_API_KEY.
+      model: claude-opus-5-5
+      api_key_env: ANTHROPIC_API_KEY
+      max_tokens: 16000
+    gemini:                # Google AI Studio free tier (OpenAI-compatible endpoint).
+      base_url: https://generativelanguage.googleapis.com/v1beta/openai
+      model: gemini-2.5-flash
+      api_key_env: GEMINI_API_KEY
+    groq:                  # Groq free tier.
+      base_url: https://api.groq.com/openai/v1
+      model: llama-3.3-70b-versatile
+      api_key_env: GROQ_API_KEY
+    openrouter:            # OpenRouter (free ":free" models or paid).
+      base_url: https://openrouter.ai/api/v1
+      model: meta-llama/llama-3.3-70b-instruct:free
+      api_key_env: OPENROUTER_API_KEY
+    ollama:                # Local models. Needs `ollama serve`.
+      base_url: http://localhost:11434/v1
+      model: llama3.1
+      api_key_env: null
+
+render:
+  # PDF renderers tried in order: weasyprint (default, no browser), chromium (Playwright).
+  pdf: [weasyprint, chromium]
+  # Optional: image generation providers for decorative art (off by default).
+  art: []
+
+defaults:
+  page_sizes: [letter, a4]
+  marketplaces: [etsy, gumroad, payhip, kofi]

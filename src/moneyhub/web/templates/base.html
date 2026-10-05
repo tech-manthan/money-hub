@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MoneyHub</title><link rel="stylesheet" href="/static/app.css"></head>
+<body>
+<header class="top"><div class="in"><b>MoneyHub</b>
+<nav><a href="/" class="{{ 'on' if request.url.path == '/' }}">Studio</a><a href="/report" class="{{ 'on' if request.url.path == '/report' }}">Sales &amp; learning</a><a href="/settings" class="{{ 'on' if request.url.path == '/settings' }}">Settings</a></nav></div></header>
+<main>{% block main %}{% endblock %}</main>
+<script src="/static/app.js"></script>
+</body></html>

@@ -1,0 +1,21 @@
+{% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, ['12 monthly trackers', content.habits|length ~ ' habits', 'Reflection page']) }}
+
+{% for m in range(1) %}
+<section class="page">
+  {{ header(style, 'Habit tracker', 'Month: ______________   Goal: ____________________') }}
+  <div class="ht">
+    <div class="ht-row ht-head"><div class="ht-name">Habit</div>{% for d in range(1, 32) %}<div class="ht-cell">{{ d }}</div>{% endfor %}</div>
+    {% for h in content.habits %}
+    <div class="ht-row"><div class="ht-name">{{ h }}</div>{% for d in range(31) %}<div class="ht-cell"><i class="sq"></i></div>{% endfor %}</div>
+    {% endfor %}
+    {% for e in range(3) %}
+    <div class="ht-row"><div class="ht-name">&nbsp;</div>{% for d in range(31) %}<div class="ht-cell"><i class="sq"></i></div>{% endfor %}</div>
+    {% endfor %}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7em;margin-top:.8em;height:6em;">
+    {{ box('Biggest win', 3) }}{{ box('What got in the way', 3) }}{{ box('Next month I will', 3) }}
+  </div>
+  {{ footer(content.title, false, content.reminders[0]) }}
+</section>
+{% endfor %}

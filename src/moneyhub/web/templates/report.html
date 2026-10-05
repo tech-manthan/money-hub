@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block main %}
+<h1>Sales &amp; learning</h1>
+<p class="meta">Record views, favourites and sales on each product page. Use this table to decide which niche, product type and style to make more of.</p>
+<div class="panel"><table><tr><th>Product</th><th>Niche</th><th>Type</th><th>Style</th><th>Status</th><th>Views</th><th>Favs</th><th>Sold</th><th>Revenue</th></tr>
+{% for r in rows %}<tr><td><a href="/product/{{ r.id }}">{{ r.title }}</a></td><td>{{ r.niche_name }}</td><td>{{ r.product_type|replace('_',' ') }}</td><td class="meta">{{ r.style }}</td><td><span class="badge {{ r.status }}">{{ r.status }}</span></td><td>{{ r.views }}</td><td>{{ r.favourites }}</td><td>{{ r.units }}</td><td>${{ '%.2f'|format(r.revenue) }}</td></tr>{% endfor %}
+</table>{% if not rows %}<p class="meta">No products yet.</p>{% endif %}</div>
+{% endblock %}

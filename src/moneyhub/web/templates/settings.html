@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block main %}
+<h1>Settings</h1>
+<div class="panel"><h2 style="margin-top:0">AI providers</h2>
+<table><tr><th>Provider</th><th>Status</th><th>Model</th></tr>{% for p in providers %}<tr><td>{{ p.name }}</td><td><span class="badge {{ 'pass' if p.available else 'warn' }}">{{ 'ready' if p.available else 'not available' }}</span></td><td class="meta">{{ p.model }}</td></tr>{% endfor %}</table>
+<p class="meta">Add keys as environment variables before starting the UI: ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY. <code>claude -p</code> uses your installed Claude Code login; Ollama needs <code>ollama serve</code>.</p></div>
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Chains per task</h2>
+<table>{% for k, v in tasks.items() %}<tr><td>{{ k }}</td><td class="meta">{{ v|join(' → ') }}</td></tr>{% endfor %}</table>
+<p class="meta">Each task tries providers in order and falls back automatically; “builtin” is the offline library. Edit <code>moneyhub.yaml</code> (or create <code>moneyhub.local.yaml</code>) to change order, models or add providers.</p></div>
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Rendering &amp; output</h2><p>PDF renderers (in order): {{ renderers|join(', ') }}<br>Output folder: <code>{{ out }}</code></p></div>
+{% endblock %}

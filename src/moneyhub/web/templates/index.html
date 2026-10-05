@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% block main %}
+<h1>Studio</h1>
+<div class="panel">
+  <form id="make-form">
+    <div class="row">
+      <div><label for="niche">Niche (any text; comma-separate to batch)</label>
+        <input type="text" id="niche" name="niche" list="niche-list" placeholder="e.g. ADHD, nurse, dog training, wedding" required>
+        <datalist id="niche-list">{% for n in niches %}<option value="{{ n }}">{% endfor %}</datalist>
+        <div class="meta" id="niche-note" style="margin-top:4px">Built-in profiles: {{ niches|join(', ') }}. Anything else works too.</div></div>
+      <div><label for="product_type">Product type</label>
+        <select id="product_type" name="product_type">
+          {% for k, t in types.items() %}<option value="{{ k }}" data-sizes="{{ t.supported_sizes|join(',') }}" data-defaults="{{ t.default_sizes|join(',') }}" data-desc="{{ t.description }}">{{ t.label }}</option>{% endfor %}
+        </select><div class="meta" id="type-desc" style="margin-top:4px"></div></div>
+    </div>
+    <div class="row">
+      <div><label>Sizes</label><div class="checks">{% for k, s in sizes.items() %}<label><input type="checkbox" name="sizes" value="{{ k }}"> {{ s.label }}</label>{% endfor %}</div></div>
+    </div>
+    <div class="row">
+      <div><label for="palette">Colour palette</label><select id="palette" name="palette"><option value="">Auto (matched to niche mood)</option>{% for p in palettes %}<option value="{{ p.key }}">{{ p.key }}</option>{% endfor %}</select></div>
+      <div><label for="llm">AI provider chain</label>
+        <select id="llm" name="llm">
+          <option value="">Default chain (config)</option>
+          <option value="builtin">Offline only (no AI)</option>
+          <option value="claude_cli,builtin">claude -p</option>
+          <option value="anthropic,builtin">Anthropic API</option>
+          <option value="gemini,groq,openrouter,builtin">Free tiers (Gemini / Groq / OpenRouter)</option>
+          <option value="ollama,builtin">Local (Ollama)</option>
+        </select>
+        <div class="meta" style="margin-top:4px">Available now: {% for p in providers %}{{ '✓' if p.available else '–' }} {{ p.name }}{{ ', ' if not loop.last }}{% endfor %}</div></div>
+      <div id="weeks-wrap"><label for="weeks">Weeks (planner)</label><input type="number" id="weeks" name="weeks" min="4" max="60" placeholder="52"></div>
+      <div><label for="seed">Seed (optional)</label><input type="number" id="seed" name="seed" placeholder="random look"></div>
+    </div>
+    <button type="submit">Generate product</button>
+    <span class="meta">Takes 20s–3min depending on size and AI provider.</span>
+  </form>
+  <div id="jobs" style="margin-top:12px">
+    {% for jid, j in jobs %}{% if j.status in ('queued','running') %}<div class="job"><span class="spin"></span> {{ j.label }}: {{ j.log[-1] if j.log else j.status }} (reload to track)</div>{% endif %}{% endfor %}
+  </div>
+</div>
+<h2>Catalogue ({{ products|length }})</h2>
+{% if not products %}<p class="meta">Nothing yet. Generate your first product above.</p>{% endif %}
+<div class="grid cards">
+{% for p in products %}
+  <a class="card" href="/product/{{ p.id }}">
+    <div class="img">{% if p.thumb %}<img loading="lazy" src="/files/{{ p.id }}/{{ p.thumb }}">{% else %}no preview{% endif %}</div>
+    <div class="body"><div class="t">{{ p.title }}</div>
+      <div class="meta">{{ p.niche_name }} · {{ p.product_type|replace('_',' ') }} · ${{ '%.2f'|format(p.price or 0) }}</div>
+      <div style="margin-top:6px"><span class="badge {{ p.status }}">{{ p.status }}</span> <span class="badge {{ p.qa_status }}">QA {{ p.qa_status }}</span></div></div>
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

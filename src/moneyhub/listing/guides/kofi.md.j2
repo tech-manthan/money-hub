@@ -1,0 +1,17 @@
+# Ko-fi Shop upload guide - {{ title }}
+
+Ko-fi takes 0% commission on shop sales (payment processor fees still apply; check Ko-fi's current terms).
+
+1. Go to **Shop > Add Item > Digital Download**.
+2. **Name:** `{{ copy.short_title }}`
+3. **Price:** ${{ "%.2f"|format(price) }}
+4. **Image:** `{{ square }}` (square, 1000 x 1000)
+5. **Files:**
+{% for f in files %}   - `{{ f }}`
+{% endfor %}6. **Description:** paste
+```
+{{ description }}
+```
+7. Publish, then add the item link to your Ko-fi page header and your Pinterest bio.
+
+Ko-fi works best when you already have an audience (Pinterest, Instagram, YouTube), since it has little built-in product search.

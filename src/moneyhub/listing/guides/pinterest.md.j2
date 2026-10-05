@@ -1,0 +1,33 @@
+# Pinterest guide - {{ title }}
+
+Pinterest is a search engine: pins keep sending visitors for months. Aim for **3-5 fresh pins per day** across your product catalogue; for one product, start with **1 pin per day for 6 days**, then re-pin the winners.
+
+You post pins yourself (Pinterest's developer rules also require a person to review each action).
+
+## Setup (once)
+1. Create a **Pinterest Business account** (free) and **claim your website/shop** so pins show your name.
+2. Create 3-5 **boards** named with search keywords, e.g. `{{ copy.tags[0] }}`, `{{ copy.tags[1] }}`, `{{ copy.tags[2] }}`.
+3. Fill your profile: keywords in the name and bio, a link to your shop.
+
+## Pins for this product (1000 x 1500, 2:3 ratio)
+{% for p in pins %}
+### Pin {{ loop.index }} - `{{ p.image }}`
+**Title ({{ p.title|length }}/100):** {{ p.title }}
+**Destination link:** (your {{ marketplace_hint }} listing URL)
+{% endfor %}
+
+## Description (500 characters max) - use on every pin, change a few words each time
+```
+{{ pin_description }}
+```
+
+## Posting rules of thumb
+- Put the main keyword in the pin title, the description and the first line of text on the image.
+- Keep important text out of the bottom third (it can be cropped).
+- Post each pin to the **most relevant board first**, then to one or two secondary boards after a few days.
+- Use **fresh pins** (new image or headline) instead of re-uploading the same image.
+- Check **Pinterest Analytics** after 2 weeks: keep the pins with the most outbound clicks and make variations of them.
+- Always disclose affiliate links; never post the identical pin repeatedly (looks like spam).
+
+## Tracking
+Record pin titles + dates in the MoneyHub dashboard so you can see which angle brings sales.

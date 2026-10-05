@@ -1,0 +1,86 @@
+{% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
+{% set land = page.landscape %}
+{% set v = style.seed % 3 %}
+{# ---------------- cover ---------------- #}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline,
+   [content.weeks ~ ' undated weeks', '12 month views', 'Goal pages', 'Notes'],
+   [('Goals', '#goals'), ('Months', '#months'), ('Weeks', '#week-1'), ('Notes', '#notes')] if hyper else none) }}
+
+{# ---------------- welcome ---------------- #}
+<section class="page" id="welcome">
+  {{ header(style, 'Welcome', 'How to use this planner') }}
+  <p style="font-size:1.05em;max-width:34em;">{{ content.welcome }}</p>
+  <div style="display:grid;grid-template-columns:{{ '1fr 1fr' if land else '1fr' }};gap:1em;margin-top:.8em;flex:1;min-height:0;">
+    <div>
+      <div class="label" style="margin-bottom:.5em;">Four steps</div>
+      {% for step in content.how_to %}
+      <div style="display:flex;margin-bottom:.8em;align-items:flex-start;">
+        <div style="flex:none;width:1.9em;height:1.9em;border-radius:50%;background:var(--accent);color:var(--accent-ink);text-align:center;line-height:1.9em;font-weight:700;margin-right:.7em;">{{ loop.index }}</div>
+        <div style="padding-top:.2em;">{{ step }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="fill">{{ box('My why', 8, 'soft') }}</div>
+  </div>
+  {{ footer(content.title, hyper) }}
+</section>
+
+{# ---------------- goals ---------------- #}
+<section class="page" id="goals" style="bookmark-level:1;bookmark-label:'Goals';">
+  {{ header(style, 'Big picture', 'Start here, then plan your weeks') }}
+  <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:.8em;flex:1;min-height:0;">
+    {% for p in content.yearly_prompts %}{{ box(p, 5) }}{% endfor %}
+  </div>
+  {{ footer(content.title, hyper) }}
+</section>
+
+{# ---------------- months ---------------- #}
+{% for m in range(12) %}
+<section class="page" {% if loop.first %}id="months" style="bookmark-level:1;bookmark-label:'Months';"{% endif %}>
+  {{ header(style, 'Month overview', 'Month: ______________   Year: ________') }}
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;border:1px solid var(--line);border-radius:var(--radius) var(--radius) 0 0;overflow:hidden;flex:none;">
+    {% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}
+    <div style="background:var(--soft);text-align:center;padding:.35em 0;font-size:.7em;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);">{{ d }}</div>
+    {% endfor %}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);border-left:1px solid var(--line);border-top:1px solid var(--line);flex:{{ 12 if not land else 8 }};min-height:0;">
+    {% for c in range(42) %}<div style="border-right:1px solid var(--line);border-bottom:1px solid var(--line);"></div>{% endfor %}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat({{ content.monthly_prompts|length }},1fr);gap:.7em;margin-top:.8em;flex:{{ 4 if not land else 3 }};min-height:0;">
+    {% for p in content.monthly_prompts %}{{ box(p, 3) }}{% endfor %}
+  </div>
+  {{ footer(content.title, hyper) }}
+</section>
+{% endfor %}
+
+{# ---------------- weeks ---------------- #}
+{% for w in range(1, content.weeks + 1) %}
+<section class="page week" id="week-{{ w }}" {% if loop.first %}style="bookmark-level:1;bookmark-label:'Weeks';"{% endif %}>
+  {{ header(style, 'Week ' ~ w, 'Week of ______ / ______    Focus: ______________________') }}
+  <div class="wk-body">
+    <div class="days">
+      {% for d in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+      <div class="day">
+        <div class="dname"><b class="ds">{{ d[:3] }}</b><b class="dl">{{ d }}</b></div>
+        <div class="dlines">{{ lines(4 if not land else 5) }}</div>
+        <div class="dchecks" style="width:{{ (content.daily_labels|map('length')|max) * 0.56 + 2.2 }}em;">{% for l in content.daily_labels %}<div><i class="check"></i>{{ l }}</div>{% endfor %}</div>
+      </div>
+      {% endfor %}
+      {% if land %}<div class="day notes">{{ box('Notes', 6, 'soft') }}</div>{% endif %}
+    </div>
+    <div class="side">
+      {% for b in content.weekly_boxes %}{{ box(b, 3, 'soft' if loop.first else '') }}{% endfor %}
+    </div>
+  </div>
+  {{ footer(content.weekly_quotes[(w - 1) % content.weekly_quotes|length], hyper, '') }}
+</section>
+{% endfor %}
+
+{# ---------------- notes ---------------- #}
+{% for n in range(8) %}
+<section class="page" {% if loop.first %}id="notes" style="bookmark-level:1;bookmark-label:'Notes';"{% endif %}>
+  {{ header(style, 'Notes', 'Ideas, lists, brain dumps') }}
+  <div class="card" style="flex:1;"><div class="dots"></div></div>
+  {{ footer(content.title, hyper) }}
+</section>
+{% endfor %}

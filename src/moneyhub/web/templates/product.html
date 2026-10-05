@@ -1,0 +1,79 @@
+{% extends "base.html" %}{% block main %}
+<p><a href="/">← Studio</a></p>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+  <h1 style="margin:0">{{ p.title }}</h1><span class="badge {{ p.status }}">{{ p.status }}</span>
+</div>
+<p class="meta">{{ p.niche_name }} · {{ p.product_type|replace('_',' ') }} · style {{ p.style }} · content by <b>{{ p.content_source }}</b> · listing copy by <b>{{ p.listing_source }}</b></p>
+
+<div class="panel" style="margin-bottom:16px">
+  <form method="post" action="/product/{{ p.id }}/status" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input type="text" name="notes" value="{{ p.notes }}" placeholder="Review notes" style="flex:1;min-width:200px">
+    <button name="status" value="approved">Approve</button>
+    <button class="ghost" name="status" value="draft">Back to draft</button>
+    <button class="danger" name="status" value="rejected">Reject</button>
+    <a class="btn ghost" href="/files/{{ p.id }}/upload-package.zip?download=1">Download upload package</a>
+  </form>
+</div>
+
+<h2>Preview</h2>
+<div class="pages">{% for pg in pages %}<a href="/preview/{{ p.id }}/{{ pg.pdf }}/{{ pg.i }}.png" target="_blank"><img loading="lazy" src="/preview/{{ p.id }}/{{ pg.pdf }}/{{ pg.i }}.png"></a>{% endfor %}</div>
+{% if not pages %}<p class="meta">No PDF in this product - open the spreadsheet from the files list.</p>{% endif %}
+
+<div class="two">
+  <div>
+    <h2>Quality checks</h2>
+    <ul class="qa panel" style="list-style:none;margin:0;padding:14px 18px">{% for c in qa %}<li class="{{ c.status }}">{{ c.name }} <span class="meta">- {{ c.detail }}</span></li>{% endfor %}</ul>
+  </div>
+  <div>
+    <h2>Files you will sell</h2>
+    <div class="panel"><table>{% for f in files %}<tr><td>{{ f.rel.split('/')[-1] }}</td><td class="meta">{{ '%.1f'|format(f.size/1e6) }} MB</td><td><a href="/files/{{ p.id }}/{{ f.rel }}?download=1">download</a></td></tr>{% endfor %}</table></div>
+  </div>
+</div>
+
+<h2>Listing copy</h2>
+<div class="two">
+  <div class="panel"><b>Etsy title</b> <span class="meta">({{ listing.copy_.title|length if listing.copy_ else 0 }}/140)</span>
+    <div class="copybox" id="c-title" style="margin:6px 0">{{ listing.copy_.title if listing.copy_ }}</div><button class="sm ghost" onclick="copyText('c-title',this)">Copy</button>
+    <p><b>Price</b> ${{ '%.2f'|format(listing.price or 0) }}<br><span class="meta">{{ listing.price_note }}</span></p>
+    <b>Tags</b> <span class="meta">(13 max, 20 chars)</span>
+    <div class="copybox" id="c-tags" style="margin:6px 0">{{ listing.copy_.tags|join(', ') if listing.copy_ }}</div><button class="sm ghost" onclick="copyText('c-tags',this)">Copy</button></div>
+  <div class="panel"><b>Description</b>
+    <div class="copybox" id="c-desc" style="margin:6px 0">{{ listing.description }}</div><button class="sm ghost" onclick="copyText('c-desc',this)">Copy</button></div>
+</div>
+
+<h2>Images by marketplace</h2>
+<div class="tabs">{% for m, imgs in images.items() if imgs %}<button data-group="img" data-tab="img-{{ m }}" class="{{ 'on' if loop.first }}">{{ m }} ({{ imgs|length }})</button>{% endfor %}</div>
+{% for m, imgs in images.items() if imgs %}
+<div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endfor %}</div></div>
+{% endfor %}
+
+<h2>Upload guides</h2>
+<div class="tabs">{% for m in guides %}<button data-group="guide" data-tab="g-{{ m }}" class="{{ 'on' if loop.first }}">{{ m }}</button>{% endfor %}</div>
+{% for m, text in guides.items() %}
+<div class="tabpane {{ 'on' if loop.first }}" data-group="guide" id="g-{{ m }}"><div class="copybox" id="gt-{{ m }}">{{ text }}</div><p><button class="sm ghost" onclick="copyText('gt-{{ m }}',this)">Copy guide</button></p></div>
+{% endfor %}
+
+<h2>Track it</h2>
+<div class="two">
+  <div class="panel"><b>Where you listed it</b>
+    {% for l in listings %}<div class="meta">{{ l.marketplace }} - <a href="{{ l.url }}">{{ l.url }}</a> (${{ l.price }})</div>{% endfor %}
+    <form method="post" action="/product/{{ p.id }}/listing" class="row" style="margin-top:10px">
+      <div><label>Marketplace</label><select name="marketplace"><option>etsy</option><option>gumroad</option><option>payhip</option><option>kofi</option><option>other</option></select></div>
+      <div><label>Listing URL</label><input type="url" name="url" required></div>
+      <div><label>Price</label><input type="number" step="0.01" name="price" value="{{ '%.2f'|format(p.price or 0) }}"></div>
+      <div><label>&nbsp;</label><button>Save listing</button></div></form></div>
+  <div class="panel"><b>Record results</b>
+    <form method="post" action="/product/{{ p.id }}/sale" class="row" style="margin-top:10px">
+      <div><label>Marketplace</label><select name="marketplace"><option>etsy</option><option>gumroad</option><option>payhip</option><option>kofi</option></select></div>
+      <div><label>Units</label><input type="number" name="units" value="1"></div>
+      <div><label>Revenue</label><input type="number" step="0.01" name="revenue" required></div>
+      <div><label>&nbsp;</label><button>Add sale</button></div></form>
+    <form method="post" action="/product/{{ p.id }}/metric" class="row">
+      <div><label>Marketplace</label><select name="marketplace"><option>etsy</option><option>gumroad</option><option>payhip</option><option>kofi</option></select></div>
+      <div><label>Views</label><input type="number" name="views" value="0"></div>
+      <div><label>Favourites</label><input type="number" name="favourites" value="0"></div>
+      <div><label>Pin clicks</label><input type="number" name="pin_clicks" value="0"></div>
+      <div><label>&nbsp;</label><button class="ghost">Add stats</button></div></form></div>
+</div>
+<form method="post" action="/product/{{ p.id }}/delete" onsubmit="return confirm('Delete this product and its files?')" style="margin-top:24px"><button class="danger sm">Delete product</button></form>
+{% endblock %}

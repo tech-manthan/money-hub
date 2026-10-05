@@ -1,0 +1,21 @@
+# Payhip upload guide - {{ title }}
+
+Open **Products > Add new product > Digital product**.
+
+1. **Upload files** (each up to 5 GB):
+{% for f in files %}   - `{{ f }}`
+{% endfor %}2. **Title:** `{{ copy.short_title }}`
+3. **Price:** ${{ "%.2f"|format(price) }}. Payhip's free plan charges 5% per sale; paid plans reduce this (check current pricing).
+4. **Cover image:** `{{ cover }}` - Payhip recommends images at least 1000 px wide and cares about aspect ratio rather than exact pixels; you can add up to 9 images, so also add the Etsy images from `images/etsy/`.
+5. **Description:** paste
+```
+{{ description }}
+```
+6. Optional: add a **preview file** (a sample page) so buyers can see inside.
+7. Optional: add a **coupon**, an **upsell**, or a **bundle** with your other products in this niche.
+8. Save and publish, then test-buy using a 100% coupon to check delivery.
+
+## Checklist
+- [ ] Product link works in an incognito window
+- [ ] Description includes terms and the disclosure line
+- [ ] Link added to Pinterest pins
