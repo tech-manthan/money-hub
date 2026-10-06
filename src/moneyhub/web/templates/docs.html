@@ -2,8 +2,8 @@
 <h1>How to use MoneyHub</h1>
 <div class="docs">
 <nav class="toc" aria-label="On this page">
-  <a href="#start">Quick start</a><a href="#tour">Video tour</a><a href="#steps">Using the app</a><a href="#after">After it's made</a>
-  <a href="#cli">Command line</a><a href="#ai">AI helpers</a><a href="#rules">Shop rules</a><a href="#glossary">Plain-English glossary</a><a href="#trouble">Troubleshooting</a><a href="#limits">What it can't do yet</a>
+  <a href="#start">Quick start</a><a href="#tour">Video tour</a><a href="#steps">Using the app</a><a href="#layouts">Page layouts</a><a href="#extras">Brand colour &amp; e-ink</a><a href="#after">After it's made</a><a href="#export">KDP, Notion, Canva</a>
+  <a href="#connect">Connect services</a><a href="#cli">Command line</a><a href="#ai">AI helpers</a><a href="#rules">Shop rules</a><a href="#glossary">Plain-English glossary</a><a href="#trouble">Troubleshooting</a><a href="#limits">What it can't do yet</a>
 </nav>
 <div class="doc">
 
@@ -49,6 +49,26 @@
 </div>
 {% endfor %}
 
+<h2 id="layouts">Page layouts: ready-made or generated</h2>
+<p>Planners come in more than one page layout, because buyers like different things. In step 3 you pick from three kinds:</p>
+<ul>
+  <li><b>Ready-made layouts</b> are hand-tuned and reliable. Weekly planner: classic, grid, focus, minimal. Daily planner: hourly, priorities, time-block.</li>
+  <li><b>Generated layouts.</b> Press <b>Generate another layout</b> and MoneyHub invents a new arrangement (boxes left, right, top or bottom, days as a list, grid or columns, extra habit or priority blocks). There are thousands. Every picture is a real page, so what you see is what you get.</li>
+  <li><b>Describe it.</b> Type what you want, such as "big priorities on the left and a habit row at the bottom". Your AI helper turns that into a layout. Without an AI helper you still get a generated layout.</li>
+</ul>
+<p>Generated layouts are checked automatically. If one would not fit on a page, MoneyHub falls back to the classic layout and tells you.</p>
+<pre class="copybox">moneyhub layouts weekly_planner --count 8          # picture of presets + 8 generated layouts
+moneyhub make "nurse" weekly_planner --page-layout grid
+moneyhub make "nurse" weekly_planner --page-layout auto:42     # layout number 42: the same every time
+moneyhub make "nurse" daily_planner --layout-prompt "no schedule, long to-do list, notes at the bottom"</pre>
+
+<h2 id="extras">Your brand colour and e-ink tablets</h2>
+<ul>
+  <li><b>Brand colour.</b> In step 2 choose <b>I'll pick</b>, then <b>Use my own brand colour</b>. We build a matching set of colours and keep the text readable. Command line: <code>--brand "#2F6B57"</code>.</li>
+  <li><b>E-ink.</b> For reMarkable, Kindle Scribe and Boox, tick the e-ink box in step 3. Pages are black and white with crisp lines, sized 3:4, with tap-to-jump links. Command line: <code>--eink</code>. Works with the weekly and daily planners, journal, checklists, worksheets and guides.</li>
+  <li><b>Where you'll sell.</b> Tick the shops in step 3. We make listing pictures and an upload guide only for those.</li>
+</ul>
+
 <h2 id="after">After it's made</h2>
 <ul>
   <li><b>Where the files are.</b> In the <code>out/products/</code> folder, one folder per product: <code>product/</code> (what customers get), <code>listing/</code> (text), <code>images/</code> (listing photos and pins) and <code>upload-package.zip</code>.</li>
@@ -58,11 +78,34 @@
   <li><b>Launch videos.</b> <code>moneyhub brag</code> (or the product page) makes a short video with music and share text for Pinterest, Reels and TikTok.</li>
 </ul>
 
+<h2 id="export">Sell it somewhere else: KDP, Notion, Canva</h2>
+<p>On a product's page, <b>Sell it somewhere else</b> makes a ready-to-use pack, each with a step-by-step guide.</p>
+<ul>
+  <li><b>Amazon KDP paperback.</b> A print-ready interior at an exact book size (6 x 9 in and others), margins that meet KDP's rules for the page count, a cover template with the spine width worked out, and a KDP guide. Always confirm the spine width with KDP's own cover generator.</li>
+  <li><b>Notion.</b> A zip of pages and databases that Notion imports. After importing, switch columns to Checkbox or Date as you like. Notion cannot import formulas.</li>
+  <li><b>Canva.</b> The pages as a PDF and images for Canva's import, a brand kit (colours and fonts), a "your template link" page for buyers, and a how-to. Canva does not accept template files from outside, so you finish the template inside Canva and paste its link into the buyer page.</li>
+</ul>
+<pre class="copybox">moneyhub export kdp 4 --trim 6x9 --paper white
+moneyhub export notion 4
+moneyhub export canva 4 --link "https://www.canva.com/design/..."</pre>
+<p class="meta">Check each platform's current rules before selling: KDP content guidelines, Notion's and Canva's template-selling terms.</p>
+
+<h2 id="connect">Connect AI services (Settings)</h2>
+<p>Open <a href="/settings">Settings</a> to add keys. <b>None are required.</b> Keys are saved on your computer in a hidden file that is not committed to git, shown only as the last four characters, and sent only to the service they belong to. Each has a <b>Test</b> button and a <b>Remove</b> button.</p>
+<ul>
+  <li><b>Writing helpers:</b> Claude Code (uses your login, no key), Anthropic, Google Gemini (free tier), Groq (free tier), OpenRouter, and local Ollama.</li>
+  <li><b>AI artwork for wall art:</b> <b>claude_svg</b> lets Claude draw vector art with no image key. Hugging Face, Together AI, OpenAI or your own image server make pictures instead. Check each service's terms before selling images it makes.</li>
+  <li><b>Natural narration:</b> <code>moneyhub voices install</code> adds a natural voice for launch and tour videos.</li>
+  <li><b>Optional video engines:</b> <code>moneyhub engines install hyperframes</code> (HTML to video), <code>remotion</code>, or <code>manim</code>. Run <code>moneyhub doctor</code> to see what is installed.</li>
+</ul>
+
 <h2 id="cli">Everything also works from the command line</h2>
 <p>Run <code>source .venv/bin/activate</code> first. Then:</p>
 <pre class="copybox">moneyhub make "nurse" weekly_planner               # one product
 moneyhub make "nurse" wall_art --palette plum --fonts classic --motif arches --layout 2
-moneyhub styles                                    # every look option you can choose
+moneyhub styles                                    # every look and layout option you can choose
+moneyhub layouts weekly_planner                    # picture of page layouts to choose from
+moneyhub next                                      # what to make next, learned from your sales
 moneyhub types                                     # product types, audiences, AI helpers
 moneyhub ideas --focus pets                        # brainstorm what to make
 moneyhub batch "nurse,teacher" --products weekly_planner,habit_tracker
@@ -75,6 +118,7 @@ moneyhub sale 3 etsy 6.5                           # record a sale
 moneyhub report                                    # what's working
 moneyhub bundle 3,4,5 --name "Nurse Bundle"        # sell products together
 moneyhub sample 3                                  # free preview PDF
+moneyhub export kdp 3                              # also: notion, canva
 moneyhub brag 3                                    # launch video + share text
 moneyhub calendar                                  # seasonal opportunities
 moneyhub keywords "nurse planner"                  # search phrases to check by hand
@@ -89,6 +133,8 @@ moneyhub ui --port 8766                            # this web app</pre>
   <tr><td><code>--radius</code></td><td>{{ radii|join(', ') }} (pixels)</td></tr>
   <tr><td><code>--grid</code></td><td>{{ grids|join(', ') }}</td></tr>
   <tr><td><code>--motif</code> / <code>--layout</code></td><td>Wall art only: {{ motifs|join(', ') }} / 0-4</td></tr>
+  <tr><td><code>--brand</code>, <code>--eink</code></td><td>Your hex colour; e-ink black-and-white version</td></tr>
+  <tr><td><code>--page-layout</code>, <code>--layout-prompt</code></td><td>Planner layouts: a preset, <code>auto:NUMBER</code>, or a description in words</td></tr>
   <tr><td><code>--seed</code></td><td>Any number. Repeats a look.</td></tr>
   <tr><td><code>--llm</code></td><td>e.g. <code>builtin</code> (offline) or <code>claude_cli,builtin</code></td></tr>
   <tr><td><code>--ai-art</code>, <code>--art-provider</code></td><td>AI poster backgrounds (wall art, needs a key)</td></tr>
@@ -139,8 +185,9 @@ moneyhub ui --port 8766                            # this web app</pre>
 <h2 id="limits">What it can't do yet</h2>
 <ul>
   <li>It does not upload to any marketplace. That is by design.</li>
-  <li>Not built yet: Amazon KDP export, Canva and Notion files, e-ink planner versions, spell-check.</li>
-  <li>Not yet verified on every setup: Etsy's current photo and video limits, Excel/Numbers recalculation of spreadsheets, GoodNotes link behaviour.</li>
+  <li>Not built yet: Amazon KDP export for cards, wall art and spreadsheets; page layouts for the other product types (planners have them today).</li>
+  <li>Not yet verified on a real device or app: how the exports behave inside Canva, Notion, KDP's previewer, GoodNotes links and e-ink tablets. Spreadsheet recalculation in Excel and Numbers.</li>
+  <li>Spelling checks flag possible mistakes as warnings. They never block a product.</li>
   <li>Ideas and keyword suggestions are educated guesses, not live sales data. Check them by hand on Etsy and Pinterest.</li>
 </ul>
 </div></div>

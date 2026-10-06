@@ -90,6 +90,8 @@ SPOKEN = {
     "…and a font style.": "Then a font style. Watch the example page change as you choose.",
     "More detail lets you change titles, corners and lines. All optional.": "There is more detail if you want it, like the title style and the corners. But it is all optional.",
     "Step 3: check your choices.": "Step three. Here is a quick summary of what we are about to make.",
+    "Pick how the pages are arranged. Each picture is a real page.": "Planners come in different layouts, because people like different things. Each picture here is a real page from your product.",
+    "Not enough? Generate a new layout.": "And if none of these is quite right, press Generate another layout, and we will invent a new one for you. You can even describe the layout you want in words.",
     "Everything here also works in the terminal. This is the same request.": "And if you ever prefer a terminal, here is the very same request, written as a command.",
     "Press Make my product.": "Happy with it? Press Make my product.",
     "It's being made. This usually takes 20 seconds to 3 minutes.": "Now we wait a little. It usually takes a few minutes at most, and you can watch each step happen.",
@@ -199,6 +201,15 @@ def tour(page: Page, voice=None, audio_dir: Path | None = None) -> Tour:
     t.mark("make0")
     t.cap("Step 3: check your choices.", 2.0)
     t.hover("#summary", 1.0)
+    page.evaluate("document.querySelectorAll('#layouts img').forEach(i => i.loading = 'eager')")
+    page.wait_for_function("[...document.querySelectorAll('#layouts img')].every(i => i.complete && i.naturalWidth > 0)", timeout=90_000)
+    t.hover('#layouts .layopt:nth-child(1)', 0.5)
+    t.cap("Pick how the pages are arranged. Each picture is a real page.", 3.0)
+    t.click('#layouts .layopt:nth-child(3)', 0.6)
+    t.click('#gen-layout', 0.5)
+    page.evaluate("document.querySelectorAll('#layouts img').forEach(i => i.loading = 'eager')")
+    page.wait_for_function("[...document.querySelectorAll('#layouts img')].every(i => i.complete && i.naturalWidth > 0)", timeout=90_000)
+    t.cap("Not enough? Generate a new layout.", 3.0)
     t.click("details.help summary:has-text('matching command')", 0.8)
     t.cap("Everything here also works in the terminal. This is the same request.", 3.0)
     t.click("details.help summary:has-text('matching command')", 0.4)
