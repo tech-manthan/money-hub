@@ -14,7 +14,7 @@ Six notes sit beside this file (01 marketplaces, 02 policy/legal, 03 product qua
 10. **APIs**: Etsy has a draft-listing API (needs approval); others lack one. Manual upload stays; revisit an Etsy draft publisher when it can be tested.
 
 ## Built in this round (see commit log)
-`moneyhub brag` (launch video + music + SFX + captions + share copy, from latent-spaces/brag, MIT), `moneyhub risk`, `moneyhub bundle`, `moneyhub sample`, `moneyhub calendar`, `moneyhub keywords`, Start Here + licence page in every package, sheet protection and Google Sheets copy-link page, extra QA, pin safe-zone fix.
+`moneyhub brag` (launch video + music + SFX + captions + share copy, from latent-spaces/brag, MIT), `moneyhub risk`, `moneyhub bundle`, `moneyhub sample`, `moneyhub calendar`, `moneyhub keywords`, Start Here page in every package, sheet protection, media QA, pin safe-zone fix. (A Google Sheets copy-link page and a separate licence page were considered but are not built; the Start Here page carries the licence note.)
 
 ## Not built (and why)
 Etsy/Pinterest API publishing (cannot be verified from this sandbox; policy expects human review), KDP export, Typst engine, HyperFrames engine, e-ink/disc-bound planner variants (exact specs not verified), AI music models (licence/hardware), Canva/Notion native files.

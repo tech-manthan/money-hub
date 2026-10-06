@@ -113,12 +113,35 @@ def product(request: Request, pid: int):
         d = folder / "images" / m
         images[m] = [str(x.relative_to(folder)) for x in sorted(d.glob("*"))] if d.exists() else []
     editable = [str(f.relative_to(folder)) for f in sorted((folder / "editable").glob("*/*.svg"))] if (folder / "editable").exists() else []
+    bdir = folder / "brag"
+    brag_files = {"videos": [str(f.relative_to(folder)) for f in sorted(bdir.glob("*.mp4"))] if bdir.exists() else [],
+                  "poster": "brag/brag.jpg" if (bdir / "brag.jpg").exists() else "",
+                  "share": (bdir / "share-copy.txt").read_text() if (bdir / "share-copy.txt").exists() else ""}
+    running = [j for j in JOBS.values() if j.get("label") == f"Launch video for #{pid}" and j["status"] in ("queued", "running")]
     guides = {}
     for g in sorted((folder / "listing").glob("guide-*.md")):
         guides[g.stem.replace("guide-", "")] = g.read_text()
     return templates.TemplateResponse(request, "product.html", _ctx(
         request, p=p, qa=json.loads(p["qa"] or "[]"), listing=listing, spec=spec, files=files, pages=pages,
-        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable))
+        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable, brag=brag_files, brag_running=bool(running)))
+
+
+@app.post("/product/{pid}/brag")
+def brag_job(pid: int, tone: str = Form(""), fmt: str = Form("vertical"), duration: float = Form(20.0),
+             voice: str = Form(""), captions: str = Form(""), music: str = Form("generated")):
+    if not _store().product(pid):
+        raise HTTPException(404)
+    if fmt not in ("vertical", "landscape", "square", "all"):
+        raise HTTPException(400, "bad format")
+
+    def run(job):
+        from ..brag.pipeline import make_brag
+        from ..brag.sources import from_product
+        res = make_brag(from_product(pid), tone=tone or None, fmt=fmt, duration=duration, voice=bool(voice), music=music,
+                        captions=bool(captions), progress=lambda m: job["log"].append(m))
+        return {"product_id": pid, "brag": True, "seconds": round(res.seconds, 1)}
+    _submit(f"Launch video for #{pid}", run)
+    return RedirectResponse(f"/product/{pid}", status_code=303)
 
 
 @app.get("/ideas", response_class=HTMLResponse)

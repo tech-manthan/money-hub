@@ -65,6 +65,9 @@ Three interchangeable engines render the same LLM-written scene plan; set the or
 | `manim` | `moneyhub engines install manim` (Cairo/Pango; `brew install pango cairo pkg-config`) | MIT; smooth Python animation |
 `moneyhub engines status` / `moneyhub engines test remotion` check them. Examples: `moneyhub make adhd weekly_planner --motion remotion,pillow`.
 
+## Launch videos (brag)
+`moneyhub brag <id>` makes a 12-30 s video with generated music, sound effects, optional voice-over and captions, plus share copy for Pinterest/Reels/TikTok, from a product, a collection (`--shop`) or a website (`--url`). Details: `docs/brag.md`.
+
 ## Visual editing step (Penpot / Open Design)
 `moneyhub edit export <id>` writes layered SVGs (live text, separate image layers) for pins, the Etsy hero image and wall-art posters, plus fonts and a design brief. Edit them in Penpot (`bash editor/penpot/run.sh` starts a local one) or hand the brief to Open Design, export PNG/JPG with the same names, then `moneyhub edit import <id>` swaps them into the upload package. The product page in the UI has buttons for all of this. See `docs/editing.md`.
 

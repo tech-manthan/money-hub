@@ -210,6 +210,98 @@ def edit_import(product_id: int, folder: Path = typer.Argument(None, help="Folde
     typer.echo(f"{len(done)} image(s) replaced; originals saved in images/_original/" if done else "No matching files found (name them like pin-01.png, 01-hero.jpg, gumroad-cover.png).")
 
 
+@app.command()
+def brag(
+    product_id: int = typer.Argument(None, help="Product id to make a launch video for"),
+    shop: str = typer.Option(None, "--shop", help="Comma-separated product ids for a shop/collection video"),
+    url: str = typer.Option(None, "--url", help="Make a launch video from a website (needs Playwright + Chromium)"),
+    tone: str = typer.Option(None, help="polished | playful | cinematic | chaotic | app-store | ... or free text like 'calm and cosy'"),
+    fmt: str = typer.Option("vertical", "--format", help="vertical | landscape | square | all"),
+    duration: float = typer.Option(20.0, help="Target seconds (12-30)"),
+    voice: str = typer.Option("", help="Voice-over: 'auto' or an engine (kokoro | say | espeak). Empty = none"),
+    music: str = typer.Option("generated", help="generated | none | file"),
+    music_file: Path = typer.Option(None, help="Your own licensed track (with --music file)"),
+    captions: bool = typer.Option(False, help="Burn captions into the video"),
+    llm: bool = typer.Option(True, "--llm/--no-llm", help="Let an LLM write the story (falls back to the built-in writer)"),
+    providers: str = typer.Option(None, help="Provider chain override, e.g. claude_cli,ollama"),
+    preview: bool = typer.Option(False, help="Half-size, 15 fps draft"),
+):
+    """Launch video with music, motion and share copy (Pinterest/Reels/TikTok) for a product, collection or website."""
+    from .brag.pipeline import make_brag
+    from .brag.render import FORMATS
+    from .brag import sources
+    if fmt != "all" and fmt not in FORMATS:
+        raise typer.BadParameter("format must be vertical, landscape, square or all")
+    if url:
+        mat = sources.from_url(url, FORMATS["vertical" if fmt == "all" else fmt])
+    elif shop:
+        mat = sources.from_shop([int(x) for x in shop.split(",") if x.strip()])
+    elif product_id is not None:
+        mat = sources.from_product(product_id)
+    else:
+        raise typer.BadParameter("give a product id, --shop ids, or --url")
+    res = make_brag(mat, tone=tone, fmt=fmt, duration=duration, voice=(voice if voice not in ("", "auto") else bool(voice)),
+                    music=music, music_file=music_file, captions=captions, providers=_csv(providers), use_llm=llm, preview=preview,
+                    progress=lambda m: typer.echo(f"  {m}"))
+    typer.echo(f"\nVideo:  {res.video}\nPoster: {res.poster}\nShare copy: {res.share}\nPlan: {res.plan_md}\n"
+               f"{res.seconds:.1f}s, story by {res.plan_source}, music {res.music}, voice {res.voice_engine or 'none'}")
+    for v in res.extra_videos:
+        typer.echo(f"Also:   {v}")
+
+
+@app.command()
+def bundle(product_ids: str = typer.Argument(..., help="Comma-separated product ids"), name: str = typer.Option(..., help="Bundle name"),
+           discount: float = typer.Option(0.30, help="Discount vs buying separately (0-0.6)")):
+    """Combine products into one zip + listing starter with fee-aware pricing."""
+    from .growth import make_bundle
+    out = make_bundle([int(x) for x in product_ids.split(",") if x.strip()], name, min(0.6, max(0.0, discount)))
+    typer.echo(f"Bundle written to {out}\nOpen listing.md for price, tags and description; upload product/*.zip.")
+
+
+@app.command()
+def sample(product_id: int, pages: int = typer.Option(2, help="How many pages to include")):
+    """Free preview PDF (first pages) for email/Pinterest lead magnets."""
+    from .growth import make_sample
+    dst = make_sample(product_id, pages)
+    typer.echo(f"Sample: {dst}" if dst else "This product has no PDF to sample.")
+
+
+@app.command()
+def calendar(months: int = typer.Option(4, help="How many months ahead to show")):
+    """Seasonal opportunities to prepare now (general guidance, not sales data)."""
+    from .growth import calendar as cal
+    import calendar as pycal
+    for row in cal(months=months):
+        when = "this month" if row["in_months"] == 0 else f"in {row['in_months']} month(s)"
+        typer.echo(f"{pycal.month_name[row['month']]:<10} ({when:<13}) {row['occasion']}: {'; '.join(row['ideas'])}")
+
+
+@app.command()
+def keywords(seed: str, suggest: bool = typer.Option(False, help="Also query Google autocomplete (sends the seed text to Google)")):
+    """Search-phrase ideas to check by hand in Etsy/Pinterest search boxes. Does not scrape either site."""
+    from .growth import keyword_ideas
+    for k in keyword_ideas(seed, suggest):
+        typer.echo(k)
+
+
+voices_app = typer.Typer(help="Voice-over engines for 'moneyhub brag --voice'.", no_args_is_help=True)
+app.add_typer(voices_app, name="voices")
+
+
+@voices_app.command("status")
+def voices_status():
+    from .brag.voice import voice_status
+    for v in voice_status():
+        typer.echo(f"{'ok ' if v['available'] else '-- '}{v['name']:<8} {'ready' if v['available'] else 'not available'}")
+
+
+@voices_app.command("install")
+def voices_install():
+    """Download the Kokoro voice model (~350 MB, Apache-2.0) into ~/.cache/moneyhub/kokoro."""
+    from .brag.voice import install_kokoro
+    typer.echo(f"Installed: {install_kokoro(progress=lambda m: typer.echo(f'  {m}'))}")
+
+
 engines_app = typer.Typer(help="Optional video engines: remotion (React) and manim (Python).", no_args_is_help=True)
 app.add_typer(engines_app, name="engines")
 

@@ -146,7 +146,7 @@ def make_package(folder: Path) -> Path:
 
     zpath = folder / "upload-package.zip"
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
-        for sub in ("product", "images", "listing"):
+        for sub in ("product", "images", "listing", "brag"):
             for f in sorted((folder / sub).rglob("*")):
                 if f.is_file():
                     z.write(f, f.relative_to(folder))

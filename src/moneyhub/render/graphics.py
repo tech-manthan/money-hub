@@ -370,8 +370,11 @@ def gallery_wall(arts: list[Image.Image], title: str, subtitle: str, brush: Brus
     d.rectangle((0, int(H * 0.86), W, H), fill=(166, 138, 112, 255))   # floor
     d.rectangle((0, int(H * 0.84), W, int(H * 0.86)), fill=(244, 240, 233, 255))  # skirting
     n = min(3, len(arts))
-    base_h = [0.52, 0.42, 0.32][:n]
-    region_x, region_w = int(W * 0.36), int(W * 0.60)
+    portrait = H > W
+    base_h = ([0.34, 0.28, 0.22] if portrait else [0.52, 0.42, 0.32])[:n]
+    region_x, region_w = (int(W * 0.06), int(W * 0.88)) if portrait else (int(W * 0.36), int(W * 0.60))
+    if not title and not portrait:
+        region_x, region_w = int(W * 0.08), int(W * 0.84)
     gap = int(W * 0.03)
     k = 1.0
     for _ in range(12):
@@ -379,14 +382,19 @@ def gallery_wall(arts: list[Image.Image], title: str, subtitle: str, brush: Brus
         if sum(f.width for f in frames) + gap * (n - 1) <= region_w:
             break
         k *= 0.93
-    x = region_x
-    top = int(H * 0.12)
-    avail = int(H * 0.68)
+    x = region_x + (region_w - (sum(f.width for f in frames) + gap * (n - 1))) // 2 if (portrait or not title) else region_x
+    top = int(H * 0.30) if portrait else int(H * 0.12)
+    avail = int(H * 0.42) if portrait else int(H * 0.68)
     for f in frames:
         paste_with_shadow(img, f, (x, top + (avail - f.height) // 3), blur=22, offset=(10, 18), opacity=90)
         x += f.width + gap
-    d.text((int(W * 0.05), int(H * 0.2)), subtitle.upper(), font=brush.body(40), fill=brush.accent)
-    draw_text_block(d, (int(W * 0.05), int(H * 0.26)), title, brush.heading(100), brush.ink, int(W * 0.27), 1.08)
+    if portrait:
+        if subtitle:
+            d.text((W // 2, int(H * 0.10)), subtitle.upper(), font=brush.body(int(W * 0.04)), fill=brush.accent, anchor="ma")
+        draw_text_block(d, (W // 2, int(H * 0.13)), title, brush.heading(int(W * 0.085)), brush.ink, int(W * 0.84), 1.08, anchor="c", max_lines=2)
+    else:
+        d.text((int(W * 0.05), int(H * 0.2)), subtitle.upper(), font=brush.body(40), fill=brush.accent)
+        draw_text_block(d, (int(W * 0.05), int(H * 0.26)), title, brush.heading(100), brush.ink, int(W * 0.27), 1.08)
     return img.convert("RGB")
 
 

@@ -17,6 +17,9 @@ This is a practical summary, not legal advice. "Checked" means I read the licenc
 | [Manim Community](https://github.com/ManimCommunity/manim) | MIT (3Blue1Brown LLC and Manim Community Developers) | LICENSE file | Free for commercial use. Needs Cairo/Pango. |
 | [Penpot](https://github.com/penpot/penpot) | MPL-2.0 | LICENSE file | Free to self-host and to sell what you design with it. MoneyHub does not copy Penpot code; `editor/penpot/run.sh` downloads Penpot's official compose file when you run it. |
 | [Open Design](https://github.com/nexu-io/open-design) | Apache-2.0 | LICENSE file | Optional external app; MoneyHub only provides a design brief it can use. |
+| [latent-spaces/brag](https://github.com/latent-spaces/brag) | MIT | LICENSE file | Inspiration for `moneyhub brag`; no code copied. |
+| [Kokoro-ONNX](https://github.com/thewh1teagle/kokoro-onnx) + Kokoro-82M voices | Apache-2.0 | project pages | Optional voice-over, downloaded on request. |
+| [HyperFrames](https://github.com/heygen-com/hyperframes) | Apache-2.0 | project page | Not used; listed as a possible future engine. |
 | ffmpeg | LGPL/GPL depending on the build | not checked | Used as a separate program to encode MP4s; the videos you create are yours. |
 
 ## Python dependencies (from `python scripts/list_licenses.py`)

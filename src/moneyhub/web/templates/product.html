@@ -48,6 +48,22 @@
 <div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}{% if i.endswith('.mp4') %}<div><video controls preload="metadata" style="width:100%;border-radius:8px" src="/files/{{ p.id }}/{{ i }}"></video><div class="meta">{{ i.split('/')[-1] }}</div></div>{% else %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endif %}{% endfor %}</div></div>
 {% endfor %}
 
+<h2 id="brag">Launch video (brag)</h2>
+<div class="panel">
+  <p class="meta" style="margin-top:0">A 12-30 s video with generated music, motion and ready-to-paste captions for Pinterest, Reels, TikTok and Shorts. Built only from this product's facts.</p>
+  {% if brag_running %}<p>Rendering... reload in a minute.</p>{% endif %}
+  <form method="post" action="/product/{{ p.id }}/brag" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+    <label>Tone<br><input name="tone" placeholder="polished, playful, cinematic..."></label>
+    <label>Format<br><select name="fmt"><option>vertical</option><option>landscape</option><option>square</option><option>all</option></select></label>
+    <label>Seconds<br><input name="duration" type="number" min="12" max="30" value="20" style="width:70px"></label>
+    <label><input type="checkbox" name="voice" value="1"> Voice-over</label>
+    <label><input type="checkbox" name="captions" value="1"> Captions</label>
+    <button>{{ 'Make another' if brag.videos else 'Make video' }}</button>
+  </form>
+  {% for v in brag.videos %}<div style="margin-top:12px"><video controls preload="metadata" style="max-width:320px;max-height:420px" {% if brag.poster %}poster="/files/{{ p.id }}/{{ brag.poster }}"{% endif %} src="/files/{{ p.id }}/{{ v }}"></video>
+    <div class="meta"><a href="/files/{{ p.id }}/{{ v }}?download=1">{{ v.split('/')[-1] }}</a></div></div>{% endfor %}
+  {% if brag.share %}<details style="margin-top:10px"><summary>Share copy</summary><pre style="white-space:pre-wrap">{{ brag.share }}</pre></details>{% endif %}
+</div>
 <h2 id="editor">Visual editing (Penpot / Open Design)</h2>
 <div class="panel">
   <p class="meta" style="margin-top:0">Want to tweak a pin or the hero image by hand? Export layered SVGs (live text, separate image layers), edit them in <b>Penpot</b> (free, open source) or Inkscape, export PNG/JPG with the same file names, and upload them here. Originals are backed up. Steps: <code>docs/editing.md</code>.</p>

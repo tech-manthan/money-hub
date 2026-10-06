@@ -1,0 +1,138 @@
+"""Small helpers around products: bundles, free samples, seasonal calendar, keyword ideas."""
+from __future__ import annotations
+
+import json
+import re
+import zipfile
+from datetime import date
+from pathlib import Path
+
+from .config import get_config
+from .store import Store
+
+# Approximate public fee schedules; they change, so the numbers are labelled estimates in all output.
+FEES = {
+    "etsy": {"pct": 0.065 + 0.03, "fixed": 0.20 + 0.25, "note": "6.5% transaction + ~3% & $0.25 payment processing + $0.20 listing (estimate; check Etsy's fee page)"},
+    "gumroad": {"pct": 0.10, "fixed": 0.50, "note": "10% + $0.50 flat fee (estimate; 30% via Discover; check Gumroad)"},
+    "payhip": {"pct": 0.05, "fixed": 0.0, "note": "free plan ~5% + processor fees (estimate; check Payhip)"},
+    "kofi": {"pct": 0.0, "fixed": 0.0, "note": "0% commission + processor fees (estimate; check Ko-fi)"},
+}
+
+
+def net_after_fees(price: float, marketplace: str) -> float:
+    f = FEES[marketplace]
+    return round(price * (1 - f["pct"]) - f["fixed"], 2)
+
+
+def bundle_price(prices: list[float], discount: float = 0.30) -> float:
+    """Sum of parts less a discount, ending in .99 or .00 when sensible, never below the priciest single item."""
+    raw = max(sum(prices) * (1 - discount), max(prices) + 1.0)
+    return float(int(raw)) + 0.99 if raw - int(raw) >= 0.5 else max(float(int(raw)) - 0.01, 0.99)
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "bundle"
+
+
+def make_bundle(pids: list[int], name: str, discount: float = 0.30, store: Store | None = None) -> Path:
+    if len(pids) < 2:
+        raise ValueError("a bundle needs at least two products")
+    store = store or Store()
+    rows = []
+    for pid in pids:
+        p = store.product(pid)
+        if not p:
+            raise ValueError(f"no product #{pid}")
+        rows.append(p)
+    out = Path(get_config().output_dir) / "bundles" / f"{date.today():%Y%m%d}-{_slug(name)}"
+    (out / "product").mkdir(parents=True, exist_ok=True)
+    zpath = out / "product" / f"{_slug(name)}.zip"
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in rows:
+            for f in sorted((Path(p["folder"]) / "product").glob("*")):
+                if f.is_file():
+                    z.write(f, f"{_slug(p['title'])[:30]}/{f.name}")
+    prices = [float(p["price"] or 0) for p in rows]
+    price = bundle_price([x or 5.0 for x in prices], discount)
+    nets = "\n".join(f"- {m}: you keep about ${net_after_fees(price, m):.2f} - {FEES[m]['note']}" for m in FEES)
+    tags = []
+    for p in rows:
+        lst = Path(p["folder"]) / "listing" / "listing.json"
+        if lst.exists():
+            tags += json.loads(lst.read_text()).get("copy_", {}).get("tags", [])
+    tags = list(dict.fromkeys(t for t in tags if len(t) <= 20))[:13]
+    items = "\n".join(f"- {p['title']} (sold separately at ${float(p['price'] or 0):.2f})" for p in rows)
+    (out / "listing.md").write_text(
+        f"# {name}\n\n**Suggested price:** ${price:.2f} (sum of parts ${sum(prices):.2f}, {int(discount * 100)}% bundle discount)\n\n"
+        f"## What you keep (estimates)\n{nets}\n\n## Tags (reused from the products, max 13)\n{', '.join(tags)}\n\n"
+        f"## Description starter\nA bundle of {len(rows)} digital downloads, saving {int(discount * 100)}% against buying them one by one.\n\n"
+        f"Included:\n{items}\n\nInstant digital download - no physical item will be shipped. Personal use only.\n"
+        f"(If any product used AI assistance, keep the AI disclosure line from its listing.)\n", encoding="utf-8")
+    return out
+
+
+def make_sample(pid: int, pages: int = 2, store: Store | None = None) -> Path | None:
+    """Free preview PDF (first pages of the main PDF) for lead magnets and Pinterest/email."""
+    from pypdf import PdfReader, PdfWriter
+    p = (store or Store()).product(pid)
+    if not p:
+        raise ValueError(f"no product #{pid}")
+    folder = Path(p["folder"])
+    pdfs = sorted(f for f in (folder / "product").glob("*.pdf") if not f.name.startswith("00-"))
+    if not pdfs:
+        return None
+    reader = PdfReader(str(pdfs[0]))
+    w = PdfWriter()
+    for page in reader.pages[: max(1, pages)]:
+        w.add_page(page)
+    w.add_metadata({"/Title": f"{p['title']} - free sample"})
+    out = folder / "sample"
+    out.mkdir(exist_ok=True)
+    dst = out / f"sample-{pdfs[0].stem}.pdf"
+    with open(dst, "wb") as fh:
+        w.write(fh)
+    return dst
+
+
+# month -> (occasion, what sells). General guidance: start 2-3 months ahead because listings need time to be indexed.
+CALENDAR = {
+    1: [("New year reset", "planners, goal setting, habit and budget trackers"), ("Tax season prep", "expense and receipt trackers")],
+    2: [("Valentine's Day", "cards, couple journals, gift tags"), ("Wedding season planning", "wedding planners, checklists")],
+    3: [("Spring cleaning", "cleaning schedules, decluttering checklists"), ("Easter", "kids activities, printable cards")],
+    4: [("Mother's Day (May)", "gift cards, memory journals"), ("Graduation (May-June)", "cards, memory books, study planners")],
+    5: [("Summer break", "kids routines, travel planners"), ("Father's Day (June)", "cards, journals")],
+    6: [("Back to school (Jul-Sep)", "teacher planners, student planners, classroom printables")],
+    7: [("Back to school", "student planners, lesson planners"), ("Fall planning", "undated planners, 12-month")],
+    8: [("Halloween (Oct)", "party printables, kids activities"), ("Teacher gifts", "gift cards, appreciation notes")],
+    9: [("Thanksgiving (Nov)", "meal planners, gratitude journals"), ("Q4 business planning", "business planners, content calendars")],
+    10: [("Christmas / holidays", "advent calendars, gift trackers, holiday budgets, cards"), ("Black Friday", "bundles")],
+    11: [("Next-year planners", "dated and undated planners, goal workbooks"), ("Christmas last minute", "instant-download gift cards")],
+    12: [("New-year reset", "planners, habit trackers, budget trackers"), ("Tax prep", "receipt trackers")],
+}
+
+
+def calendar(today: date | None = None, months: int = 4) -> list[dict]:
+    today = today or date.today()
+    out = []
+    for k in range(months):
+        m = (today.month - 1 + k) % 12 + 1
+        for occasion, ideas in CALENDAR[m]:
+            out.append({"month": m, "in_months": k, "occasion": occasion, "ideas": ideas})
+    return out
+
+
+def keyword_ideas(seed: str, suggest: bool = False) -> list[str]:
+    """Related search phrases. Offline: seed + common modifiers. Optional: Google autocomplete (public suggest endpoint)."""
+    seed = seed.strip().lower()
+    mods = ["printable", "digital download", "template", "pdf", "for women", "for men", "for kids", "for teachers", "for nurses",
+            "for students", "goodnotes", "minimalist", "aesthetic", "undated", "2027", "instant download"]
+    ideas = [f"{seed} {m}" for m in mods]
+    if suggest:
+        import httpx
+        for q in (seed, f"{seed} printable", f"{seed} template"):
+            try:
+                r = httpx.get("https://suggestqueries.google.com/complete/search", params={"client": "firefox", "q": q}, timeout=8)
+                ideas += [s for s in r.json()[1] if isinstance(s, str)]
+            except Exception:  # noqa: BLE001
+                break
+    return list(dict.fromkeys(ideas))
