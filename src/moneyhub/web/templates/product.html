@@ -48,6 +48,18 @@
 <div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}{% if i.endswith('.mp4') %}<div><video controls preload="metadata" style="width:100%;border-radius:8px" src="/files/{{ p.id }}/{{ i }}"></video><div class="meta">{{ i.split('/')[-1] }}</div></div>{% else %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endif %}{% endfor %}</div></div>
 {% endfor %}
 
+<h2 id="editor">Visual editing (Penpot / Open Design)</h2>
+<div class="panel">
+  <p class="meta" style="margin-top:0">Want to tweak a pin or the hero image by hand? Export layered SVGs (live text, separate image layers), edit them in <b>Penpot</b> (free, open source) or Inkscape, export PNG/JPG with the same file names, and upload them here. Originals are backed up. Steps: <code>docs/editing.md</code>.</p>
+  <form method="post" action="/product/{{ p.id }}/editable" style="display:inline"><button class="ghost sm">{{ 'Re-export' if editable else 'Export editable files' }}</button></form>
+  {% if editable %}<a class="btn ghost sm" href="/product/{{ p.id }}/editable.zip">Download editable.zip</a>
+  <div class="gallery" style="margin-top:12px">{% for f in editable %}{% if 'pins' in f or 'listing' in f or 'posters' in f %}<a href="/files/{{ p.id }}/{{ f }}" target="_blank"><img loading="lazy" src="/files/{{ p.id }}/{{ f }}"><div class="meta">{{ f.split('/')[-1] }}</div></a>{% endif %}{% endfor %}</div>{% endif %}
+  <form method="post" action="/product/{{ p.id }}/edits" enctype="multipart/form-data" style="margin-top:12px">
+    <label>Upload your edited exports (named like <code>pin-01.png</code>, <code>01-hero.jpg</code>, <code>gumroad-cover.png</code>)</label>
+    <input type="file" name="files" multiple accept="image/*"> <button class="sm">Replace images</button>
+  </form>
+</div>
+
 <h2>Upload guides</h2>
 <div class="tabs">{% for m in guides %}<button data-group="guide" data-tab="g-{{ m }}" class="{{ 'on' if loop.first }}">{{ m }}</button>{% endfor %}</div>
 {% for m, text in guides.items() %}

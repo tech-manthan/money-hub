@@ -62,7 +62,8 @@ def ffmpeg_exe() -> str | None:
 
 
 def available() -> bool:
-    return ffmpeg_exe() is not None
+    """True when at least one motion engine can render."""
+    return any(e.available() for e in ENGINES.values())
 
 
 def _ease(t: float) -> float:
@@ -169,8 +170,8 @@ class _Renderer:
         return img
 
 
-def render_video(plan: MotionPlan, pages: list[Image.Image], brush: g.Brush, out: Path, size=(1000, 1500),
-                 title: str = "", fps: int = 24) -> Path | None:
+def _render_pillow(plan: MotionPlan, pages: list[Image.Image], brush: g.Brush, out: Path, size=(1000, 1500),
+                   title: str = "", fps: int = 24) -> Path | None:
     exe = ffmpeg_exe()
     if not exe or not pages:
         log.warning("video skipped: ffmpeg not available")
@@ -201,3 +202,183 @@ def render_video(plan: MotionPlan, pages: list[Image.Image], brush: g.Brush, out
         log.warning("ffmpeg closed early: %s", proc.stderr.read().decode()[-300:])
         return None
     return out
+
+
+# ----------------------------------------------------------------------------- engines
+ENGINES_DIR = Path(__file__).resolve().parents[3] / "engines"
+
+
+class MotionEngine:
+    name = "base"
+    note = ""
+
+    def available(self) -> bool:
+        raise NotImplementedError
+
+    def render(self, plan, pages, brush, out, size, title, fps) -> Path | None:
+        raise NotImplementedError
+
+
+class PillowEngine(MotionEngine):
+    name = "pillow"
+    note = "built in (Pillow frames + ffmpeg)"
+
+    def available(self) -> bool:
+        return ffmpeg_exe() is not None
+
+    def render(self, plan, pages, brush, out, size, title, fps):
+        return _render_pillow(plan, pages, brush, out, size, title, fps)
+
+
+def _engine_assets(plan: MotionPlan, pages, brush: g.Brush, size, title, fps, workdir: Path) -> dict:
+    """Write page images + fonts to workdir and return the JSON props shared by the Remotion and Manim engines."""
+    import shutil as sh
+
+    from ..design import font_file
+    from ..paths import FONT_DIR
+
+    workdir.mkdir(parents=True, exist_ok=True)
+    names = []
+    for i, im in enumerate(pages[:6]):
+        n = f"page-{i}.png"
+        im.convert("RGB").save(workdir / n)
+        names.append(n)
+    st = brush.style
+    f = st.fonts
+    font_files, font_paths = [], []
+    for family, weights in ((f.heading, f.heading_weights), (f.body, f.body_weights), (f.script, (400, 700))):
+        for w in weights:
+            fn = font_file(family, w)
+            src = FONT_DIR / fn
+            if src.exists() and not any(x["file"] == fn for x in font_files):
+                sh.copy(src, workdir / fn)
+                font_files.append({"family": family, "weight": w, "file": fn})
+                font_paths.append(str(workdir / fn))
+    p = st.palette
+    return {
+        "width": size[0], "height": size[1], "fps": fps, "title": title,
+        "scenes": [s.model_dump() for s in plan.scenes], "pages": names,
+        "palette": {"paper": p.paper, "ink": p.ink, "muted": p.muted, "line": p.line, "accent": p.accent,
+                    "accentInk": p.accent_ink, "soft": p.soft, "accent2": p.accent2},
+        "fonts": {"heading": f.heading, "body": f.body, "script": f.script},
+        "fontFiles": font_files, "fontPaths": font_paths,
+    }
+
+
+class RemotionEngine(MotionEngine):
+    """Remotion (React video). Free for individuals and companies of up to 3 people; larger for-profit companies need a
+    Remotion company licence. Setup: `moneyhub engines install remotion` (needs Node 18+)."""
+    name = "remotion"
+    note = "React-based; needs Node + `moneyhub engines install remotion`; see Remotion licence terms"
+
+    @property
+    def project(self) -> Path:
+        from ..config import get_config
+        return Path(get_config().get("render.remotion_dir") or ENGINES_DIR / "remotion")
+
+    def browser(self) -> str | None:
+        """Explicit chrome-headless-shell path (config `render.remotion_browser` or MONEYHUB_REMOTION_BROWSER), else a
+        Playwright-managed headless shell if present, else None so Remotion downloads its own on first render."""
+        import glob
+        import os
+
+        from ..config import get_config
+        explicit = os.environ.get("MONEYHUB_REMOTION_BROWSER") or get_config().get("render.remotion_browser")
+        if explicit:
+            return explicit
+        found = sorted(glob.glob(os.path.join(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ""), "chromium_headless_shell-*", "chrome-linux*", "headless_shell")))
+        return found[-1] if found else None
+
+    def available(self) -> bool:
+        return bool(shutil.which("node")) and (self.project / "node_modules" / ".bin" / "remotion").exists()
+
+    def render(self, plan, pages, brush, out, size, title, fps):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            work = Path(td) / "public"
+            props = _engine_assets(plan, pages, brush, size, title, fps, work)
+            pj = Path(td) / "props.json"
+            pj.write_text(json.dumps(props))
+            out.parent.mkdir(parents=True, exist_ok=True)
+            cmd = [str(self.project / "node_modules" / ".bin" / "remotion"), "render", "src/index.ts", "MoneyVideo", str(out),
+                   f"--props={pj}", f"--public-dir={work}", "--log=error", "--concurrency=2", "--codec=h264"]
+            browser = self.browser()
+            if browser:
+                cmd.append(f"--browser-executable={browser}")
+            r = subprocess.run(cmd, cwd=self.project, capture_output=True, text=True, timeout=900)
+            if r.returncode != 0 or not out.exists():
+                log.warning("remotion failed: %s", (r.stderr or r.stdout)[-400:])
+                return None
+        return out
+
+
+class ManimEngine(MotionEngine):
+    """Manim Community Edition (MIT). Install: `pip install manim` (needs Cairo/Pango; on macOS `brew install pango cairo`)."""
+    name = "manim"
+    note = "needs `pip install manim` (+ Cairo/Pango)"
+
+    def command(self) -> str | None:
+        import os
+
+        from ..config import get_config
+        return os.environ.get("MONEYHUB_MANIM_COMMAND") or get_config().get("render.manim_command") or shutil.which("manim")
+
+    def available(self) -> bool:
+        return self.command() is not None
+
+    def render(self, plan, pages, brush, out, size, title, fps):
+        import json
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            work = Path(td) / "assets"
+            props = _engine_assets(plan, pages, brush, size, title, fps, work)
+            props["pages"] = [str(work / n) for n in props["pages"]]
+            pj = Path(td) / "plan.json"
+            pj.write_text(json.dumps(props))
+            media = Path(td) / "media"
+            cmd = [self.command(), "render", "-qh", "--format", "mp4", "-r", f"{size[0]},{size[1]}", "--fps", str(fps),
+                   "--media_dir", str(media), "-o", "moneyhub.mp4", "--disable_caching", str(ENGINES_DIR / "manim" / "scene.py"), "MoneyScene"]
+            env = dict(os.environ, MONEYHUB_PLAN=str(pj))
+            r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=1200)
+            produced = sorted(media.rglob("moneyhub.mp4"))
+            if r.returncode != 0 or not produced:
+                log.warning("manim failed: %s", (r.stderr or r.stdout)[-400:])
+                return None
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(produced[-1], out)
+        return out
+
+
+ENGINES: dict[str, MotionEngine] = {e.name: e for e in (PillowEngine(), RemotionEngine(), ManimEngine())}
+
+
+def engine_status() -> list[dict]:
+    from ..config import get_config
+    chain = get_config().get("render.motion") or ["pillow"]
+    return [{"name": n, "available": e.available(), "enabled": n in chain, "note": e.note} for n, e in ENGINES.items()]
+
+
+def render_video(plan: MotionPlan, pages: list[Image.Image], brush: g.Brush, out: Path, size=(1000, 1500),
+                 title: str = "", fps: int = 24, engines: list[str] | None = None) -> Path | None:
+    """Render with the first working engine of the chain (config `render.motion`, default [pillow])."""
+    from ..config import get_config
+
+    if not pages:
+        return None
+    for name in engines or get_config().get("render.motion") or ["pillow"]:
+        e = ENGINES.get(name)
+        if not e or not e.available():
+            log.info("motion engine %s unavailable", name)
+            continue
+        try:
+            res = e.render(plan, pages, brush, out, size, title, fps)
+        except Exception as ex:  # noqa: BLE001 - fall through to the next engine
+            log.warning("motion engine %s failed: %s", name, ex)
+            continue
+        if res:
+            return res
+    return None

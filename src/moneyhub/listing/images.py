@@ -34,7 +34,7 @@ def _preview_pages(build: BuildResult, want: int = 6) -> tuple[list[Image.Image]
 
 
 def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str, copy, sizes_labels: list[str],
-                router=None, niche=None, providers=None, videos: bool = False) -> dict[str, list[Path]]:
+                router=None, niche=None, providers=None, videos: bool = False, motion_engines: list[str] | None = None) -> dict[str, list[Path]]:
     brush = g.Brush(style)
     main, extra = _preview_pages(build)
     if not main:
@@ -75,11 +75,11 @@ def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str,
         out["pinterest"].append(g.save(
             g.pin(main + extra[:1], headline, build.title, i, brush), out_dir / "images" / "pinterest" / f"pin-{i + 1:02d}-1000x1500.png"))
     if videos:
-        out["video"] = _videos(build, brush, out_dir, copy, main + extra[:2], router, niche, providers)
+        out["video"] = _videos(build, brush, out_dir, copy, main + extra[:2], router, niche, providers, motion_engines)
     return out
 
 
-def _videos(build, brush, out_dir, copy, pages, router, niche, providers) -> list[Path]:
+def _videos(build, brush, out_dir, copy, pages, router, niche, providers, engines=None) -> list[Path]:
     from ..render import motion
 
     if not motion.available():
@@ -91,7 +91,7 @@ def _videos(build, brush, out_dir, copy, pages, router, niche, providers) -> lis
         plan = motion.builtin_plan(build.title, build.subtitle, build.features, copy.pin_headlines[0] if copy.pin_headlines else build.title)
     vids = []
     for name, size in (("pin-video-1000x1500.mp4", (1000, 1500)), ("listing-video-1920x1080.mp4", (1920, 1080))):
-        v = motion.render_video(plan, pages, brush, out_dir / "images" / "video" / name, size, build.title)
+        v = motion.render_video(plan, pages, brush, out_dir / "images" / "video" / name, size, build.title, engines=engines)
         if v:
             vids.append(v)
     return vids

@@ -1,0 +1,20 @@
+{
+  "name": "moneyhub-remotion",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Remotion engine for MoneyHub video pins and listing videos. Remotion is free for individuals and companies with up to 3 people; larger for-profit companies need a Remotion company licence (https://www.remotion.pro/license).",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts MoneyVideo"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.250",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.250"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.3",
+    "typescript": "5.5.4"
+  }
+}

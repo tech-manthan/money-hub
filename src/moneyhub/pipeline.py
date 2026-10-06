@@ -38,6 +38,7 @@ class Request:
     options: dict = field(default_factory=dict)
     with_images: bool = True
     with_video: bool = True
+    motion: list[str] | None = None            # video engine chain override, e.g. ["remotion", "pillow"]
 
 
 @dataclass
@@ -91,7 +92,8 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     if req.with_images:
         say("Creating listing images and pins")
         images = make_images(build, style, folder, ptype.key, kit.copy_, labels, router=router, niche=niche,
-                             providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)))
+                             providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)),
+                             motion_engines=req.motion)
     say("Writing marketplace guides")
     render_guides(folder, kit, build, images, style.palette.key, req.marketplaces)
     (folder / "listing").mkdir(exist_ok=True)

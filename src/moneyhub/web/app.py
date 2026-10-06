@@ -112,12 +112,13 @@ def product(request: Request, pid: int):
     for m in ("etsy", "gumroad", "payhip", "kofi", "pinterest", "video"):
         d = folder / "images" / m
         images[m] = [str(x.relative_to(folder)) for x in sorted(d.glob("*"))] if d.exists() else []
+    editable = [str(f.relative_to(folder)) for f in sorted((folder / "editable").glob("*/*.svg"))] if (folder / "editable").exists() else []
     guides = {}
     for g in sorted((folder / "listing").glob("guide-*.md")):
         guides[g.stem.replace("guide-", "")] = g.read_text()
     return templates.TemplateResponse(request, "product.html", _ctx(
         request, p=p, qa=json.loads(p["qa"] or "[]"), listing=listing, spec=spec, files=files, pages=pages,
-        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else ""))
+        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable))
 
 
 @app.get("/ideas", response_class=HTMLResponse)
@@ -131,6 +132,51 @@ def make_ideas(n: int = Form(15), focus: str = Form(""), llm: str = Form("")):
     from ..ideas import suggest_ideas
     provs = [x.strip() for x in llm.split(",") if x.strip()] or None
     return {"job": _submit(f"ideas: {focus or 'any'}", lambda job: {"ideas": len(suggest_ideas(n, focus or None, provs)["ideas"])})}
+
+
+@app.post("/product/{pid}/editable")
+def export_edit(pid: int):
+    from ..editable import export_editable
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    export_editable(Path(p["folder"]), pid)
+    return RedirectResponse(f"/product/{pid}#editor", status_code=303)
+
+
+@app.get("/product/{pid}/editable.zip")
+def editable_zip(pid: int):
+    import io
+    import zipfile
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    root = Path(p["folder"]) / "editable"
+    if not root.exists():
+        raise HTTPException(404, "export the editable files first")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(root.rglob("*")):
+            if f.is_file() and "edited" not in f.relative_to(root).parts[:1]:
+                z.write(f, f.relative_to(root))
+    from fastapi.responses import Response
+    return Response(buf.getvalue(), media_type="application/zip", headers={"Content-Disposition": f"attachment; filename=editable-{pid}.zip"})
+
+
+@app.post("/product/{pid}/edits")
+async def upload_edits(pid: int, request: Request):
+    import tempfile
+    from ..editable import import_edits
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    form = await request.form()
+    with tempfile.TemporaryDirectory() as td:
+        for f in form.getlist("files"):
+            if getattr(f, "filename", ""):
+                (Path(td) / Path(f.filename).name).write_bytes(await f.read())
+        import_edits(Path(p["folder"]), Path(td))
+    return RedirectResponse(f"/product/{pid}", status_code=303)
 
 
 @app.post("/product/{pid}/regenerate")

@@ -39,8 +39,13 @@ def run() -> list[Item]:
         except ImportError:
             items.append(Item(label, False, "missing", True, "pip install -e ."))
     from .render import motion
-    items.append(Item("ffmpeg (video pins)", motion.available(), motion.ffmpeg_exe() or "not found", False,
+    items.append(Item("ffmpeg (video pins)", motion.ffmpeg_exe() is not None, motion.ffmpeg_exe() or "not found", False,
                       "brew install ffmpeg   (or pip install imageio-ffmpeg)"))
+    for e in motion.engine_status():
+        if e["name"] == "pillow":
+            continue
+        items.append(Item(f"Video engine: {e['name']} (optional)", e["available"], e["note"] if not e["available"] else ("ready" + (", in chain" if e["enabled"] else ", not in render.motion chain")), False,
+                          f"moneyhub engines install {e['name']}"))
     try:
         import playwright  # noqa: F401
         from .render.pdf import chromium_executable

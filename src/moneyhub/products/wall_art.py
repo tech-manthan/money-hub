@@ -71,30 +71,8 @@ class WallArt(ProductType[WallArtContent]):
     def build(self, ctx: BuildContext, content: WallArtContent) -> BuildResult:
         slug = self.slug(content.title)
         pal = ctx.style.palette
-        rng = ctx.rng
-        schemes = [(pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.accent, pal.accent_ink, True),
-                   (pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.ink, pal.paper, True)]
         use_ai = bool(ctx.options.get("ai_art"))
-        designs = []
-        ai_used = ""
-        for i, q in enumerate(content.quotes):
-            bg, fg, dark = schemes[i % len(schemes)]
-            motif = MOTIFS[(ctx.seed + i) % len(MOTIFS)]
-            n = len(q.text)
-            ai_bg = None
-            if use_ai:
-                made = generate_art(f"minimal abstract background art, soft shapes, {pal.key} colour palette, "
-                                    "no text, no people, flat illustration, lots of empty space", (1024, 1536))
-                if made:
-                    p = ctx.out_dir.parent / "art" / f"ai-{i + 1}.png"
-                    p.parent.mkdir(exist_ok=True)
-                    made[0].save(p)
-                    ai_bg, ai_used = p.as_uri(), made[1]
-            designs.append({
-                "text": q.text, "small": q.small, "bg": bg, "fg": fg, "layout": (i + ctx.seed) % 5,
-                "svg": motif_svg(motif, pal, ctx.seed * 31 + i, on_dark=dark), "ai_bg": ai_bg,
-                "fs": 5.4 if n <= 26 else 4.4 if n <= 56 else 3.6,
-            })
+        designs, ai_used = make_designs(content, ctx.style, ctx.seed, use_ai, ctx.out_dir.parent / "art")
         files: list[ProductFile] = []
         previews: list[Path] = []
         renderer = ""
@@ -133,6 +111,33 @@ class WallArt(ProductType[WallArtContent]):
         ]
         return BuildResult(content.title, content.subtitle, files, features, len(designs), renderer,
                            meta={"art_previews": previews, "ai_provider": ai_used if use_ai else ""})
+
+
+def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = False, art_dir: Path | None = None) -> tuple[list[dict], str]:
+    """Colour scheme, motif and layout for every poster. Deterministic for a given seed."""
+    pal = style.palette
+    schemes = [(pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.accent, pal.accent_ink, True),
+               (pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.ink, pal.paper, True)]
+    designs, ai_used = [], ""
+    for i, q in enumerate(content.quotes):
+        bg, fg, dark = schemes[i % len(schemes)]
+        motif = MOTIFS[(seed + i) % len(MOTIFS)]
+        n = len(q.text)
+        ai_bg = None
+        if use_ai and art_dir is not None:
+            made = generate_art(f"minimal abstract background art, soft shapes, {pal.key} colour palette, "
+                                "no text, no people, flat illustration, lots of empty space", (1024, 1536))
+            if made:
+                art_dir.mkdir(exist_ok=True)
+                p = art_dir / f"ai-{i + 1}.png"
+                made[0].save(p)
+                ai_bg, ai_used = p.as_uri(), made[1]
+        designs.append({
+            "text": q.text, "small": q.small, "bg": bg, "fg": fg, "layout": (i + seed) % 5,
+            "svg": motif_svg(motif, pal, seed * 31 + i, on_dark=dark), "ai_bg": ai_bg,
+            "fs": 5.4 if n <= 26 else 4.4 if n <= 56 else 3.6,
+        })
+    return designs, ai_used
 
 
 def _css(designs) -> str:

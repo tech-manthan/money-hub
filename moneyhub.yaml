@@ -45,6 +45,11 @@ render:
   videos: true
   # workers: 4        # parallel PDF renders
   # chromium_path: /Applications/Chromium.app/Contents/MacOS/Chromium
+  # Video engines tried in order: pillow (built in), remotion (React; `moneyhub engines install remotion`),
+  # manim (`moneyhub engines install manim`). Remotion needs a licence if your company has 4+ people.
+  motion: [pillow]
+  # remotion_browser: /path/to/chrome-headless-shell   # optional; Remotion downloads its own if unset
+  # manim_command: /path/to/manim
 
 defaults:
   page_sizes: [letter, a4]

@@ -6,3 +6,5 @@ out/
 .pytest_cache/
 moneyhub.local.yaml
 .env
+node_modules/
+engines/remotion/out/
