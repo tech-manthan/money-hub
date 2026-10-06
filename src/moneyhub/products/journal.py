@@ -56,6 +56,7 @@ class GuidedJournal(ProductType[JournalContent]):
     label = "Guided journal"
     description = "30 days of prompts with gratitude, mood and a small-step box, plus weekly check-ins."
     content_model = JournalContent
+    supported_sizes = ["letter", "a4", "eink"]
     price_range = (5.0, 12.0)
     typical_formats = "PDF (printable, also fillable on a tablet)"
 

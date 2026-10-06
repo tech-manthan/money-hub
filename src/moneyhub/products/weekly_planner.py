@@ -33,7 +33,7 @@ class WeeklyPlanner(ProductType[PlannerContent]):
     description = "Undated weekly planner with monthly overviews, goal pages and notes. Printable + hyperlinked tablet version."
     content_model = PlannerContent
     default_sizes = ["letter", "a4", "tablet"]
-    supported_sizes = ["letter", "a4", "a5", "tablet"]
+    supported_sizes = ["letter", "a4", "a5", "tablet", "eink"]
     price_range = (6.0, 15.0)
     typical_formats = "PDF (printable + hyperlinked tablet)"
 
@@ -82,7 +82,7 @@ class WeeklyPlanner(ProductType[PlannerContent]):
         jobs, meta = [], []
         for size in ctx.sizes:
             page = ctx.page(size)
-            hyper = size == "tablet"
+            hyper = size in ("tablet", "eink")
             out = ctx.out_dir / f"{slug}-{size}{'-hyperlinked' if hyper else ''}.pdf"
             jobs.append((page, out, {"content": content, "hyper": hyper}))
             meta.append((page, out, hyper))
@@ -101,6 +101,8 @@ class WeeklyPlanner(ProductType[PlannerContent]):
         ]
         if "tablet" in ctx.sizes:
             features.append("Hyperlinked tabs for GoodNotes, Notability and Samsung Notes")
+        if "eink" in ctx.sizes:
+            features.append("Black-and-white, hyperlinked pages made for reMarkable, Kindle Scribe and Boox")
         return BuildResult(content.title, content.subtitle, files, features, pages, renderer,
                            meta={"weeks": content.weeks, "sizes": ctx.sizes})
 

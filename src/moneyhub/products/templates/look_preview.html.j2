@@ -1,0 +1,20 @@
+{% from '_macros.html.j2' import header, lines, box, footer %}
+<div class="page">
+  {{ header(style, title, 'Week of ______ / ______') }}
+  <div style="display:flex;gap:.7em;margin-bottom:.7em">
+    <div class="card soft" style="flex:1"><div class="label">This week's focus</div><div style="font-size:.9em;margin-top:.2em">Small steps, steady progress.</div></div>
+    <div class="card" style="flex:1"><div class="label">Habits</div>
+      <div class="small"><span class="check"></span>Water &nbsp; <span class="check"></span>Walk &nbsp; <span class="sq"></span>Read</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:.7em">
+    {% for d in ['M','T','W','T','F','S','S'] %}<div style="text-align:center;padding:.25em 0;font-size:.7em;font-weight:700;color:var(--accent);background:var(--soft)">{{ d }}</div>{% endfor %}
+    {% for i in range(14) %}<div style="height:2.1em;border-top:1px solid var(--line);{% if i % 7 != 6 %}border-right:1px solid var(--line){% endif %}"></div>{% endfor %}
+  </div>
+  <div class="fill">{{ box('Notes', 5) }}</div>
+  <div style="margin-top:.7em;display:flex;gap:.5em;align-items:center">
+    <span style="background:var(--accent);color:var(--accent-ink);border-radius:99em;padding:.2em .9em;font-size:.75em;font-weight:700">Instant download</span>
+    <span style="background:var(--accent2);color:#fff;border-radius:99em;padding:.2em .9em;font-size:.75em;font-weight:700">Printable</span>
+    <span class="script" style="font-size:1.2em;margin-left:auto">{{ tagline }}</span>
+  </div>
+  {{ footer(title, false, 'moneyhub') }}
+</div>

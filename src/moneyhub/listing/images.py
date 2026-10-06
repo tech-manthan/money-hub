@@ -34,7 +34,10 @@ def _preview_pages(build: BuildResult, want: int = 6) -> tuple[list[Image.Image]
 
 
 def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str, copy, sizes_labels: list[str],
-                router=None, niche=None, providers=None, videos: bool = False, motion_engines: list[str] | None = None) -> dict[str, list[Path]]:
+                router=None, niche=None, providers=None, videos: bool = False, motion_engines: list[str] | None = None,
+                marketplaces: list[str] | None = None) -> dict[str, list[Path]]:
+    """Listing images for the chosen marketplaces only (all of them by default)."""
+    want = set(marketplaces or ["etsy", "gumroad", "payhip", "kofi", "pinterest"])
     brush = g.Brush(style)
     main, extra = _preview_pages(build)
     if not main:
@@ -54,32 +57,39 @@ def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str,
         badges = ["Instant download", "High-res JPG", "5 print ratios"]
     out: dict[str, list[Path]] = {"etsy": [], "gumroad": [], "payhip": [], "kofi": [], "pinterest": [], "video": []}
 
-    et = out_dir / "images" / "etsy"
-    out["etsy"] += [
-        g.save(g.gallery_wall(main, build.title, build.subtitle, brush) if is_art else g.hero(main, build.title, build.subtitle, badges, brush), et / "01-hero.jpg"),
-        g.save(g.included(main, build.features, brush), et / "02-whats-included.jpg"),
-        g.save(g.page_grid(extra[1:] or main, "A look inside", brush), et / "03-inside.jpg"),
-        g.save(g.sizes_image(sizes_labels, ("Instant JPG download. Print at home or at any print shop." if is_art else "Instant PDF download. " + ("Spreadsheet works in Excel, Google Sheets and Numbers." if any(f.kind == "xlsx" for f in build.files) else "Print at home or at a print shop.")), main, brush), et / "04-sizes-formats.jpg"),
-        g.save(g.how_it_works([("Buy", "Check out securely on the marketplace."), ("Download", "Get your files instantly after payment."), ("Use it", "Print it or open it on your device.")], brush), et / "05-how-it-works.jpg"),
-        g.save(g.detail(extra[min(2, len(extra) - 1)], "Designed to be used, not just admired", brush), et / "06-detail.jpg"),
-    ]
-    for n, im in enumerate(sheet_imgs):
-        out["etsy"].append(g.save(im, et / f"{7 + n:02d}-spreadsheet-illustration.jpg"))
-    out["gumroad"] += [
+    if "etsy" in want:
+        et = out_dir / "images" / "etsy"
+        out["etsy"] += [
+            g.save(g.gallery_wall(main, build.title, build.subtitle, brush) if is_art else g.hero(main, build.title, build.subtitle, badges, brush), et / "01-hero.jpg"),
+            g.save(g.included(main, build.features, brush), et / "02-whats-included.jpg"),
+            g.save(g.page_grid(extra[1:] or main, "A look inside", brush), et / "03-inside.jpg"),
+            g.save(g.sizes_image(sizes_labels, ("Instant JPG download. Print at home or at any print shop." if is_art else "Instant PDF download. " + ("Spreadsheet works in Excel, Google Sheets and Numbers." if any(f.kind == "xlsx" for f in build.files) else "Print at home or at a print shop.")), main, brush), et / "04-sizes-formats.jpg"),
+            g.save(g.how_it_works([("Buy", "Check out securely on the marketplace."), ("Download", "Get your files instantly after payment."), ("Use it", "Print it or open it on your device.")], brush), et / "05-how-it-works.jpg"),
+            g.save(g.detail(extra[min(2, len(extra) - 1)], "Designed to be used, not just admired", brush), et / "06-detail.jpg"),
+        ]
+        for n, im in enumerate(sheet_imgs):
+            out["etsy"].append(g.save(im, et / f"{7 + n:02d}-spreadsheet-illustration.jpg"))
+    if "gumroad" in want:
+        out["gumroad"] += [
         g.save(g.cover_wide(main, build.title, build.subtitle, brush, (1280, 720)), out_dir / "images" / "gumroad" / "cover-1280x720.png"),
         g.save(g.square(main, build.title, build.subtitle, brush, (600, 600)), out_dir / "images" / "gumroad" / "thumbnail-600x600.png"),
     ]
-    out["payhip"] += [g.save(g.cover_wide(main, build.title, build.subtitle, brush, (1600, 1067)), out_dir / "images" / "payhip" / "cover-1600x1067.png")]
-    out["kofi"] += [g.save(g.square(main, build.title, build.subtitle, brush, (1000, 1000)), out_dir / "images" / "kofi" / "square-1000x1000.png")]
-    for i, headline in enumerate(copy.pin_headlines[:6]):
-        out["pinterest"].append(g.save(
-            g.pin(main + extra[:1], headline, build.title, i, brush), out_dir / "images" / "pinterest" / f"pin-{i + 1:02d}-1000x1500.png"))
-    if videos:
-        out["video"] = _videos(build, brush, out_dir, copy, main + extra[:2], router, niche, providers, motion_engines)
+    if "payhip" in want:
+        out["payhip"] += [g.save(g.cover_wide(main, build.title, build.subtitle, brush, (1600, 1067)), out_dir / "images" / "payhip" / "cover-1600x1067.png")]
+    if "kofi" in want:
+        out["kofi"] += [g.save(g.square(main, build.title, build.subtitle, brush, (1000, 1000)), out_dir / "images" / "kofi" / "square-1000x1000.png")]
+    if "pinterest" in want:
+        for i, headline in enumerate(copy.pin_headlines[:6]):
+            out["pinterest"].append(g.save(
+                g.pin(main + extra[:1], headline, build.title, i, brush), out_dir / "images" / "pinterest" / f"pin-{i + 1:02d}-1000x1500.png"))
+    if videos and want & {"etsy", "pinterest"}:
+        specs = [spec for spec, market in ((("pin-video-1000x1500.mp4", (1000, 1500)), "pinterest"),
+                                          (("listing-video-1920x1080.mp4", (1920, 1080)), "etsy")) if market in want]
+        out["video"] = _videos(build, brush, out_dir, copy, main + extra[:2], router, niche, providers, motion_engines, specs)
     return out
 
 
-def _videos(build, brush, out_dir, copy, pages, router, niche, providers, engines=None) -> list[Path]:
+def _videos(build, brush, out_dir, copy, pages, router, niche, providers, engines=None, specs=None) -> list[Path]:
     from ..render import motion
 
     if not motion.available():
@@ -91,7 +101,7 @@ def _videos(build, brush, out_dir, copy, pages, router, niche, providers, engine
         plan = motion.builtin_plan(build.title, build.subtitle, build.features, copy.pin_headlines[0] if copy.pin_headlines else build.title)
     plan = motion.fit_duration(plan, 14.0)
     vids = []
-    for name, size in (("pin-video-1000x1500.mp4", (1000, 1500)), ("listing-video-1920x1080.mp4", (1920, 1080))):
+    for name, size in specs or (("pin-video-1000x1500.mp4", (1000, 1500)), ("listing-video-1920x1080.mp4", (1920, 1080))):
         v = motion.render_video(plan, pages, brush, out_dir / "images" / "video" / name, size, build.title, engines=engines)
         if v:
             vids.append(v)

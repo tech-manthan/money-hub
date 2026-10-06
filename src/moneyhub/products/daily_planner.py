@@ -32,7 +32,7 @@ class DailyPlanner(ProductType[DailyContent]):
     description = "Undated one-page-per-day planner with hourly schedule, priorities, to-do list and niche boxes."
     content_model = DailyContent
     default_sizes = ["letter", "a4"]
-    supported_sizes = ["letter", "a4", "a5"]
+    supported_sizes = ["letter", "a4", "a5", "eink"]
     price_range = (5.0, 12.0)
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> DailyContent:

@@ -29,16 +29,45 @@
   function syncType() {
     const wall = val('product_type') === 'wall_art';
     $('#wall-opts').hidden = !wall; $('#ai-wrap').hidden = !wall;
+    const r = $(`input[name="product_type"]:checked`);
+    $('#eink-wrap').hidden = !(r && r.dataset.eink === '1');
+    if ($('#eink-wrap').hidden) $('#opt-eink').checked = false;
+  }
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  function shuffleLook() {
+    const r = $('input[name="lookmode"][value="pick"]'); r.checked = true; $('#look-pick').hidden = false;
+    $('#use-brand').checked = false; $('#brand').disabled = true;
+    const radios = n => $$(`input[name="${n}"]`).filter(x => x.value);
+    pick(radios('palette')).checked = true; pick(radios('fonts')).checked = true;
+    ['header', 'radius', 'grid'].forEach(id => { const o = [...$('#' + id).options].filter(x => x.value); $('#' + id).value = pick(o).value; });
+    updatePreview();
+  }
+  let prevTimer = null;
+  function updatePreview() {
+    clearTimeout(prevTimer);
+    prevTimer = setTimeout(() => {
+      const q = new URLSearchParams();
+      if (val('lookmode') === 'pick') {
+        const l = look(); ['palette', 'fonts', 'header', 'radius', 'grid', 'brand'].forEach(k => l[k] && q.set(k, l[k]));
+        $('#prev-note').textContent = '';
+      } else $('#prev-note').textContent = 'Shown in a sample look. With "Choose for me" we match colours to your audience.';
+      if ($('#opt-eink') && $('#opt-eink').checked) q.set('eink', '1');
+      $('#look-preview').src = '/api/preview.png?' + q;
+    }, 200);
   }
 
   $('#ideas').addEventListener('change', e => { if (e.target.name === 'idea') pickIdea(e.target); });
   $('#types').addEventListener('change', syncType);
   $('#custom-toggle').addEventListener('click', () => setCustom(!customOn));
   $('#surprise').addEventListener('click', () => {
-    const all = $$('input[name="idea"]'); const r = all[Math.floor(Math.random() * all.length)];
-    pickIdea(r); r.closest('.idea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const all = $$('input[name="idea"]'); const r = pick(all);
+    pickIdea(r); shuffleLook(); r.closest('.idea').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
-  $$('input[name="lookmode"]').forEach(r => r.addEventListener('change', () => { $('#look-pick').hidden = val('lookmode') !== 'pick'; }));
+  $('#shuffle').addEventListener('click', shuffleLook);
+  $$('input[name="lookmode"]').forEach(r => r.addEventListener('change', () => { $('#look-pick').hidden = val('lookmode') !== 'pick'; updatePreview(); }));
+  $('#look-pick').addEventListener('change', e => { if (e.target.id === 'use-brand') $('#brand').disabled = !e.target.checked; updatePreview(); });
+  $('#brand').addEventListener('input', updatePreview);
+  $('#opt-eink').addEventListener('change', updatePreview);
 
   function go(n) {
     if (n > step && step === 1) {
@@ -48,6 +77,7 @@
     step = n;
     $$('.step').forEach(s => s.classList.toggle('on', +s.dataset.step === n));
     $$('#stepper li').forEach(li => { const k = +li.dataset.step; li.classList.toggle('on', k === n); li.classList.toggle('done', k < n); });
+    if (n === 2) updatePreview();
     if (n === 3) summarise();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -55,24 +85,31 @@
 
   function look() {
     if (val('lookmode') !== 'pick') return {};
-    const o = { palette: val('palette'), fonts: val('fonts'), header: sel('header'), radius: sel('radius'), grid: sel('grid'), seed: sel('seed') };
+    const o = { palette: $('#use-brand').checked ? '' : val('palette'), brand: $('#use-brand').checked ? sel('brand') : '', fonts: val('fonts'),
+                header: sel('header'), radius: sel('radius'), grid: sel('grid'), seed: sel('seed') };
     if (val('product_type') === 'wall_art') { o.motif = sel('motif'); o.layout = sel('layout'); }
     return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== ''));
   }
+  const markets = () => $$('input[name="mk"]:checked').map(x => x.value);
   function payload() {
     const o = { niche: niche(), product_type: val('product_type'), ...look() };
     if (!$('#opt-video').checked) o.no_video = '1';
+    if ($('#opt-eink').checked) o.eink = '1';
     if (val('product_type') === 'wall_art' && $('#opt-ai').checked) o.ai_art = '1';
     return o;
   }
   function summarise() {
     const l = look(), bits = [];
     if (l.palette) bits.push(`<b>${l.palette}</b> colours`);
+    if (l.brand) bits.push(`your brand colour <b>${l.brand}</b>`);
+    if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
     $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
-    const p = payload(), flag = { palette: '--palette', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', layout: '--layout', seed: '--seed' };
+    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', layout: '--layout', seed: '--seed' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
+    if (p.eink) cmd += ' --eink';
+    const mk = markets(); if (mk.join() !== 'etsy,pinterest') cmd += ` --marketplaces ${mk.join(',')}`;
     if (p.no_video) cmd += ' --no-video';
     if (p.ai_art) cmd += ' --ai-art';
     $('#cli').textContent = cmd;
@@ -81,6 +118,7 @@
   let timer = null;
   async function make() {
     const body = new FormData(); Object.entries(payload()).forEach(([k, v]) => body.append(k, v));
+    markets().forEach(m => body.append('marketplaces', m));
     form.hidden = true; $('#stepper').hidden = true;
     const box = $('#progress'); box.hidden = false; $('#p-done').hidden = $('#p-error').hidden = true;
     $('#p-title').textContent = 'Making your product…'; $$('#p-steps li').forEach(li => li.className = '');

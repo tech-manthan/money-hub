@@ -36,6 +36,7 @@ class ChecklistPack(ProductType[ChecklistContent]):
     label = "Checklist pack"
     description = "A bundle of niche-specific printable checklists (routines, prep lists, resets, supplies)."
     content_model = ChecklistContent
+    supported_sizes = ["letter", "a4", "eink"]
     price_range = (3.0, 9.0)
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> ChecklistContent:

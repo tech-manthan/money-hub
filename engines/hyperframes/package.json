@@ -1,0 +1,10 @@
+{
+  "name": "moneyhub-hyperframes",
+  "private": true,
+  "version": "0.0.0",
+  "description": "HyperFrames (HTML to video) engine for MoneyHub launch and listing videos",
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "hyperframes": "latest"
+  }
+}

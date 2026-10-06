@@ -1,7 +1,9 @@
 """Design system: palettes, font pairings and layout variants, chosen from a seed so every product looks distinct."""
 from __future__ import annotations
 
+import colorsys
 import random
+import re
 from dataclasses import dataclass, field, asdict
 
 from .paths import FONT_DIR
@@ -59,6 +61,49 @@ PALETTES: list[Palette] = [
     Palette("mint", ("fresh", "clean", "kids"), "#FFFFFF", "#17302C", "#476560", "#D2E6E1", "#1F7A6D", "#FFFFFF", "#E3F4F0", "#D4713E"),
     Palette("plum", ("rich", "bold", "creative"), "#FFFFFF", "#2D1B2E", "#634B66", "#E6D6E7", "#7A2E7A", "#FFFFFF", "#F4E8F4", "#C98B2E"),
 ]
+
+# Black-on-white, no tints: for e-ink tablets (reMarkable, Kindle Scribe, Boox), where colour fills render as muddy grey.
+EINK = Palette("eink", ("minimal",), "#FFFFFF", "#000000", "#2B2B2B", "#8A8A8A", "#000000", "#FFFFFF", "#EFEFEF", "#4A4A4A")
+
+_HEX = re.compile(r"^#?([0-9a-fA-F]{6})$")
+
+
+def is_hex_colour(value: str | None) -> bool:
+    return bool(value and _HEX.match(value))
+
+
+def _to_rgb(h: str) -> tuple[float, float, float]:
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+def _to_hex(rgb) -> str:
+    return "#" + "".join(f"{round(max(0, min(1, c)) * 255):02X}" for c in rgb)
+
+
+def _mix(a: str, b: str, t: float) -> str:
+    ra, rb = _to_rgb(a), _to_rgb(b)
+    return _to_hex(tuple(x + (y - x) * t for x, y in zip(ra, rb)))
+
+
+def brand_palette(accent: str, accent2: str | None = None) -> Palette:
+    """Build a full palette from one brand colour. The accent is darkened if needed so text stays readable."""
+    accent = "#" + _HEX.match(accent).group(1).upper()  # type: ignore[union-attr]
+    h, light, sat = colorsys.rgb_to_hls(*_to_rgb(accent))
+    while contrast(accent, "#FFFFFF") < 4.5 and light > 0.05:  # white text/lines must read on it
+        light -= 0.03
+        accent = _to_hex(colorsys.hls_to_rgb(h, light, sat))
+    ink = _to_hex(colorsys.hls_to_rgb(h, 0.12, min(sat, 0.35)))
+    muted = _mix(ink, "#FFFFFF", 0.35)
+    while contrast(muted, "#FFFFFF") < 4.5:
+        muted = _mix(muted, ink, 0.2)
+    if accent2 and is_hex_colour(accent2):
+        second = "#" + _HEX.match(accent2).group(1).upper()  # type: ignore[union-attr]
+    else:  # a warm/cool counterpart: rotate the hue by 150 degrees
+        second = _to_hex(colorsys.hls_to_rgb((h + 150 / 360) % 1, 0.5, min(max(sat, 0.45), 0.7)))
+    return Palette("custom", ("custom",), "#FFFFFF", ink, muted, _mix(accent, "#FFFFFF", 0.82), accent, "#FFFFFF",
+                   _mix(accent, "#FFFFFF", 0.9), second)
+
 
 
 @dataclass(frozen=True)
@@ -132,8 +177,11 @@ class Style:
         return "\n".join(dict.fromkeys(parts))
 
     def describe(self) -> dict:
-        return {"palette": self.palette.key, "fonts": self.fonts.key, "header": self.header,
-                "radius": self.radius, "grid": self.grid, "seed": self.seed}
+        d = {"palette": self.palette.key, "fonts": self.fonts.key, "header": self.header,
+             "radius": self.radius, "grid": self.grid, "seed": self.seed}
+        if self.palette.key == "custom":  # not in the built-in list, so keep the colours to rebuild it later
+            d["colors"] = asdict(self.palette)
+        return d
 
 
 HEADERS = ["band", "rule", "box"]
@@ -143,18 +191,27 @@ GRIDS = ["solid", "dotted", "dashed"]
 
 def choose_style(seed: int | None = None, mood: str | None = None, palette: str | None = None,
                  fonts: str | None = None, header: str | None = None, radius: int | None = None,
-                 grid: str | None = None) -> Style:
-    """Random look from the seed; any of palette/fonts/header/radius/grid can be pinned."""
+                 grid: str | None = None, brand: str | None = None, eink: bool = False) -> Style:
+    """Random look from the seed; any of palette/fonts/header/radius/grid can be pinned.
+    brand: a hex colour to build the palette from. eink: black-and-white palette and crisp lines for e-ink tablets."""
     seed = random.SystemRandom().randrange(1, 10**6) if seed is None else seed
     rng = random.Random(seed)
     pool = [p for p in PALETTES if mood and mood in p.mood] or PALETTES
     pal = next((p for p in PALETTES if p.key == palette), None) or rng.choice(pool)
+    if brand and not is_hex_colour(brand):
+        raise ValueError(f"brand colour must look like #2F6B57, got {brand!r}")
+    if is_hex_colour(palette):
+        brand = brand or palette
+    if brand:
+        pal = brand_palette(brand)
+    if eink:
+        pal = EINK
     fp = next((f for f in FONT_PAIRS if f.key == fonts), None) or rng.choice(FONT_PAIRS)
     return Style(
         palette=pal, fonts=fp,
-        header=_pick(rng, HEADERS, header),
-        radius=_pick(rng, RADII, radius),
-        grid=_pick(rng, GRIDS, grid),
+        header=_pick(rng, HEADERS, header or ("rule" if eink else None)),
+        radius=_pick(rng, RADII, radius if radius is not None else (0 if eink else None)),
+        grid=_pick(rng, GRIDS, grid or ("solid" if eink else None)),
         seed=seed,
     )
 
@@ -173,8 +230,14 @@ def palette_keys() -> list[str]:
 
 
 def style_from_dict(d: dict) -> Style:
+    if d["palette"] == "eink":
+        pal = EINK
+    elif d["palette"] == "custom":
+        pal = Palette(**{**d["colors"], "mood": tuple(d["colors"]["mood"])})
+    else:
+        pal = next(p for p in PALETTES if p.key == d["palette"])
     return Style(
-        palette=next(p for p in PALETTES if p.key == d["palette"]),
+        palette=pal,
         fonts=next(f for f in FONT_PAIRS if f.key == d["fonts"]),
         header=d["header"], radius=d["radius"], grid=d["grid"], seed=d.get("seed", 0),
     )

@@ -36,6 +36,7 @@ PAGE_SIZES: dict[str, PageSize] = {
     "letter": PageSize("letter", "US Letter (8.5 x 11 in)", 8.5, 11.0, 10.0),
     "a4": PageSize("a4", "A4 (210 x 297 mm)", 8.268, 11.693, 10.0),
     "a5": PageSize("a5", "A5 (148 x 210 mm)", 5.827, 8.268, 7.4),
+    "eink": PageSize("eink", "E-ink tablet (reMarkable / Kindle Scribe / Boox, 3:4)", 6.212, 8.283, 7.8),
     "tablet": PageSize("tablet", "Tablet / GoodNotes (landscape)", 11.25, 8.44, 10.0),
 }
 

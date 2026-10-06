@@ -36,6 +36,7 @@ class EbookGuide(ProductType[GuideContent]):
     label = "Short guide"
     description = "Printable beginner guide with chapters, key points and action steps (LLM-written; review facts before selling)."
     content_model = GuideContent
+    supported_sizes = ["letter", "a4", "eink"]
     price_range = (4.0, 14.0)
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> GuideContent:

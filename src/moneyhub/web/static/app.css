@@ -94,3 +94,14 @@ video{max-width:100%;border-radius:10px;border:1px solid var(--line);background:
 .doc code{background:var(--soft);padding:1px 6px;border-radius:5px;font-size:.92em}.doc pre.copybox{max-height:none}
 .clip{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;margin:14px 0}@media(max-width:860px){.clip{grid-template-columns:1fr}}.clip h3{margin-top:0}.clip video{width:100%}
 html{scroll-behavior:smooth}
+
+.lookwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}@media(max-width:900px){.lookwrap{grid-template-columns:1fr}}
+.lookprev{position:sticky;top:76px;text-align:center}.lookprev img{width:100%;max-width:300px;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:6px}
+.brand{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}.brand label{display:flex;gap:6px;align-items:center;margin:0}.brand input[type=color]{width:44px;height:32px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+button.sm,.btn.sm{padding:5px 12px;font-size:13px}
+@media(max-width:760px){
+  header.top .in{gap:8px}header.top nav{margin-left:0;width:100%;overflow-x:auto;white-space:nowrap;gap:14px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  h1,.hero h1{overflow-wrap:anywhere}.nav{flex-wrap:wrap}.nav button{flex:1 1 auto}pre.copybox{overflow-x:auto}table{display:block;overflow-x:auto}
+  .stepper li{padding-right:10px;font-size:13px}.doc,.lp-hero>*{min-width:0}
+}
+a:focus-visible,button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

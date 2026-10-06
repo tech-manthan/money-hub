@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -127,6 +127,22 @@ def start(request: Request):
     return templates.TemplateResponse(request, "start.html", _ctx(
         request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), steps=guide.STEPS,
         size_map={k: t.size_options() for k, t in types.items()}, ai_art=any(a["available"] for a in art_status()), **_look_ctx()))
+
+
+@app.get("/api/preview.png")
+def look_preview(palette: str = "", fonts: str = "", header: str = "", radius: str = "", grid: str = "", brand: str = "", eink: str = ""):
+    from ..design import is_hex_colour
+    from ..render.preview import look_preview_png
+    if brand and not is_hex_colour(brand):
+        raise HTTPException(422, "brand must be a hex colour like #2F6B57")
+    if palette and palette not in [p.key for p in PALETTES]:
+        raise HTTPException(422, "unknown palette")
+    if fonts and fonts not in [f.key for f in FONT_PAIRS]:
+        raise HTTPException(422, "unknown fonts")
+    if header and header not in HEADERS or grid and grid not in GRIDS:
+        raise HTTPException(422, "unknown header or grid")
+    png = look_preview_png(palette, fonts, header, radius if radius in {str(r) for r in RADII} else "", grid, "#" + brand.lstrip("#") if brand else "", bool(eink))
+    return Response(png, media_type="image/png", headers={"Cache-Control": "max-age=600"})
 
 
 @app.get("/products", response_class=HTMLResponse)
@@ -282,12 +298,17 @@ def settings(request: Request):
 def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: list[str] = Form(default=[]),
                palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form(""),
                ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
-               radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form("")):
+               radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
+               brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[])):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
                                         (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
     if bad:
         raise HTTPException(422, f"Unknown {bad[0][2]}: {bad[0][0]}")
-    look = {**({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
+    from ..design import is_hex_colour
+    if brand and not is_hex_colour(brand):
+        raise HTTPException(422, "Brand colour must look like #2F6B57")
+    look = {**({"brand": "#" + brand.lstrip("#")} if brand else {}), **({"eink": True} if eink else {}),
+            **({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
             **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {}),
             **({"layout": int(layout)} if layout.strip().isdigit() and 0 <= int(layout) <= 4 else {})}
     ids = []
@@ -299,6 +320,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
             options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look},
             with_video=not no_video,
         )
+        if marketplaces:
+            req.marketplaces = [m for m in marketplaces if m in ("etsy", "gumroad", "payhip", "kofi", "pinterest")] or req.marketplaces
         ids.append(_submit(f"{n} / {product_type}", _gen_fn(req)))
     return {"jobs": ids}
 

@@ -38,10 +38,12 @@ def main(verbose: bool = typer.Option(False, "--verbose", "-v")):
 def make(
     niche: str = typer.Argument(..., help="Any niche, e.g. 'ADHD', 'nurse', 'dog training'"),
     product: str = typer.Argument("weekly_planner", help="run `moneyhub types` for the list"),
-    sizes: str = typer.Option(None, help="Comma list: letter,a4,a5,tablet"),
+    sizes: str = typer.Option(None, help="Comma list: letter,a4,a5,tablet,eink"),
     seed: int = typer.Option(None, help="Reuse a seed to reproduce a look"),
     palette: str = typer.Option(None, help=f"One of: {', '.join(palette_keys())}"),
     fonts: str = typer.Option(None, help=f"Font pair, one of: {', '.join(font_keys())}"),
+    brand: str = typer.Option(None, help="Your own brand colour as hex, e.g. '#2F6B57'; builds a matching palette"),
+    eink: bool = typer.Option(False, help="E-ink tablet version (reMarkable / Kindle Scribe / Boox): black and white, hyperlinked"),
     header: str = typer.Option(None, help=f"Page header style: {', '.join(HEADERS)}"),
     radius: int = typer.Option(None, help=f"Card corner radius in px: {', '.join(map(str, RADII))}"),
     grid: str = typer.Option(None, help=f"Grid line style: {', '.join(GRIDS)}"),
@@ -53,7 +55,7 @@ def make(
     weeks: int = typer.Option(None, help="Weekly planner: number of weeks (4-60)"),
     no_images: bool = typer.Option(False, help="Skip listing images/pins"),
     no_video: bool = typer.Option(False, help="Skip the MP4 pin / listing video"),
-    motion: str = typer.Option(None, help="Video engine chain, e.g. 'remotion,pillow' (engines: pillow, remotion, manim)"),
+    motion: str = typer.Option(None, help="Video engine chain, e.g. 'remotion,pillow' (engines: pillow, remotion, manim, hyperframes)"),
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
@@ -61,6 +63,11 @@ def make(
 ):
     """Generate one product with its images, listing copy and upload guides."""
     from .art import MOTIFS
+    from .design import is_hex_colour
+    if brand and not is_hex_colour(brand):
+        raise typer.BadParameter("use a hex colour like '#2F6B57'", param_hint="--brand")
+    if palette and is_hex_colour(palette):
+        brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     art_chain = _csv(art_provider)
@@ -75,7 +82,7 @@ def make(
             typer.echo("note: no AI art provider is usable (set HF_TOKEN / TOGETHER_API_KEY / OPENAI_API_KEY and pass --art-provider NAME); "
                        "falling back to built-in motifs.", err=True)
     opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
-                              "gsheet_url": gsheet_link, "header": header, "radius": radius, "grid": grid, "motif": motif,
+                              "gsheet_url": gsheet_link, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "layout": layout, "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
@@ -354,7 +361,7 @@ def voices_install():
     typer.echo(f"Installed: {install_kokoro(progress=lambda m: typer.echo(f'  {m}'))}")
 
 
-engines_app = typer.Typer(help="Optional video engines: remotion (React) and manim (Python).", no_args_is_help=True)
+engines_app = typer.Typer(help="Optional video engines: remotion (React), manim (Python) and hyperframes (HTML).", no_args_is_help=True)
 app.add_typer(engines_app, name="engines")
 
 
@@ -367,8 +374,8 @@ def engines_status():
 
 
 @engines_app.command("install")
-def engines_install(name: str = typer.Argument(..., help="remotion | manim")):
-    """Install an optional engine (remotion: npm install in engines/remotion; manim: pip install manim)."""
+def engines_install(name: str = typer.Argument(..., help="remotion | manim | hyperframes")):
+    """Install an optional engine (remotion/hyperframes: npm install in engines/<name>; manim: pip install manim)."""
     import shutil
     import subprocess
     import sys
@@ -379,12 +386,18 @@ def engines_install(name: str = typer.Argument(..., help="remotion | manim")):
         subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=ENGINES_DIR / "remotion", check=True)
         typer.echo("Remotion installed. Add 'remotion' to render.motion in moneyhub.yaml, or use --motion remotion.\n"
                    "Remotion is free for individuals and companies of up to 3 people; see https://www.remotion.pro/license")
+    elif name == "hyperframes":
+        if not shutil.which("npm"):
+            raise typer.BadParameter("Node.js/npm not found. HyperFrames needs Node 22+ (macOS: brew install node).")
+        subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=ENGINES_DIR / "hyperframes", check=True)
+        typer.echo("HyperFrames installed (Apache-2.0). Use --motion hyperframes, or add 'hyperframes' to render.motion in moneyhub.yaml.\n"
+                   "It needs Node 22+ and ffmpeg. MoneyHub switches HyperFrames' anonymous telemetry off for every render.")
     elif name == "manim":
         typer.echo("Manim needs Cairo/Pango first (macOS: brew install pango cairo pkg-config).")
         subprocess.run([sys.executable, "-m", "pip", "install", "manim"], check=True)
         typer.echo("Manim installed. Use --motion manim, or add 'manim' to render.motion.")
     else:
-        raise typer.BadParameter("name must be 'remotion' or 'manim'")
+        raise typer.BadParameter("name must be 'remotion', 'manim' or 'hyperframes'")
 
 
 @engines_app.command("test")

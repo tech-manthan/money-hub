@@ -374,7 +374,118 @@ class ManimEngine(MotionEngine):
         return out
 
 
-ENGINES: dict[str, MotionEngine] = {e.name: e for e in (PillowEngine(), RemotionEngine(), ManimEngine())}
+class HyperFramesEngine(MotionEngine):
+    """HyperFrames (HeyGen, Apache-2.0): an HTML + GSAP composition rendered to MP4 by headless Chrome and ffmpeg.
+    Setup: `moneyhub engines install hyperframes` (needs Node 22+). Anonymous telemetry is switched off for every render."""
+    name = "hyperframes"
+    note = "HTML/GSAP-based; needs Node 22+ and `moneyhub engines install hyperframes`"
+
+    @property
+    def project(self) -> Path:
+        from ..config import get_config
+        return Path(get_config().get("render.hyperframes_dir") or ENGINES_DIR / "hyperframes")
+
+    def _node_ok(self) -> bool:
+        node = shutil.which("node")
+        if not node:
+            return False
+        try:
+            major = int(subprocess.run([node, "-v"], capture_output=True, text=True, timeout=10).stdout.strip().lstrip("v").split(".")[0])
+        except (ValueError, subprocess.SubprocessError):
+            return False
+        return major >= 22
+
+    def available(self) -> bool:
+        return self._node_ok() and (self.project / "node_modules" / ".bin" / "hyperframes").exists() \
+            and (self.project / "node_modules" / "gsap" / "dist" / "gsap.min.js").exists()
+
+    @staticmethod
+    def composition(plan: MotionPlan, props: dict) -> str:
+        """The index.html for a plan: one absolutely-positioned scene per plan scene, animated by a paused GSAP timeline."""
+        import html as h
+        import json
+
+        W, H = props["width"], props["height"]
+        p, f = props["palette"], props["fonts"]
+        total = round(sum(sc.seconds for sc in plan.scenes), 2)
+        faces = "\n".join(f"@font-face{{font-family:'{ff['family']}';font-weight:{ff['weight']};src:url('{ff['file']}')}}" for ff in props["fontFiles"])
+        big, mid = round(W * 0.085), round(W * 0.045)
+        pages, scenes, js, t = props["pages"], [], [], 0.0
+        for i, sc in enumerate(plan.scenes):
+            d = round(sc.seconds, 2)
+            bg = {"title": p["accent"], "cta": p["accent"], "page": p["soft"], "bullets": p["paper"]}[sc.kind]
+            fg = p["accentInk"] if sc.kind in ("title", "cta") else p["ink"]
+            inner = ""
+            if sc.kind in ("title", "cta"):
+                inner = f"<div class='t' id='t{i}'>{h.escape(sc.text)}</div>" + ("<div class='chip' id='c%d'>Instant download</div>" % i if sc.kind == "cta" else "")
+            elif sc.kind == "page":
+                img = pages[i % len(pages)] if pages else ""
+                inner = f"<img class='pg' id='p{i}' src='{img}'><div class='cap' id='t{i}'>{h.escape(sc.text)}</div>"
+            else:
+                inner = f"<div class='hd' id='t{i}'>{h.escape(sc.text)}</div><ul>" + "".join(
+                    f"<li id='b{i}_{k}'>{h.escape(b)}</li>" for k, b in enumerate(sc.bullets)) + "</ul>"
+            scenes.append(f"<section class='clip sc' id='s{i}' data-start='{t}' data-duration='{d}' data-track-index='{i}' style='background:{bg};color:{fg}'>{inner}</section>")
+            js.append(f"tl.fromTo('#s{i}',{{opacity:0}},{{opacity:1,duration:.35}},{t});")
+            if sc.kind in ("title", "cta"):
+                js.append(f"tl.fromTo('#t{i}',{{y:60,opacity:0}},{{y:0,opacity:1,duration:.7,ease:'power3.out'}},{t + .1});")
+                if sc.kind == "cta":
+                    js.append(f"tl.fromTo('#c{i}',{{scale:.6,opacity:0}},{{scale:1,opacity:1,duration:.5,ease:'back.out(2)'}},{t + .6});")
+            elif sc.kind == "page":
+                js.append(f"tl.fromTo('#p{i}',{{y:120,rotation:-4,opacity:0}},{{y:0,rotation:2,opacity:1,duration:.8,ease:'power3.out'}},{t + .1});")
+                js.append(f"tl.to('#p{i}',{{scale:1.06,duration:{max(d - 1, .5)},ease:'none'}},{t + .9});")
+                js.append(f"tl.fromTo('#t{i}',{{opacity:0}},{{opacity:1,duration:.5}},{t + .5});")
+            else:
+                js.append(f"tl.fromTo('#t{i}',{{x:-60,opacity:0}},{{x:0,opacity:1,duration:.5,ease:'power2.out'}},{t + .1});")
+                for k in range(len(sc.bullets)):
+                    js.append(f"tl.fromTo('#b{i}_{k}',{{x:-40,opacity:0}},{{x:0,opacity:1,duration:.45,ease:'power2.out'}},{t + .5 + k * .35});")
+            t = round(t + d, 2)
+        return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width={W}, height={H}">
+<script src="gsap.min.js"></script>
+<style>{faces}
+*{{margin:0;padding:0;box-sizing:border-box}}html,body{{width:{W}px;height:{H}px;overflow:hidden;background:{p['paper']}}}
+#root{{position:relative;width:{W}px;height:{H}px;font-family:'{f['body']}',sans-serif}}
+.sc{{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:{round(H*.03)}px;padding:{round(W*.08)}px;text-align:center}}
+.t{{font-family:'{f['heading']}',serif;font-weight:700;font-size:{big}px;line-height:1.1}}
+.hd{{font-family:'{f['heading']}',serif;font-weight:700;font-size:{round(big*.8)}px}}
+ul{{list-style:none;display:flex;flex-direction:column;gap:{round(H*.025)}px;font-size:{mid}px;font-weight:600}}
+li::before{{content:"";display:inline-block;width:.55em;height:.55em;border-radius:50%;background:{p['accent2']};margin-right:.5em}}
+.pg{{max-height:{round(H*.68)}px;max-width:{round(W*.72)}px;border:2px solid {p['line']};border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,.18);background:#fff}}
+.cap{{font-family:'{f['script']}',cursive;font-size:{round(big*.7)}px;color:{p['accent']}}}
+.chip{{background:{p['paper']};color:{p['accent']};border-radius:999px;padding:.35em 1.1em;font-weight:700;font-size:{mid}px}}
+</style></head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="{total}" data-width="{W}" data-height="{H}">
+{chr(10).join(scenes)}
+</div>
+<script>
+window.__timelines = window.__timelines || {{}};
+const tl = gsap.timeline({{ paused: true }});
+{chr(10).join(js)}
+window.__timelines["main"] = tl;
+tl.seek(0);
+</script></body></html>"""
+
+    def render(self, plan, pages, brush, out, size, title, fps):
+        import json
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            work = Path(td) / "proj"
+            props = _engine_assets(plan, pages, brush, size, title, fps, work)
+            shutil.copy(self.project / "node_modules" / "gsap" / "dist" / "gsap.min.js", work / "gsap.min.js")
+            (work / "hyperframes.json").write_text(json.dumps({"paths": {"blocks": "compositions", "components": "compositions/components", "assets": "assets"}}))
+            (work / "index.html").write_text(self.composition(plan, props), encoding="utf-8")
+            out.parent.mkdir(parents=True, exist_ok=True)
+            env = {**os.environ, "HYPERFRAMES_NO_TELEMETRY": "1", "DO_NOT_TRACK": "1", "HYPERFRAMES_SKIP_SKILLS": "1"}
+            cmd = [str(self.project / "node_modules" / ".bin" / "hyperframes"), "render", str(work), "-o", str(out), "-f", str(fps), "--quiet"]
+            r = subprocess.run(cmd, cwd=work, capture_output=True, text=True, timeout=900, env=env)
+            if r.returncode != 0 or not out.exists():
+                log.warning("hyperframes failed: %s", (r.stderr or r.stdout)[-400:])
+                return None
+        return out
+
+
+ENGINES: dict[str, MotionEngine] = {e.name: e for e in (PillowEngine(), RemotionEngine(), ManimEngine(), HyperFramesEngine())}
 
 
 def engine_status() -> list[dict]:

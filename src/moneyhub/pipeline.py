@@ -69,8 +69,14 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     say(f"Niche profile: {niche.name} ({niche_source})")
     seed = req.seed if req.seed is not None else random.SystemRandom().randrange(1, 10**6)
     style = choose_style(seed=seed, mood=niche.mood, palette=req.palette, fonts=req.fonts,
-                         header=req.options.get("header"), radius=req.options.get("radius"), grid=req.options.get("grid"))
+                         header=req.options.get("header"), radius=req.options.get("radius"), grid=req.options.get("grid"),
+                         brand=req.options.get("brand"), eink=bool(req.options.get("eink")))
     sizes = [s for s in (req.sizes or ptype.default_sizes) if s in ptype.supported_sizes] or ptype.default_sizes
+    if req.options.get("eink"):
+        if "eink" not in ptype.supported_sizes:
+            raise ValueError(f"{ptype.label} has no e-ink version. E-ink works with: weekly_planner, daily_planner, guided_journal, "
+                             "checklist_pack, worksheet_pack, ebook_guide")
+        sizes = ["eink"]
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
     base = f"{stamp}-{niche.key}-{ptype.key}"
@@ -104,7 +110,7 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
         say("Creating listing images and pins")
         images = make_images(build, style, folder, ptype.key, kit.copy_, labels, router=router, niche=niche,
                              providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)),
-                             motion_engines=req.motion)
+                             motion_engines=req.motion, marketplaces=req.marketplaces)
     say("Writing marketplace guides")
     render_guides(folder, kit, build, images, style.palette.key, req.marketplaces)
     (folder / "listing").mkdir(exist_ok=True)
@@ -124,6 +130,8 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     top = riskmod.status(findings)
     checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",
                         "nothing on the watch list" if not findings else "; ".join(f"{f.where}: '{f.term}' ({f.severity})" for f in findings[:6])))
+    from .spellcheck import spelling_check
+    checks.append(spelling_check(content.model_dump_json(), json.loads(kit.model_dump_json()), niche))
     if findings:
         (folder / "listing" / "risk.json").write_text(json.dumps([f.to_dict() for f in findings], indent=2), encoding="utf-8")
     qa_status = summarize(checks)

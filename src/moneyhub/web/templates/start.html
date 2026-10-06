@@ -41,7 +41,7 @@
   <div class="grid types" id="types">
     {% for k, t in types.items() %}
     <label class="type">
-      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}">
+      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}">
       <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span></span>
     </label>
     {% endfor %}
@@ -60,7 +60,10 @@
     <label class="opt"><input type="radio" name="lookmode" value="auto" checked><span class="in"><b>Choose for me</b><span class="meta">Recommended. We match colours and fonts to your audience's mood.</span></span></label>
     <label class="opt"><input type="radio" name="lookmode" value="pick"><span class="in"><b>I'll pick</b><span class="meta">Choose colours and fonts yourself.</span></span></label>
   </div>
+  <div class="lookwrap">
+  <div class="lookctl">
   <div id="look-pick" hidden>
+    <div class="actions"><button type="button" class="ghost sm" id="shuffle">🎲 Shuffle the look</button></div>
     <h3>Colours</h3>
     <div class="swatches" id="palettes">
       <label class="sw"><input type="radio" name="palette" value="" checked><span class="in"><span class="chips"><i style="background:linear-gradient(90deg,#3F6B55,#A8456B,#1F5F8B)"></i></span>Automatic</span></label>
@@ -68,6 +71,9 @@
       <label class="sw"><input type="radio" name="palette" value="{{ p.key }}"><span class="in"><span class="chips"><i style="background:{{ p.accent }}"></i><i style="background:{{ p.accent2 }}"></i><i style="background:{{ p.soft }}"></i></span>{{ p.key|capitalize }}</span></label>
       {% endfor %}
     </div>
+    <div class="brand"><label><input type="checkbox" id="use-brand"> Use my own brand colour</label>
+      <input type="color" id="brand" value="#2f6b57" aria-label="Brand colour" disabled>
+      <span class="meta">We build a matching set of colours from it and keep the text easy to read.</span></div>
     <h3>Fonts</h3>
     <div class="grid fontlist" id="fonts">
       <label class="opt"><input type="radio" name="fonts" value="" checked><span class="in"><b>Automatic</b></span></label>
@@ -89,6 +95,11 @@
         <div class="meta">Every look has a number. Type one you liked before to get the same look again.</div></div></div>
     </details>
   </div>
+  </div>
+  <aside class="lookprev" aria-live="polite"><div class="meta">Example page in this look</div>
+    <img id="look-preview" alt="Example planner page in the chosen colours and fonts" width="460">
+    <div class="meta" id="prev-note"></div></aside>
+  </div>
   <div class="nav"><button type="button" class="ghost" data-go="1">← Back</button><button type="button" data-go="3">Next: review →</button></div>
 </section>
 
@@ -96,7 +107,18 @@
 <section class="step panel" data-step="3">
   <h2>Ready to make it</h2>
   <p class="summary" id="summary"></p>
+  <h3>Where will you sell it?</h3>
+  <div class="checks" id="markets">
+    <label><input type="checkbox" name="mk" value="etsy" checked> Etsy</label>
+    <label><input type="checkbox" name="mk" value="pinterest" checked> Pinterest</label>
+    <label><input type="checkbox" name="mk" value="gumroad"> Gumroad</label>
+    <label><input type="checkbox" name="mk" value="payhip"> Payhip</label>
+    <label><input type="checkbox" name="mk" value="kofi"> Ko-fi</label>
+  </div>
+  <p class="meta">We make the listing pictures and the upload guide for the places you tick.</p>
+  <h3>Options</h3>
   <div class="checks">
+    <label id="eink-wrap" hidden><input type="checkbox" id="opt-eink"> For e-ink tablets: black and white, tap-to-jump links (reMarkable, Kindle Scribe, Boox)</label>
     <label><input type="checkbox" id="opt-video" checked> Also make short videos (adds about a minute)</label>
     <label id="ai-wrap" hidden><input type="checkbox" id="opt-ai" {% if not ai_art %}disabled{% endif %}> AI-made poster backgrounds {% if not ai_art %}<span class="meta">(not set up: needs an image API key, see Settings)</span>{% endif %}</label>
   </div>

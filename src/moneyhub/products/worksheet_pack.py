@@ -117,6 +117,7 @@ class WorksheetPack(ProductType[WorksheetContent]):
     label = "Worksheet pack"
     description = "Printable worksheets with directions and an answer key (classroom/homeschool or self-guided exercises)."
     content_model = WorksheetContent
+    supported_sizes = ["letter", "a4", "eink"]
     price_range = (3.0, 9.0)
     typical_formats = "PDF"
 
