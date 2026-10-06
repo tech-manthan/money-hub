@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "moneyhub"
 version = "0.1.0"
 description = "Local creator studio that generates sellable digital products (planners, trackers, worksheets, journals) plus listing kits for Etsy, Gumroad, Payhip, Ko-fi and Pinterest."
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 dependencies = [
   "weasyprint>=62",
   "xlsxwriter>=3.2",

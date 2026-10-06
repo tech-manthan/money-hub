@@ -68,6 +68,25 @@ class ProductType(ABC, Generic[C]):
     supported_sizes: ClassVar[list[str]] = ["letter", "a4"]
     price_range: ClassVar[tuple[float, float]] = (4.0, 12.0)
     typical_formats: ClassVar[str] = "PDF"
+    # page layouts the buyer can choose between: key -> short description. The first is the default. Empty = one fixed layout.
+    layouts: ClassVar[dict[str, str]] = {}
+    layout_marker: ClassVar[str] = ""   # text on the page that shows the layout best (used for the live thumbnail)
+
+    auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option
+
+    def has_layout(self, key: str) -> bool:
+        return key in self.layouts or (self.auto_layout and key.split(":")[0] in ("auto", "custom"))
+
+    def layout_of(self, ctx: "BuildContext") -> str:
+        """The chosen page layout key (validated), or the first preset when none was chosen."""
+        if not self.layouts:
+            return ""
+        if ctx.options.get("layout_spec"):
+            return "custom"
+        want = ctx.options.get("page_layout") or next(iter(self.layouts))
+        if not self.has_layout(want):
+            raise ValueError(f"{self.label} has no page layout '{want}'. Choose one of: {', '.join(self.layouts)}" + (", auto, auto:<number>" if self.auto_layout else ""))
+        return want
 
     def size_options(self) -> list[tuple[str, str]]:
         """(key, label) choices offered in the UI/CLI for this product type."""
@@ -108,6 +127,7 @@ class ProductType(ABC, Generic[C]):
     # --- helpers -----------------------------------------------------
     def pdf_from_template(self, ctx: BuildContext, template: str, page: PageSize, out: Path,
                           extra_css: str = "", margin: float = 3.4, **tctx) -> str:
+        margin = ctx.options.get("margin_em", margin)
         html = render_html(template, ctx.style, page, extra_css=extra_css, margin=margin, **tctx)
         return render_pdf(html, out, page_css_size=page.css_size)
 
@@ -115,6 +135,7 @@ class ProductType(ABC, Generic[C]):
                     extra_css=None, margin: float = 3.4) -> str:
         """Render one PDF per (page, out_path, template_context) job, in parallel. extra_css may be a str or f(page)."""
         built = []
+        margin = ctx.options.get("margin_em", margin)   # exports (e.g. KDP) can ask for wider margins
         for page, out, tctx in jobs:
             css = extra_css(page) if callable(extra_css) else (extra_css or "")
             built.append((render_html(template, ctx.style, page, extra_css=css, margin=margin, **tctx), out, page.css_size))

@@ -1,13 +1,65 @@
 {% extends "base.html" %}{% block main %}
 <h1>Settings</h1>
-<div class="panel"><h2 style="margin-top:0">AI providers</h2>
-<table><tr><th>Provider</th><th>Status</th><th>Model</th></tr>{% for p in providers %}<tr><td>{{ p.name }}</td><td><span class="badge {{ 'pass' if p.available else 'warn' }}">{{ 'ready' if p.available else 'not available' }}</span></td><td class="meta">{{ p.model }}</td></tr>{% endfor %}</table>
-<p class="meta">Add keys as environment variables before starting the UI: ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY. <code>claude -p</code> uses your installed Claude Code login; Ollama needs <code>ollama serve</code>.</p></div>
-<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Chains per task</h2>
+<p class="meta" style="max-width:720px">Connect the services MoneyHub can use. <b>None are required</b>: without them it works offline with built-in content. Keys are saved on this computer in <code>{{ env_file }}</code> (hidden from git, readable only by you) and are sent only to the service they belong to.</p>
+
+{% macro keyrow(k) %}
+<div class="keyrow" data-env="{{ k.env }}">
+  <div class="kl"><b>{{ k.label }}</b>
+    <div class="meta">{{ k.note }}{% if k.url %} <a href="{{ k.url }}" target="_blank" rel="noopener">Get one</a>{% endif %}</div></div>
+  <div class="kv">
+    {% if k.set %}<span class="badge pass">saved</span> <code>{{ k.masked }}</code> <span class="meta">({{ k.source }})</span>
+      <button type="button" class="ghost sm" data-test="{{ k.provider }}">Test</button>
+      {% if k.source == '.env file' %}<button type="button" class="danger sm" data-remove="{{ k.env }}">Remove</button>{% endif %}
+    {% else %}
+      <input type="{{ 'password' if k.secret else 'url' }}" autocomplete="off" spellcheck="false" placeholder="{{ 'Paste your key' if k.secret else 'http://localhost:8188/generate' }}" aria-label="{{ k.label }}">
+      <button type="button" class="sm" data-save="{{ k.env }}">Save</button>
+    {% endif %}
+    <span class="msg-inline meta" role="status"></span>
+  </div>
+</div>
+{% endmacro %}
+
+<div class="panel"><h2 style="margin-top:0">AI writing helpers</h2>
+  <p class="meta">These write the product text, listing copy and ideas. They are tried in order and MoneyHub falls back to the offline library if none work.</p>
+  <div class="keyrow"><div class="kl"><b>Claude Code (<code>claude -p</code>)</b><div class="meta">Uses the Claude Code you are already logged in to. Nothing to enter.</div></div>
+    <div class="kv">{% for p in providers if p.name == 'claude_cli' %}<span class="badge {{ 'pass' if p.available else 'warn' }}">{{ 'ready' if p.available else 'not found' }}</span> <button type="button" class="ghost sm" data-test="claude_cli">Test</button>{% endfor %}<span class="msg-inline meta" role="status"></span></div></div>
+  {% for k in keys if k.group == 'writing' %}{{ keyrow(k) }}{% endfor %}
+  <div class="keyrow"><div class="kl"><b>Ollama (local models)</b><div class="meta">Install Ollama and run <code>ollama serve</code>. Nothing to enter.</div></div>
+    <div class="kv">{% for p in providers if p.name == 'ollama' %}<span class="badge {{ 'pass' if p.available else 'warn' }}">{{ 'ready' if p.available else 'not running' }}</span>{% endfor %}</div></div>
+</div>
+
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">AI artwork for wall art</h2>
+  <p class="meta">Wall art uses built-in, licence-free artwork by default. Tick the sources you want for the <b>AI art</b> option, in this order. Check each service's terms before selling images it makes.</p>
+  <form id="art-form">
+  {% for a in art %}<label class="artopt"><input type="checkbox" name="providers" value="{{ a.name }}" {{ 'checked' if a.enabled }}> <b>{{ a.name }}</b>
+    <span class="badge {{ 'pass' if a.available else 'warn' }}">{{ 'ready' if a.available else 'not set up' }}</span>
+    {% if a.name == 'claude_svg' %}<span class="meta">Claude draws vector art for you. No image key needed.</span>{% endif %}</label>{% endfor %}
+  <button type="submit" class="sm">Save choices</button> <span id="art-msg" class="meta" role="status"></span></form>
+  {% for k in keys if k.group == 'art' %}{{ keyrow(k) }}{% endfor %}
+</div>
+
+<details class="panel" style="margin-top:16px"><summary><b>Advanced: which helper runs which task</b></summary>
 <table>{% for k, v in tasks.items() %}<tr><td>{{ k }}</td><td class="meta">{{ v|join(' → ') }}</td></tr>{% endfor %}</table>
-<p class="meta">Each task tries providers in order and falls back automatically; “builtin” is the offline library. Edit <code>moneyhub.yaml</code> (or create <code>moneyhub.local.yaml</code>) to change order, models or add providers.</p></div>
-<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">AI art providers (optional)</h2>
-<table><tr><th>Provider</th><th>Key</th><th>Enabled in config</th></tr>{% for a in art %}<tr><td>{{ a.name }}</td><td>{{ 'found' if a.available else 'missing' }}</td><td>{{ 'yes' if a.enabled else 'no' }}</td></tr>{% endfor %}</table>
-<p class="meta">Wall art uses procedural, licence-free artwork by default. To add AI backgrounds, set a key and list the provider under <code>render.art</code> in <code>moneyhub.yaml</code>, then tick "AI art backgrounds". Check the provider's terms before selling generated images.</p></div>
-<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Rendering &amp; output</h2><p>PDF renderers (in order): {{ renderers|join(', ') }}<br>Output folder: <code>{{ out }}</code></p></div>
+<p class="meta">Each task tries helpers in order. To change the order, edit <code>moneyhub.local.yaml</code> (hidden from git).</p></details>
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Output</h2><p>PDF renderers (in order): {{ renderers|join(', ') }}<br>Products are saved in <code>{{ out }}</code></p></div>
+<script>
+(() => {
+  const post = (url, data) => fetch(url, { method: 'POST', body: new URLSearchParams(data) }).then(async r => {
+    const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || r.statusText); return j; });
+  const say = (el, t, ok) => { const m = el.closest('.kv, form, .keyrow').querySelector('.msg-inline, #art-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--good)' : 'var(--bad)'; } };
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    try {
+      if (b.dataset.save) { const row = b.closest('.keyrow'); await post('/api/settings/key', { name: b.dataset.save, value: row.querySelector('input').value }); location.reload(); }
+      else if (b.dataset.remove) { if (!confirm('Remove this key from this computer?')) return; await post('/api/settings/key/remove', { name: b.dataset.remove }); location.reload(); }
+      else if (b.dataset.test) { say(b, 'Testing…', true); b.disabled = true; const r = await post('/api/settings/test', { provider: b.dataset.test }); say(b, r.message, r.ok); b.disabled = false; }
+    } catch (err) { b.disabled = false; say(b, err.message, false); }
+  });
+  document.getElementById('art-form').addEventListener('submit', async e => {
+    e.preventDefault(); const f = new FormData(e.target); const body = new URLSearchParams(); f.getAll('providers').forEach(v => body.append('providers', v));
+    try { const r = await fetch('/api/settings/art', { method: 'POST', body }); if (!r.ok) throw new Error((await r.json()).detail); document.getElementById('art-msg').textContent = 'Saved.'; }
+    catch (err) { document.getElementById('art-msg').textContent = err.message; }
+  });
+})();
+</script>
 {% endblock %}

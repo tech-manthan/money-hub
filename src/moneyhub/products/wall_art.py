@@ -8,7 +8,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from ..art import MOTIFS, generate_art, motif_svg
+from ..config import get_config
+from ..art import MOTIFS, SVG_PROVIDERS, generate_art, motif_svg
 from ..niches import NicheProfile
 from ..render.html import PageSize
 from ..render.raster import render_pages
@@ -115,6 +116,14 @@ class WallArt(ProductType[WallArtContent]):
                            meta={"art_previews": previews, "ai_provider": ai_used if use_ai else ""})
 
 
+def style_audience(style) -> str:
+    return "people who love printable art"
+
+
+def style_mood(pal) -> str:
+    return ", ".join(pal.mood)
+
+
 def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = False, art_dir: Path | None = None,
                  motif: str | None = None, layout: int | None = None,
                  art_providers: list[str] | None = None) -> tuple[list[dict], str]:
@@ -123,14 +132,20 @@ def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = Fal
     schemes = [(pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.accent, pal.accent_ink, True),
                (pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.ink, pal.paper, True)]
     designs, ai_used = [], ""
+    chain = list(art_providers or get_config().get("render.art") or ["claude_svg"]) if use_ai else []
+    drawn: list[str] = []   # motifs drawn by the writing model, reused across the posters
+    if "claude_svg" in chain and SVG_PROVIDERS["claude_svg"].available():
+        drawn = SVG_PROVIDERS["claude_svg"].motifs(pal, style_audience(style), style_mood(pal))
+        ai_used = "claude_svg" if drawn else ai_used
+    image_chain = [n for n in chain if n != "claude_svg"]
     for i, q in enumerate(content.quotes):
         bg, fg, dark = schemes[i % len(schemes)]
         kind = motif or MOTIFS[(seed + i) % len(MOTIFS)]
         n = len(q.text)
         ai_bg = None
-        if use_ai and art_dir is not None:
+        if image_chain and art_dir is not None:
             made = generate_art(f"minimal abstract background art, soft shapes, {pal.key} colour palette, "
-                                "no text, no people, flat illustration, lots of empty space", (1024, 1536), art_providers)
+                                "no text, no people, flat illustration, lots of empty space", (1024, 1536), image_chain)
             if made:
                 art_dir.mkdir(exist_ok=True)
                 p = art_dir / f"ai-{i + 1}.png"
@@ -138,7 +153,7 @@ def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = Fal
                 ai_bg, ai_used = p.as_uri(), made[1]
         designs.append({
             "text": q.text, "small": q.small, "bg": bg, "fg": fg, "layout": layout if layout is not None else (i + seed) % 5,
-            "svg": motif_svg(kind, pal, seed * 31 + i, on_dark=dark), "ai_bg": ai_bg,
+            "svg": drawn[i % len(drawn)] if drawn else motif_svg(kind, pal, seed * 31 + i, on_dark=dark), "ai_bg": ai_bg,
             "fs": 5.4 if n <= 26 else 4.4 if n <= 56 else 3.6,
         })
     return designs, ai_used

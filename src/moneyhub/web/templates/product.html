@@ -16,6 +16,44 @@
   <form method="post" action="/product/{{ p.id }}/regenerate" style="margin-top:8px"><button class="ghost sm">Make a new variation of this</button> <span class="meta">same niche and type, new look and copy</span></form>
 </div>
 
+{% if export_kinds %}
+<div class="panel" style="margin-bottom:16px" id="export-panel">
+  <h2 style="margin-top:0">Sell it somewhere else</h2>
+  <p class="meta">Make a ready-to-use pack for another platform. Each pack includes a step-by-step guide.</p>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+  {% if 'kdp' in export_kinds %}<form class="exp" data-kind="kdp"><b>📚 Amazon KDP paperback</b>
+    <p class="meta">Print-ready interior, cover template with spine width, and a KDP guide.</p>
+    <div style="display:flex;gap:6px"><select name="trim" aria-label="Book size"><option value="6x9">6 x 9 in</option><option value="5.5x8.5">5.5 x 8.5 in</option><option value="7x10">7 x 10 in</option><option value="8x10">8 x 10 in</option><option value="8.5x11">8.5 x 11 in</option></select>
+    <select name="paper" aria-label="Paper"><option value="white">White paper</option><option value="cream">Cream paper</option><option value="color">Colour</option></select></div>
+    <button class="sm" style="margin-top:6px">Make KDP pack</button></form>{% endif %}
+  {% if 'notion' in export_kinds %}<form class="exp" data-kind="notion"><b>🗂️ Notion</b>
+    <p class="meta">Pages and databases that import straight into Notion.</p><button class="sm">Make Notion pack</button></form>{% endif %}
+  {% if 'canva' in export_kinds %}<form class="exp" data-kind="canva"><b>🎨 Canva</b>
+    <p class="meta">Pages and brand kit for Canva, plus the "your template link" page for buyers.</p>
+    <input type="url" name="link" placeholder="Your Canva template link (optional, add later)" aria-label="Canva template link">
+    <button class="sm" style="margin-top:6px">Make Canva pack</button></form>{% endif %}
+  </div>
+  <p class="meta" id="exp-status" role="status"></p>
+  <ul id="exp-files">{% for f in exports %}<li><a href="/files/{{ p.id }}/{{ f }}?download=1">{{ f }}</a></li>{% endfor %}</ul>
+</div>
+<script>
+document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', async e => {
+  e.preventDefault(); const st = document.getElementById('exp-status'); st.textContent = 'Working…';
+  const body = new URLSearchParams(new FormData(f)); body.set('kind', f.dataset.kind);
+  const r = await fetch('/product/{{ p.id }}/export', { method: 'POST', body });
+  if (!r.ok) { st.textContent = (await r.json()).detail || 'That did not work.'; return; }
+  const { job } = await r.json();
+  const t = setInterval(async () => {
+    const j = await (await fetch('/api/jobs/' + job)).json();
+    st.textContent = j.log[j.log.length - 1] || 'Working…';
+    if (j.status === 'error') { clearInterval(t); st.textContent = j.error; }
+    if (j.status === 'done') { clearInterval(t); st.textContent = 'Done. Files are listed below.';
+      document.getElementById('exp-files').innerHTML = j.files.map(x => `<li><a href="/files/{{ p.id }}/${x}?download=1">${x}</a></li>`).join(''); }
+  }, 1200);
+}));
+</script>
+{% endif %}
+
 <h2>Preview</h2>
 <div class="pages">{% for pg in pages %}<a href="{{ pg.url }}" target="_blank"><img loading="lazy" src="{{ pg.url }}"></a>{% endfor %}</div>
 {% if not pages %}<p class="meta">No page previews for this product - open the files from the list below.</p>{% endif %}

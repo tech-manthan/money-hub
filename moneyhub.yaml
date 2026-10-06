@@ -9,6 +9,7 @@ llm:
     listing: [groq, gemini, claude_cli, anthropic, openrouter, ollama, builtin]
     research: [claude_cli, anthropic, gemini, groq, openrouter, ollama, builtin]
     motion: [groq, gemini, claude_cli, anthropic, openrouter, ollama, builtin]
+    art: [claude_cli, anthropic, gemini, groq, openrouter, ollama]   # who draws SVG art for --art-provider claude_svg
   providers:
     claude_cli:            # `claude -p` (Claude Code headless). Personal use / your own pipeline.
       command: claude

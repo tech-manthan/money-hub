@@ -42,6 +42,8 @@ def make(
     seed: int = typer.Option(None, help="Reuse a seed to reproduce a look"),
     palette: str = typer.Option(None, help=f"One of: {', '.join(palette_keys())}"),
     fonts: str = typer.Option(None, help=f"Font pair, one of: {', '.join(font_keys())}"),
+    page_layout: str = typer.Option(None, "--page-layout", help="Page layout for products that have several (see `moneyhub styles`), e.g. grid, focus, minimal"),
+    layout_prompt: str = typer.Option(None, "--layout-prompt", help="Describe the page layout you want in words, e.g. 'big priorities on the left, habit row at the bottom'"),
     brand: str = typer.Option(None, help="Your own brand colour as hex, e.g. '#2F6B57'; builds a matching palette"),
     eink: bool = typer.Option(False, help="E-ink tablet version (reMarkable / Kindle Scribe / Boox): black and white, hyperlinked"),
     header: str = typer.Option(None, help=f"Page header style: {', '.join(HEADERS)}"),
@@ -49,7 +51,7 @@ def make(
     grid: str = typer.Option(None, help=f"Grid line style: {', '.join(GRIDS)}"),
     motif: str = typer.Option(None, help="Wall art: background motif (see `moneyhub styles`); default varies per poster"),
     layout: int = typer.Option(None, help="Wall art: text layout 0-4; default varies per poster"),
-    art_provider: str = typer.Option(None, help="AI art provider chain, e.g. 'huggingface,together' (implies --ai-art)"),
+    art_provider: str = typer.Option(None, help="AI art provider chain, e.g. 'claude_svg' (Claude draws vector art) or 'huggingface,together' (implies --ai-art)"),
     marketplaces: str = typer.Option(None, help="Guides to write: etsy,gumroad,payhip,kofi,pinterest (default all)"),
     llm: str = typer.Option(None, help="Provider chain override, e.g. 'claude_cli,builtin' or 'builtin'"),
     weeks: int = typer.Option(None, help="Weekly planner: number of weeks (4-60)"),
@@ -70,19 +72,37 @@ def make(
         brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
+    if page_layout:
+        from .products import get_product_type
+        try:
+            have = get_product_type(product).layouts
+        except KeyError as e:
+            raise typer.BadParameter(str(e), param_hint="product")
+        if not get_product_type(product).has_layout(page_layout):
+            raise typer.BadParameter(f"{product} " + (f"has these layouts: {', '.join(have)}" + (", auto, auto:<number>" if get_product_type(product).auto_layout else "") if have else "has only one layout"), param_hint="--page-layout")
+    layout_spec = None
+    if layout_prompt:
+        from . import layouts as _lay
+        from .llm import get_router
+        if product not in _lay.SPEC_MODELS:
+            raise typer.BadParameter(f"{product} has no generated layouts (try weekly_planner or daily_planner)", param_hint="--layout-prompt")
+        spec_obj, how = _lay.spec_from_text(product, layout_prompt, get_router(), _csv(llm))
+        layout_spec = spec_obj.model_dump()
+        typer.echo(f"Layout '{spec_obj.name}' ({'designed by your AI helper' if how == 'ai' else 'generated; no AI helper was available'}): {spec_obj.model_dump_json()}")
     art_chain = _csv(art_provider)
     for a in art_chain or []:
-        _check(a, list(__import__("moneyhub.art", fromlist=["PROVIDERS"]).PROVIDERS), "--art-provider")
+        _check(a, __import__("moneyhub.art", fromlist=["ALL_ART_PROVIDERS"]).ALL_ART_PROVIDERS, "--art-provider")
     if (ai_art or art_chain) and product != "wall_art":
         typer.echo("note: AI art backgrounds only apply to wall_art; ignoring for this product.", err=True)
     if (ai_art or art_chain) and product == "wall_art":
-        from .art import PROVIDERS
-        usable = [n for n in (art_chain or get_config().get("render.art") or []) if n in PROVIDERS and PROVIDERS[n].available()]
+        from .art import PROVIDERS, SVG_PROVIDERS
+        every = {**PROVIDERS, **SVG_PROVIDERS}
+        usable = [n for n in (art_chain or get_config().get("render.art") or ["claude_svg"]) if n in every and every[n].available()]
         if not usable:
-            typer.echo("note: no AI art provider is usable (set HF_TOKEN / TOGETHER_API_KEY / OPENAI_API_KEY and pass --art-provider NAME); "
-                       "falling back to built-in motifs.", err=True)
+            typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
+                       "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
     opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
-                              "gsheet_url": gsheet_link, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
+                              "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "layout": layout, "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
@@ -112,9 +132,86 @@ def styles():
     typer.echo(f"Grid lines (--grid): {', '.join(GRIDS)}")
     typer.echo(f"Wall art motifs (--motif): {', '.join(MOTIFS)}")
     typer.echo("Wall art layouts (--layout): 0-4")
+    typer.echo("\nPage layouts (--page-layout), by product:")
+    from .products import all_product_types as _all
+    for key, t in _all().items():
+        if t.layouts:
+            typer.echo(f"  {key}:")
+            for name, desc in t.layouts.items():
+                typer.echo(f"    {name:<11} {desc}")
     typer.echo("\nAI art providers (--art-provider; need a key/URL, see doctor):")
     for a in art_status():
         typer.echo(f"  {'ok ' if a['available'] else '-- '} {a['name']}")
+
+
+export_app = typer.Typer(help="Export a finished product for another platform: kdp (Amazon paperback), notion, canva.", no_args_is_help=True)
+app.add_typer(export_app, name="export")
+
+
+@export_app.command("kdp")
+def export_kdp_cmd(product_id: int, trim: str = typer.Option("6x9", help="5.5x8.5, 6x9, 7x10, 8x10 or 8.5x11 (inches)"),
+                   paper: str = typer.Option("white", help="white, cream or color")):
+    """Print-ready interior, cover template with spine width, and a KDP guide."""
+    from .exports import kdp, load
+    spec = kdp.export_kdp(load(product_id), trim, paper, progress=lambda m: typer.echo(f"  - {m}"))
+    typer.echo(f"\nKDP pack: {spec['pages']} pages, spine {spec['spine_in']} in, cover {spec['full_cover_in'][0]} x {spec['full_cover_in'][1]} in")
+    for c in spec["checks"]:
+        typer.echo(f"  {'ok ' if c['ok'] else 'FAIL'} {c['name']}: {c['detail']}")
+    typer.echo(f"Folder: {load(product_id).folder / 'exports' / 'kdp'}")
+
+
+@export_app.command("notion")
+def export_notion_cmd(product_id: int):
+    """Zip of Markdown pages and CSV databases to import into Notion."""
+    from .exports import load, notion
+    z = notion.export_notion(load(product_id))
+    typer.echo(f"Notion pack: {z}")
+
+
+@export_app.command("canva")
+def export_canva_cmd(product_id: int, link: str = typer.Option(None, help="Your Canva template link, to put on the buyer's page")):
+    """PDF and page images for Canva, a brand kit, a buyer 'template link' page and a how-to."""
+    from .exports import canva, load
+    typer.echo(f"Canva pack: {canva.export_canva(load(product_id), link)}")
+
+
+@app.command(name="next")
+def next_cmd(limit: int = typer.Option(5, help="How many suggestions")):
+    """What to make next, learned from the sales and views you have recorded."""
+    from .growth import recommend
+    r = recommend(limit=limit)
+    typer.echo(r["note"] + "\n")
+    for i, x in enumerate(r["make_next"], 1):
+        typer.echo(f"{i}. {x['niche']} / {x['product_type']}  [{x['kind']}]\n   {x['reason']}\n   moneyhub make \"{x['niche']}\" {x['product_type']}")
+    if r["good_looks"]:
+        typer.echo("\nColours that did well: " + ", ".join(r["good_looks"]))
+
+
+@app.command()
+def layouts(product: str = typer.Argument("weekly_planner"), count: int = typer.Option(8, help="How many generated layouts to show"),
+            first: int = typer.Option(1, help="First layout number"), out: Path = typer.Option(Path("layouts.png"), help="Contact sheet image to write")):
+    """See generated page layouts for a product as one picture. Use the number with `--page-layout auto:NUMBER`."""
+    import io
+
+    from PIL import Image
+
+    from .products import get_product_type
+    from .render.preview import layout_preview_png
+    pt = get_product_type(product)
+    if not pt.auto_layout:
+        raise typer.BadParameter(f"{product} has no generated layouts")
+    keys = [*pt.layouts, *[f"auto:{n}" for n in range(first, first + count)]]
+    ims = []
+    for k in keys:
+        typer.echo(f"  rendering {k}")
+        ims.append(Image.open(io.BytesIO(layout_preview_png(product, k))))
+    cols = 4
+    w, h = max(i.width for i in ims), max(i.height for i in ims)
+    sheet = Image.new("RGB", (cols * w, -(-len(ims) // cols) * h), "white")
+    for n, im in enumerate(ims):
+        sheet.paste(im, ((n % cols) * w, (n // cols) * h))
+    sheet.save(out)
+    typer.echo(f"Wrote {out}: presets {', '.join(pt.layouts)}, then auto:{first} to auto:{first + count - 1}")
 
 
 @app.command()
@@ -393,7 +490,7 @@ def engines_install(name: str = typer.Argument(..., help="remotion | manim | hyp
         typer.echo("HyperFrames installed (Apache-2.0). Use --motion hyperframes, or add 'hyperframes' to render.motion in moneyhub.yaml.\n"
                    "It needs Node 22+ and ffmpeg. MoneyHub switches HyperFrames' anonymous telemetry off for every render.")
     elif name == "manim":
-        typer.echo("Manim needs Cairo/Pango first (macOS: brew install pango cairo pkg-config).")
+        typer.echo("Manim needs Cairo/Pango first (macOS: brew install pango cairo pkgconf).")
         subprocess.run([sys.executable, "-m", "pip", "install", "manim"], check=True)
         typer.echo("Manim installed. Use --motion manim, or add 'manim' to render.motion.")
     else:

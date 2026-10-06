@@ -4,16 +4,19 @@
 <section class="page dp">
   {{ header(style, 'Day ' ~ d, 'Date: ____ / ____ / ________      Mood:  ☺  ☹  ☻') }}
   <div class="dp-body">
-    <div class="dp-sched card"><div class="label">Schedule</div>
-      {% for h in range(content.start_hour, content.end_hour + 1) %}<div class="dp-hour"><span>{{ (h - 1) % 12 + 1 }}{{ 'am' if h < 12 or h == 24 else 'pm' }}</span><i></i></div>{% endfor %}
+    {% if spec.schedule != 'none' %}
+    <div class="dp-sched card"><div class="label">Schedule{% if spec.schedule == 'timeblock' %}: plan | actual{% endif %}</div>
+      {% for h in range(content.start_hour, content.end_hour + 1) %}<div class="dp-hour"><span>{{ (h - 1) % 12 + 1 }}{{ 'am' if h < 12 or h == 24 else 'pm' }}</span><i></i>{% if spec.schedule == 'timeblock' %}<i></i>{% endif %}</div>{% endfor %}
     </div>
+    {% endif %}
     <div class="dp-side">
       <div class="card soft"><div class="label">{{ content.priorities_label }}</div>
-        {% for i in range(3) %}<div class="dp-pri"><b>{{ i + 1 }}</b><i></i></div>{% endfor %}</div>
-      <div class="card" style="flex:1.6;"><div class="label">{{ content.todo_label }}</div>
-        {% for i in range(8) %}<div class="dp-todo"><span class="sq"></span><i></i></div>{% endfor %}</div>
-      {% for b in content.boxes %}{{ box(b, 3) }}{% endfor %}
-      <div class="card"><div class="label">Daily checks</div><div class="dp-checks">{% for l in content.daily_labels %}<span><i class="check"></i>{{ l }}</span>{% endfor %}</div></div>
+        {% for i in range(spec.priorities) %}<div class="dp-pri"><b>{{ i + 1 }}</b><i></i></div>{% endfor %}</div>
+      <div class="card wide" style="flex:1.6;"><div class="label">{{ content.todo_label }}</div>
+        {% for i in range(spec.todo_rows) %}<div class="dp-todo"><span class="sq"></span><i></i></div>{% endfor %}</div>
+      {% if spec.notes %}{{ box('Notes', 4) }}{% endif %}
+      {% for b in content.boxes[:spec.boxes] %}{{ box(b, 3) }}{% endfor %}
+      {% if spec.checks %}<div class="card"><div class="label">Daily checks</div><div class="dp-checks">{% for l in content.daily_labels %}<span><i class="check"></i>{{ l }}</span>{% endfor %}</div></div>{% endif %}
     </div>
   </div>
   {{ footer(content.quotes[(d - 1) % content.quotes|length]) }}

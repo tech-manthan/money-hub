@@ -56,6 +56,9 @@
     }, 200);
   }
 
+  $$('#recs .rec').forEach(b => b.addEventListener('click', () => {
+    setCustom(true); $('#custom-niche').value = b.dataset.niche; pickType(b.dataset.type); markSuggested(b.dataset.type); $('#msg-1').textContent = '';
+  }));
   $('#ideas').addEventListener('change', e => { if (e.target.name === 'idea') pickIdea(e.target); });
   $('#types').addEventListener('change', syncType);
   $('#custom-toggle').addEventListener('click', () => setCustom(!customOn));
@@ -67,7 +70,7 @@
   $$('input[name="lookmode"]').forEach(r => r.addEventListener('change', () => { $('#look-pick').hidden = val('lookmode') !== 'pick'; updatePreview(); }));
   $('#look-pick').addEventListener('change', e => { if (e.target.id === 'use-brand') $('#brand').disabled = !e.target.checked; updatePreview(); });
   $('#brand').addEventListener('input', updatePreview);
-  $('#opt-eink').addEventListener('change', updatePreview);
+  $('#opt-eink').addEventListener('change', () => { updatePreview(); if (step === 3) renderLayouts(); });
 
   function go(n) {
     if (n > step && step === 1) {
@@ -78,7 +81,7 @@
     $$('.step').forEach(s => s.classList.toggle('on', +s.dataset.step === n));
     $$('#stepper li').forEach(li => { const k = +li.dataset.step; li.classList.toggle('on', k === n); li.classList.toggle('done', k < n); });
     if (n === 2) updatePreview();
-    if (n === 3) summarise();
+    if (n === 3) { renderLayouts(); summarise(); }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   $$('[data-go]').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
@@ -90,11 +93,56 @@
     if (val('product_type') === 'wall_art') { o.motif = sel('motif'); o.layout = sel('layout'); }
     return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== ''));
   }
+  let extraLayouts = [];   // generated or described layouts the person added, kept while they browse
+  const layoutQuery = () => {
+    const r = $('input[name="product_type"]:checked'), l = look(), q = new URLSearchParams({ product_type: r.value });
+    ['palette', 'fonts', 'brand'].forEach(k => l[k] && q.set(k, l[k]));
+    if ($('#opt-eink').checked) q.set('eink', '1');
+    return q;
+  };
+  const layCard = (key, title, desc, src, checked, attrs = '') => `<label class="opt layopt"><input type="radio" name="page_layout" value="${key}" ${checked ? 'checked' : ''} ${attrs}>
+    <span class="in"><img loading="lazy" alt="Example ${title} page" src="${src}"><b>${title}</b><span class="meta">${desc}</span></span></label>`;
+  function renderLayouts() {
+    const r = $('input[name="product_type"]:checked'), wrap = $('#layout-wrap'), box = $('#layouts');
+    const layouts = r ? JSON.parse(r.dataset.layouts || '{}') : {}, keys = Object.keys(layouts);
+    wrap.hidden = keys.length < 2; $('#layout-tools').hidden = wrap.hidden;
+    if (wrap.hidden) { box.innerHTML = ''; return; }
+    if (box.dataset.type !== r.value) { extraLayouts = []; box.dataset.type = r.value; }
+    const keep = val('page_layout'), q = layoutQuery();
+    const presets = keys.map((k, i) => layCard(k, layouts[k].split(':')[0], layouts[k].split(': ')[1] || '', `/api/layout-preview.png?${q}&layout=${k}`, keep ? keep === k : i === 0));
+    const extras = extraLayouts.map(x => x.spec
+      ? layCard(x.key, /^auto/.test(x.name) ? 'Your layout' : x.name, `Designed from: ${x.text}`, `/api/layout-preview.png?${q}&layout=custom&spec=${encodeURIComponent(JSON.stringify(x.spec))}`, keep === x.key,
+                `data-spec='${JSON.stringify(x.spec).replace(/'/g, '&#39;')}' data-text="${x.text.replace(/"/g, '&quot;')}"`)
+      : layCard(x.key, `Generated layout ${extraLayouts.filter(y => !y.spec).indexOf(x) + 1}`, 'A new arrangement, made for you.', `/api/layout-preview.png?${q}&layout=${x.key}`, keep === x.key));
+    box.innerHTML = presets.concat(extras).join('');
+    if (step === 3) summarise();
+  }
+  $('#layouts').addEventListener('change', () => summarise());
+  $('#gen-layout').addEventListener('click', () => {
+    const key = 'auto:' + (1 + Math.floor(Math.random() * 99999));
+    extraLayouts.push({ key }); renderLayouts(); const c = $(`input[value="${key}"]`); if (c) { c.checked = true; summarise(); c.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  });
+  $('#design-layout').addEventListener('click', async () => {
+    const text = $('#layout-text').value.trim(), msg = $('#layout-msg'); if (!text) { msg.textContent = 'Type what you want first.'; return; }
+    msg.textContent = 'Designing…'; $('#design-layout').disabled = true;
+    try {
+      const r = await fetch('/api/layout-spec', { method: 'POST', body: new URLSearchParams({ product_type: val('product_type'), text }) });
+      if (!r.ok) throw new Error((await r.json()).detail || 'That did not work.');
+      const j = await r.json(), key = 'custom:' + (extraLayouts.length + 1);
+      extraLayouts.push({ key, spec: j.spec, name: j.name, text });
+      msg.textContent = j.source === 'ai' ? 'Designed by your AI helper.' : 'No AI helper is set up, so here is a generated layout instead. Add one in Settings for exact results.';
+      renderLayouts(); const c = $(`input[value="${key}"]`); if (c) c.checked = true;
+    } catch (err) { msg.textContent = err.message; }
+    $('#design-layout').disabled = false;
+  });
   const markets = () => $$('input[name="mk"]:checked').map(x => x.value);
   function payload() {
     const o = { niche: niche(), product_type: val('product_type'), ...look() };
     if (!$('#opt-video').checked) o.no_video = '1';
     if ($('#opt-eink').checked) o.eink = '1';
+    const pl = !$('#layout-wrap').hidden && val('page_layout');
+    if (pl && pl.startsWith('custom')) { const c = $('input[name="page_layout"]:checked'); o.layout_spec = c.dataset.spec; }
+    else if (pl) o.page_layout = pl;
     if (val('product_type') === 'wall_art' && $('#opt-ai').checked) o.ai_art = '1';
     return o;
   }
@@ -109,6 +157,9 @@
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';
+    const chosen = $('input[name="page_layout"]:checked');
+    if (p.layout_spec && chosen) cmd += ` --layout-prompt "${(chosen.dataset.text || '').replace(/"/g, "'")}"`;
+    if (p.page_layout && p.page_layout !== Object.keys(JSON.parse($('input[name="product_type"]:checked').dataset.layouts))[0]) cmd += ` --page-layout ${p.page_layout}`;
     const mk = markets(); if (mk.join() !== 'etsy,pinterest') cmd += ` --marketplaces ${mk.join(',')}`;
     if (p.no_video) cmd += ' --no-video';
     if (p.ai_art) cmd += ' --ai-art';

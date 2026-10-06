@@ -62,15 +62,22 @@
       {% for d in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
       <div class="day">
         <div class="dname"><b class="ds">{{ d[:3] }}</b><b class="dl">{{ d }}</b></div>
-        <div class="dlines">{{ lines(4 if not land else 5) }}</div>
-        <div class="dchecks" style="width:{{ (content.daily_labels|map('length')|max) * 0.56 + 2.2 }}em;">{% for l in content.daily_labels %}<div><i class="check"></i>{{ l }}</div>{% endfor %}</div>
+        <div class="dlines">{{ lines(spec.lines) }}</div>
+        {% if spec.checks %}<div class="dchecks" style="width:{{ (content.daily_labels|map('length')|max) * 0.56 + 2.2 }}em;">{% for l in content.daily_labels %}<div><i class="check"></i>{{ l }}</div>{% endfor %}</div>{% endif %}
       </div>
       {% endfor %}
-      {% if land %}<div class="day notes">{{ box('Notes', 6, 'soft') }}</div>{% endif %}
+      {% if spec.days == 'grid' %}<div class="day notes">{{ box('Notes', 6, 'soft') }}</div>{% endif %}
     </div>
+    {% if spec.body != 'none' %}
     <div class="side">
-      {% for b in content.weekly_boxes %}{{ box(b, 3, 'soft' if loop.first else '') }}{% endfor %}
+      {% for x in spec.extras %}
+        {% if x == 'priorities' %}{{ box('Top 3 priorities', 3, 'soft') }}
+        {% elif x == 'notes' %}{{ box('Notes', 3) }}
+        {% else %}<div class="card"><div class="label">Habits</div><div class="hab">{% for l in content.daily_labels[:4] %}<div class="hrow"><span>{{ l }}</span>{% for i in range(7) %}<i class="check"></i>{% endfor %}</div>{% endfor %}</div></div>{% endif %}
+      {% endfor %}
+      {% for b in content.weekly_boxes[:spec.boxes] %}{{ box(b, 3, 'soft' if loop.first and not spec.extras else '') }}{% endfor %}
     </div>
+    {% endif %}
   </div>
   {{ footer(content.weekly_quotes[(w - 1) % content.weekly_quotes|length], hyper, '') }}
 </section>

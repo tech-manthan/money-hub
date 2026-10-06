@@ -1,0 +1,26 @@
+<style>
+.cv { position:relative; width:{{ w }}in; height:{{ h }}in; background:{{ style.palette.soft }}; font-family:var(--font-b); overflow:hidden; }
+.cv .box { position:absolute; box-sizing:border-box; }
+.cv .bleed { inset:0; border:{{ bleed }}in solid rgba(200,40,40,.18); }
+.cv .trim { border:1.5px dashed #888; }
+.cv .safe { border:1px dotted #aaa; }
+.cv .lab { position:absolute; font-size:9pt; color:#666; letter-spacing:.05em; text-transform:uppercase; }
+</style>
+<div class="cv">
+  <div class="box bleed"></div>
+  <div class="box" style="left:{{ bleed }}in;top:{{ bleed }}in;width:{{ tw }}in;height:{{ th }}in;background:{{ style.palette.paper }}"></div>
+  <div class="box" style="left:{{ bleed + tw + spine }}in;top:{{ bleed }}in;width:{{ tw }}in;height:{{ th }}in;background:{{ style.palette.accent }}"></div>
+  <div class="box trim" style="left:{{ bleed }}in;top:{{ bleed }}in;width:{{ tw }}in;height:{{ th }}in"></div>
+  <div class="box trim" style="left:{{ bleed + tw }}in;top:{{ bleed }}in;width:{{ spine }}in;height:{{ th }}in"></div>
+  <div class="box trim" style="left:{{ bleed + tw + spine }}in;top:{{ bleed }}in;width:{{ tw }}in;height:{{ th }}in"></div>
+  <div class="box safe" style="left:{{ bleed + 0.25 }}in;top:{{ bleed + 0.25 }}in;width:{{ tw - 0.5 }}in;height:{{ th - 0.5 }}in"></div>
+  <div class="box safe" style="left:{{ bleed + tw + spine + 0.25 }}in;top:{{ bleed + 0.25 }}in;width:{{ tw - 0.5 }}in;height:{{ th - 0.5 }}in"></div>
+  <div class="box" style="left:{{ bleed + tw - 0.25 - 2 }}in;top:{{ bleed + th - 0.25 - 1.2 }}in;width:2in;height:1.2in;background:#fff;border:1px solid #999;display:flex;align-items:center;justify-content:center;font-size:9pt;color:#777">KDP barcode area 2 x 1.2 in</div>
+  <div class="lab" style="left:{{ bleed + 0.3 }}in;top:{{ bleed + 0.3 }}in">Back cover</div>
+  <div class="lab" style="left:{{ bleed + tw + spine + 0.3 }}in;top:{{ bleed + 0.3 }}in;color:#fff">Front cover</div>
+  <div style="position:absolute;left:{{ bleed + tw + spine + 0.5 }}in;top:{{ bleed + th * 0.3 }}in;width:{{ tw - 1 }}in;color:{{ style.palette.accent_ink }};font-family:var(--font-h);font-weight:700;font-size:30pt;line-height:1.1;text-align:center">{{ title }}</div>
+  <div style="position:absolute;left:{{ bleed + tw + spine + 0.5 }}in;top:{{ bleed + th * 0.6 }}in;width:{{ tw - 1 }}in;color:{{ style.palette.accent_ink }};font-family:var(--font-s);font-size:18pt;text-align:center">{{ subtitle }}</div>
+  {% if spine >= 0.25 %}<div style="position:absolute;left:{{ bleed + tw }}in;top:{{ bleed }}in;width:{{ spine }}in;height:{{ th }}in;display:flex;align-items:center;justify-content:center"><div style="transform:rotate(90deg);white-space:nowrap;font-size:11pt;font-weight:700;color:{{ style.palette.ink }}">{{ title }}</div></div>
+  {% else %}<div class="lab" style="left:{{ bleed + tw - 0.4 }}in;top:{{ bleed + th / 2 }}in;width:{{ spine + 0.8 }}in;text-align:center;font-size:7pt">no spine text under 79 pages</div>{% endif %}
+  <div class="lab" style="left:{{ bleed + tw }}in;top:{{ h - 0.22 }}in;width:{{ spine }}in;font-size:6pt;text-align:center">spine {{ '%0.3f'|format(spine) }}in</div>
+</div>

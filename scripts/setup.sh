@@ -13,11 +13,26 @@ else
 fi
 
 echo "==> Python environment"
-PY=${PYTHON:-python3}
+# Prefer a well-supported Python (3.12/3.13/3.11); CI tests 3.11-3.14. Override with PYTHON=/path/to/python.
+PY=${PYTHON:-}
+if [[ -z "$PY" ]]; then
+  for c in python3.12 python3.13 python3.11 python3; do
+    if command -v "$c" >/dev/null; then PY=$c; break; fi
+  done
+fi
+echo "Using $($PY --version) ($PY)"
 $PY -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip >/dev/null
 pip install -e ".[anthropic,chromium,video,dev]"
+
+if [[ "${1:-}" == "--full" ]]; then
+  echo "==> Optional engines (--full): HyperFrames, Remotion, voice, LibreOffice"
+  moneyhub engines install hyperframes || true
+  moneyhub engines install remotion || true
+  pip install kokoro-onnx && moneyhub voices install || true
+  if [[ "$(uname)" == "Darwin" ]]; then brew list --cask libreoffice >/dev/null 2>&1 || brew install --cask libreoffice || true; fi
+fi
 
 echo "==> Optional: Chromium for the alternate PDF engine (skip with Ctrl-C)"
 playwright install chromium || true

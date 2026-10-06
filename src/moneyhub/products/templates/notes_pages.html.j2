@@ -1,0 +1,8 @@
+{% from '_macros.html.j2' import header, footer %}
+{% for i in range(count) %}
+<div class="page">
+  {{ header(style, 'Notes', 'Ideas, lists, brain dumps') }}
+  <div class="card fill"><div class="dots"></div></div>
+  {{ footer(title, false, loop.index) }}
+</div>
+{% endfor %}

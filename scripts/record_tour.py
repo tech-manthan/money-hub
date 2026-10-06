@@ -74,6 +74,36 @@ def start_server(tmp: Path) -> subprocess.Popen:
 
 SR = 44100
 
+# What is said aloud. The on-screen captions stay short; the voice sounds like a person showing a friend.
+SPOKEN = {
+    "MoneyHub makes printable products you can sell.": "Hi! This is MoneyHub. It helps you make printable products you can sell, even if you have never done it before. Let me show you how it works.",
+    "Press Start making.": "Let's begin. Just press Start making.",
+    "Step 1: pick who you want to help.": "Step one. Think about who you would like to help. Every product starts with a group of people.",
+    "Each card is a group of people. We suggest a product that suits them.": "Each card is a group of people with something in common, like nurses. Under each one, we have picked a product that suits them.",
+    "You can change what to make. Planners and checklists are easy to start with.": "If you would like something different, you can change what we make for them. Planners and checklists are easy places to begin.",
+    "Not sure? Surprise me picks for you.": "Not sure at all? That is fine. Press Surprise me, and we will pick something for you.",
+    "Or describe any group of people yourself.": "Or, if you have your own idea, just type who it is for. Dog trainers, for example.",
+    "We'll go with Nurse. Next, the look.": "I will stick with nurses. Now, on to the look.",
+    "Step 2: how should it look?": "Step two. How should it look?",
+    "\"Choose for me\" matches colours and fonts to your audience. It's the recommended choice.": "If design is not your thing, leave it on Choose for me. We match the colours and fonts to your audience, so you can hardly go wrong.",
+    "Or pick yourself. Choose a colour set…": "Or pick it yourself. Start with a colour set.",
+    "…and a font style.": "Then a font style. Watch the example page change as you choose.",
+    "More detail lets you change titles, corners and lines. All optional.": "There is more detail if you want it, like the title style and the corners. But it is all optional.",
+    "Step 3: check your choices.": "Step three. Here is a quick summary of what we are about to make.",
+    "Everything here also works in the terminal. This is the same request.": "And if you ever prefer a terminal, here is the very same request, written as a command.",
+    "Press Make my product.": "Happy with it? Press Make my product.",
+    "It's being made. This usually takes 20 seconds to 3 minutes.": "Now we wait a little. It usually takes a few minutes at most, and you can watch each step happen.",
+    "Done! Your product is ready.": "And it is done! Your product is ready.",
+    "What to do next is listed right here.": "Right here, it tells you exactly what to do next.",
+    "Step 4: check it before you sell it.": "Last step. Before you sell anything, take a good look at it.",
+    "Look through every preview page.": "Scroll through the preview pages, and make sure you like what you see.",
+    "Quality checks show anything to fix. Green ticks are good.": "The quality checks flag anything that needs fixing. Green ticks mean you are good to go.",
+    "Happy with it? Press Approve.": "If you are happy with it, press Approve.",
+    "Download the upload package: your files, ready to upload.": "Then download the upload package. It has everything you need, ready to upload.",
+    "Then follow the upload guide for your shop. It tells you what goes where.": "Finally, follow the guide for your shop. It tells you which file goes where, and gives you the title and description to copy. And that is it. You have just made a product.",
+}
+
+
 
 class Tour:
     def __init__(self, page: Page, voice=None, audio_dir: Path | None = None):
@@ -85,7 +115,7 @@ class Tour:
         spoken = 0.0
         if text and self.voice:
             wav = self.audio_dir / f"line-{len(self.events):03d}.wav"
-            spoken = self.voice.synth(text.replace("\"", "").replace("…", "."), wav, shutil.which("ffmpeg"))
+            spoken = self.voice.synth(SPOKEN.get(text, text).replace("…", "."), wav, shutil.which("ffmpeg"))
             self.events.append((time.time() - self.t0, wav))
         self.page.evaluate("t => window.__cap && window.__cap(t)", text)
         self.page.wait_for_timeout(int(max(hold, spoken + 0.5) * 1000))
@@ -103,13 +133,15 @@ class Tour:
 
     def click(self, selector: str, hold: float = 0.8):
         loc = self.page.locator(selector).first
-        loc.scroll_into_view_if_needed()
+        loc.evaluate("e => e.scrollIntoView({block: 'center', behavior: 'instant'})")   # centred, so the sticky header never covers it
         self.move(loc)
         self.page.mouse.down(); self.page.mouse.up()
         self.page.wait_for_timeout(int(hold * 1000))
 
     def hover(self, selector: str, hold: float = 0.6):
-        self.move(self.page.locator(selector).first)
+        loc = self.page.locator(selector).first
+        loc.evaluate("e => e.scrollIntoView({block: 'center', behavior: 'instant'})")
+        self.move(loc)
         self.page.wait_for_timeout(int(hold * 1000))
 
     def mark(self, name: str):
@@ -149,6 +181,7 @@ def tour(page: Page, voice=None, audio_dir: Path | None = None) -> Tour:
     # ---- step 2
     t.mark("look0")
     t.cap("Step 2: how should it look?", 2.0)
+    t.click('.opt:has-text("Choose for me")', 0.5)
     t.cap("\"Choose for me\" matches colours and fonts to your audience. It's the recommended choice.", 3.2)
     t.click('.opt:has-text("I\'ll pick")', 0.8)
     t.cap("Or pick yourself. Choose a colour set…", 1.6)

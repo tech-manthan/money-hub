@@ -17,8 +17,20 @@ _EXTRA = {
     "decluttering", "meal", "preps", "meds", "ebook", "ebooks", "eink", "e-ink", "a4", "a5", "ios", "ipad", "ipads", "samsung",
     "moneyhub", "affirmations", "weekly", "monthly", "dotted", "habit", "habits", "lifestyle", "homeschool", "homeschooling",
     "wi", "fi", "etc", "vs", "okay", "ok", "gen", "z", "mom", "moms", "mum", "mums", "pre", "non", "re", "tabbed", "spreadsheet",
+    "cardstock", "builtin", "printout", "printouts", "cutout", "cutouts", "downloadable", "tablet-friendly", "goodnotes", "samsung",
     "spreadsheets", "gsheet", "google", "sheets", "numbers", "onenote", "evernote", "todoist", "bujo", "journaling", "journal",
 }
+
+
+def _us_variants(w: str) -> list[str]:
+    """British spellings are fine: map them to the American form the dictionary knows."""
+    out = []
+    for pat, rep in ((r"our(s|ed|ing|ful|ite)?$", r"or\1"), (r"is(e|es|ed|ing|ation|ations)$", r"iz\1"), (r"ys(e|es|ed|ing)$", r"yz\1"),
+                     (r"ll(ed|ing|er|ers)$", r"l\1"), (r"ogue(s)?$", r"og\1"), (r"re(s)?$", r"er\1"), (r"ence$", "ense"), (r"ae", "e"), (r"oe", "e")):
+        v = re.sub(pat, rep, w)
+        if v != w:
+            out.append(v)
+    return out
 
 
 def _checker():
@@ -61,6 +73,8 @@ def misspellings(texts: list[str], niche: NicheProfile | None = None, allow: str
             seen.add(base)
             parts = [p for p in re.split(r"-", base) if p]
             if all(p in known or p in sc for p in parts) and parts:
+                continue
+            if any(v in sc for v in _us_variants(base)):
                 continue
             if base in sc.unknown([base]) and base.rstrip("'") not in sc:
                 out.append((raw, sc.correction(base) or ""))

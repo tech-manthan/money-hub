@@ -105,3 +105,15 @@ button.sm,.btn.sm{padding:5px 12px;font-size:13px}
   .stepper li{padding-right:10px;font-size:13px}.doc,.lp-hero>*{min-width:0}
 }
 a:focus-visible,button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.keyrow{display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:12px;padding:12px 0;border-top:1px solid var(--line);align-items:center}.keyrow:first-of-type{border-top:0}
+.keyrow .kv{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.keyrow .kv input{flex:1;min-width:200px}@media(max-width:700px){.keyrow{grid-template-columns:1fr}}
+.artopt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:400;margin:6px 0}
+
+button.rec{text-align:left;font:inherit;color:inherit;background:none;border:0;padding:0;font-weight:400;position:relative;cursor:pointer}
+button.rec .in{display:flex;flex-direction:column;gap:3px;height:100%;padding:12px 14px;border:1px dashed var(--accent);border-radius:var(--radius);background:var(--bg)}
+button.rec:hover .in{background:var(--soft)}
+
+.layouts{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}.layopt .in img{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:#fff;margin-bottom:6px;aspect-ratio:3/4;object-fit:cover;object-position:top}
+
+.layopt .in img{background:linear-gradient(100deg,var(--soft) 30%,var(--panel) 50%,var(--soft) 70%);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.layopt .in img{animation:none}}

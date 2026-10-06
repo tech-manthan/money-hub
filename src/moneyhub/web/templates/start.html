@@ -26,6 +26,15 @@
     <input type="text" id="custom-niche" placeholder="e.g. dog trainers, new gardeners, night-shift workers">
     <div class="meta">Any group works. If an AI helper is available it researches the group first. Offline, it uses a general profile.</div>
   </div>
+  {% if recs.make_next and recs.basis != 'none' %}
+  <h3>Based on your results</h3>
+  <p class="meta">{{ recs.note }}</p>
+  <div class="grid ideas" id="recs">
+    {% for r in recs.make_next[:3] %}<button type="button" class="idea rec" data-niche="{{ r.niche }}" data-type="{{ r.product_type }}">
+      <span class="in"><b>{{ r.niche }}: {{ types[r.product_type].label }}</b><span class="meta">{{ r.reason }}</span></span></button>{% endfor %}
+  </div>
+  <h3>Or start from an audience</h3>
+  {% endif %}
   <div class="grid ideas" id="ideas">
     {% for i in ideas %}
     <label class="idea">
@@ -41,7 +50,7 @@
   <div class="grid types" id="types">
     {% for k, t in types.items() %}
     <label class="type">
-      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}">
+      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}">
       <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span></span>
     </label>
     {% endfor %}
@@ -107,6 +116,18 @@
 <section class="step panel" data-step="3">
   <h2>Ready to make it</h2>
   <p class="summary" id="summary"></p>
+  <div id="layout-wrap" hidden>
+    <h3>How should the pages be arranged?</h3>
+    <p class="meta">Each picture is a real page from your product in that layout. People like different layouts, so pick the one your buyers would prefer. You can make another version later.</p>
+    <div class="grid layouts" id="layouts"></div>
+    <div id="layout-tools" hidden>
+      <div class="actions"><button type="button" class="ghost sm" id="gen-layout">🎲 Generate another layout</button></div>
+      <div class="describe"><label for="layout-text">Or describe the layout you want</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="layout-text" maxlength="300" placeholder="e.g. big priorities on the left and a habit row at the bottom">
+        <button type="button" class="sm" id="design-layout">Design it</button></div>
+        <div class="meta" id="layout-msg" role="status"></div></div>
+    </div>
+  </div>
   <h3>Where will you sell it?</h3>
   <div class="checks" id="markets">
     <label><input type="checkbox" name="mk" value="etsy" checked> Etsy</label>

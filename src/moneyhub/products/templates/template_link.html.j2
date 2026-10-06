@@ -1,0 +1,25 @@
+{% from '_macros.html.j2' import header, footer %}
+<div class="page">
+  {{ header(style, 'Your template is ready', title) }}
+  <div class="card soft" style="margin:1.2em 0;padding:1.4em 1.6em">
+    <div class="label">Step 1</div>
+    {% if link %}<div style="font-size:1.5em;margin:.4em 0"><a href="{{ link }}" style="color:var(--accent);font-weight:700">Click here to open your {{ platform }} template</a></div>
+    <div class="small muted" style="word-break:break-all">{{ link }}</div>
+    {% else %}<div style="font-size:1.3em;margin:.4em 0;color:var(--accent);font-weight:700">PASTE YOUR {{ platform|upper }} TEMPLATE LINK HERE</div>
+    <div class="small muted">Replace this line with the link, and make it a clickable hyperlink, before you sell the file.</div>{% endif %}
+  </div>
+  <div class="card" style="padding:1.2em 1.6em">
+    <div class="label">What happens next</div>
+    <div class="steps">
+      <div>1. Open the link. {{ platform }} asks you to use or copy the template.</div>
+      <div>2. Make your own copy so your changes are saved to your account.</div>
+      <div>3. Edit the text, colours and fonts. Print or download it when you are done.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1em;padding:1.2em 1.6em">
+    <div class="label">Good to know</div>
+    <div class="small">You need a free {{ platform }} account. The template is for your personal use. Please do not share or resell the link or the files.
+      Fonts used: {{ fonts }}.</div>
+  </div>
+  {{ footer(title, false, 'Thank you for your purchase') }}
+</div>

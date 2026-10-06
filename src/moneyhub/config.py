@@ -52,7 +52,30 @@ def load_config(root: Path | None = None) -> Config:
         f = root / name
         if f.exists():
             data = _deep_merge(data, yaml.safe_load(f.read_text()) or {})
+    from .keystore import load_env
+    load_env()
     return Config(data, root)
+
+
+def save_local_setting(dotted: str, value: Any, root: Path | None = None) -> None:
+    """Write one setting to moneyhub.local.yaml (git-ignored) and reload the configuration."""
+    root = root or Path(os.environ.get("MONEYHUB_HOME") or REPO_ROOT)
+    f = root / "moneyhub.local.yaml"
+    data = yaml.safe_load(f.read_text()) if f.exists() else {}
+    data = data or {}
+    cur = data
+    *parents, last = dotted.split(".")
+    for part in parents:
+        cur = cur.setdefault(part, {})
+    cur[last] = value
+    f.write_text(yaml.safe_dump(data, sort_keys=False))
+    reload_config()
+
+
+def reload_config() -> None:
+    get_config.cache_clear()
+    from .llm import router
+    router._router = None
 
 
 @lru_cache(maxsize=1)

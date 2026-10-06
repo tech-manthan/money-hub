@@ -25,6 +25,8 @@ from ..render.html import PAGE_SIZES
 from ..render.raster import pdf_page_count, render_pages
 from ..store import Store
 from . import guide
+from ..growth import recommend
+from .. import keystore
 
 HERE = Path(__file__).resolve().parent
 app = FastAPI(title="MoneyHub", docs_url=None, redoc_url=None, openapi_url=None)  # /docs is our own user guide
@@ -125,7 +127,7 @@ def docs(request: Request):
 def start(request: Request):
     types = all_product_types()
     return templates.TemplateResponse(request, "start.html", _ctx(
-        request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), steps=guide.STEPS,
+        request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), steps=guide.STEPS, recs=recommend(),
         size_map={k: t.size_options() for k, t in types.items()}, ai_art=any(a["available"] for a in art_status()), **_look_ctx()))
 
 
@@ -143,6 +145,45 @@ def look_preview(palette: str = "", fonts: str = "", header: str = "", radius: s
         raise HTTPException(422, "unknown header or grid")
     png = look_preview_png(palette, fonts, header, radius if radius in {str(r) for r in RADII} else "", grid, "#" + brand.lstrip("#") if brand else "", bool(eink))
     return Response(png, media_type="image/png", headers={"Cache-Control": "max-age=600"})
+
+
+@app.get("/api/layout-preview.png")
+def layout_preview(product_type: str, layout: str, palette: str = "", fonts: str = "", brand: str = "", eink: str = "", spec: str = ""):
+    from .. import layouts as lay
+    from ..design import is_hex_colour
+    from ..render.preview import layout_preview_png
+    pt = all_product_types().get(product_type)
+    if not pt or not pt.has_layout(layout):
+        raise HTTPException(404, "unknown product type or layout")
+    if spec:
+        spec = _checked_spec(product_type, spec)
+    if (palette and palette not in [p.key for p in PALETTES]) or (fonts and fonts not in [f.key for f in FONT_PAIRS]) or (brand and not is_hex_colour(brand)):
+        raise HTTPException(422, "unknown look option")
+    png = layout_preview_png(product_type, layout, palette, fonts, "#" + brand.lstrip("#") if brand else "", bool(eink), spec_json=spec)
+    return Response(png, media_type="image/png", headers={"Cache-Control": "max-age=600"})
+
+
+def _checked_spec(product_type: str, raw: str) -> str:
+    """Validate a layout spec sent by the page; returns it normalised as JSON."""
+    from .. import layouts as lay
+    model = lay.SPEC_MODELS.get(product_type)
+    if not model:
+        raise HTTPException(422, "this product has no generated layouts")
+    try:
+        return model.model_validate_json(raw).normalised().model_dump_json()
+    except Exception:  # noqa: BLE001 - any invalid spec is a 422
+        raise HTTPException(422, "that layout is not valid")
+
+
+@app.post("/api/layout-spec")
+def layout_spec(request: Request, product_type: str = Form(...), text: str = Form(...)):
+    """Turn a description into a layout (AI helper if one is set up, otherwise a generated one)."""
+    _local_only(request)
+    from .. import layouts as lay
+    if product_type not in lay.SPEC_MODELS:
+        raise HTTPException(422, "this product has no generated layouts")
+    spec, source = lay.spec_from_text(product_type, text, get_router())
+    return {"spec": json.loads(spec.model_dump_json()), "source": source, "name": spec.name}
 
 
 @app.get("/products", response_class=HTMLResponse)
@@ -189,7 +230,9 @@ def product(request: Request, pid: int):
         guides[g.stem.replace("guide-", "")] = g.read_text()
     return templates.TemplateResponse(request, "product.html", _ctx(
         request, p=p, qa=json.loads(p["qa"] or "[]"), listing=listing, spec=spec, files=files, pages=pages,
-        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable, brag=brag_files, brag_running=bool(running)))
+        images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable, brag=brag_files, brag_running=bool(running),
+        exports=sorted(str(f.relative_to(folder)) for f in (folder / "exports").rglob("*") if f.is_file() and f.suffix in (".zip", ".pdf", ".md", ".json")) if (folder / "exports").exists() else [],
+        export_kinds=_export_kinds(p["product_type"])))
 
 
 @app.post("/product/{pid}/brag")
@@ -268,6 +311,38 @@ async def upload_edits(pid: int, request: Request):
     return RedirectResponse(f"/product/{pid}", status_code=303)
 
 
+def _export_kinds(ptype: str) -> list[str]:
+    from ..exports import kdp, notion
+    pdf_types = {"weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "budget_tracker", "card_deck"}
+    return [k for k, ok in (("kdp", ptype in kdp.SUPPORTED), ("notion", ptype in notion.SUPPORTED), ("canva", ptype in pdf_types)) if ok]
+
+
+@app.post("/product/{pid}/export")
+def export_product(pid: int, kind: str = Form(...), trim: str = Form("6x9"), paper: str = Form("white"), link: str = Form("")):
+    """Build a KDP / Notion / Canva pack in the background."""
+    from ..exports import canva, kdp, load, notion
+    if kind not in ("kdp", "notion", "canva"):
+        raise HTTPException(422, "unknown export")
+    if link and not link.startswith(("https://", "http://")):
+        raise HTTPException(422, "The template link must start with https://")
+    st = _store()
+    if not st.product(pid):
+        raise HTTPException(404)
+
+    def run(job):
+        l = load(pid, st)
+        before = {f for f in (l.folder / "exports").rglob("*")} if (l.folder / "exports").exists() else set()
+        if kind == "kdp":
+            kdp.export_kdp(l, trim, paper, progress=lambda m: job["log"].append(m))
+        elif kind == "notion":
+            notion.export_notion(l)
+        else:
+            canva.export_canva(l, link or None)
+        made = sorted(str(f.relative_to(l.folder)) for f in (l.folder / "exports").rglob("*") if f.is_file() and f.suffix in (".zip", ".pdf", ".md", ".json"))
+        return {"files": made, "product_id": pid, "qa": "pass"}
+    return {"job": _submit(f"{kind} export for #{pid}", run)}
+
+
 @app.post("/product/{pid}/regenerate")
 def regenerate(pid: int):
     p = _store().product(pid)
@@ -285,12 +360,74 @@ def report(request: Request):
     return templates.TemplateResponse(request, "report.html", _ctx(request, rows=_store().performance()))
 
 
+def _local_only(request: Request) -> None:
+    """Settings changes are accepted only from this machine's own page (blocks other websites posting to localhost)."""
+    from urllib.parse import urlparse
+    host = request.headers.get("host", "")
+    if host.rsplit(":", 1)[0].strip("[]") not in ("127.0.0.1", "localhost", "::1"):
+        raise HTTPException(403, "Settings can only be changed from this computer.")
+    origin = request.headers.get("origin")
+    if origin and urlparse(origin).netloc != host:
+        raise HTTPException(403, "Request came from another site.")
+
+
+@app.post("/api/settings/key")
+def settings_save_key(request: Request, name: str = Form(...), value: str = Form(...)):
+    _local_only(request)
+    try:
+        keystore.save(name, value)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/settings/key/remove")
+def settings_remove_key(request: Request, name: str = Form(...)):
+    _local_only(request)
+    try:
+        keystore.remove(name)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/settings/test")
+def settings_test(request: Request, provider: str = Form(...)):
+    """Check that a helper works. Writing helpers get one tiny request; image providers are only checked for a key (no cost)."""
+    _local_only(request)
+    from ..art import PROVIDERS, SVG_PROVIDERS
+    if provider in PROVIDERS or provider in SVG_PROVIDERS:
+        p = {**PROVIDERS, **SVG_PROVIDERS}[provider]
+        ok = p.available()
+        return {"ok": ok, "message": "Ready. It will be used when you make wall art with AI art switched on." if ok else "Not set up yet."}
+    p = get_router().provider(provider)
+    if not p:
+        raise HTTPException(404, "unknown provider")
+    if not p.available():
+        return {"ok": False, "message": "Not set up yet."}
+    try:
+        reply = p.complete("You are a connection test.", "Reply with the single word OK.", max_tokens=20)
+    except Exception as e:  # noqa: BLE001 - show a short, secret-free reason
+        return {"ok": False, "message": keystore.scrub(str(e))[:240]}
+    return {"ok": True, "message": "Connected." + ("" if "ok" in reply.lower() else " (it answered, but not as expected)")}
+
+
+@app.post("/api/settings/art")
+def settings_art(request: Request, providers: list[str] = Form(default=[])):
+    _local_only(request)
+    from ..art import ALL_ART_PROVIDERS
+    from ..config import save_local_setting
+    chosen = [p for p in providers if p in ALL_ART_PROVIDERS]
+    save_local_setting("render.art", chosen)
+    return {"ok": True, "providers": chosen}
+
+
 @app.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     cfg = get_config()
     return templates.TemplateResponse(request, "settings.html", _ctx(
-        request, providers=get_router().status(), tasks=cfg.get("llm.tasks"), out=str(cfg.output_dir),
-        renderers=cfg.get("render.pdf"), art=__import__("moneyhub.art", fromlist=["art_status"]).art_status()))
+        request, providers=get_router().status(), tasks=cfg.get("llm.tasks") or {}, out=str(cfg.output_dir),
+        renderers=cfg.get("render.pdf") or ["weasyprint"], art=art_status(), keys=keystore.status(), env_file=str(keystore.env_path())))
 
 
 # ------------------------------------------------------------------ actions
@@ -299,7 +436,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
                palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form(""),
                ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
                radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
-               brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[])):
+               brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[]), page_layout: str = Form(""),
+               layout_spec: str = Form("")):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
                                         (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
     if bad:
@@ -307,7 +445,10 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
     from ..design import is_hex_colour
     if brand and not is_hex_colour(brand):
         raise HTTPException(422, "Brand colour must look like #2F6B57")
-    look = {**({"brand": "#" + brand.lstrip("#")} if brand else {}), **({"eink": True} if eink else {}),
+    pt = all_product_types().get(product_type)
+    if page_layout and (not pt or not pt.has_layout(page_layout)):
+        raise HTTPException(422, f"Unknown page layout: {page_layout}")
+    look = {**({"page_layout": page_layout} if page_layout else {}), **({"layout_spec": json.loads(_checked_spec(product_type, layout_spec))} if layout_spec else {}), **({"brand": "#" + brand.lstrip("#")} if brand else {}), **({"eink": True} if eink else {}),
             **({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
             **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {}),
             **({"layout": int(layout)} if layout.strip().isdigit() and 0 <= int(layout) <= 4 else {})}

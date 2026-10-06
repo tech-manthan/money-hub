@@ -40,6 +40,11 @@ PAGE_SIZES: dict[str, PageSize] = {
     "tablet": PageSize("tablet", "Tablet / GoodNotes (landscape)", 11.25, 8.44, 10.0),
 }
 
+# KDP paperback trim sizes (inches). Interiors are built at exactly this size; base_pt scales the type with the page.
+KDP_TRIMS: dict[str, tuple[float, float]] = {"5.5x8.5": (5.5, 8.5), "6x9": (6.0, 9.0), "7x10": (7.0, 10.0), "8x10": (8.0, 10.0), "8.5x11": (8.5, 11.0)}
+for _k, (_w, _h) in KDP_TRIMS.items():
+    PAGE_SIZES[f"kdp_{_k}"] = PageSize(f"kdp_{_k}", f"KDP paperback {_k} in", _w, _h, round(10.0 * _w / 8.5 + 0.6, 2))
+
 BASE_CSS = """
 @page { size: {{ page.css_size }}; margin: 0; }
 * { box-sizing: border-box; }

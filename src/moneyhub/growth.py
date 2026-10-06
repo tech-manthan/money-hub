@@ -136,3 +136,53 @@ def keyword_ideas(seed: str, suggest: bool = False) -> list[str]:
             except Exception:  # noqa: BLE001
                 break
     return list(dict.fromkeys(ideas))
+
+
+# ------------------------------------------------------------------ what to make next, learned from your own results
+def recommend(store: Store | None = None, limit: int = 5) -> dict:
+    """Suggestions from the sales, views and favourites you have recorded. Small numbers are noise, so every reason says how much data
+    it rests on. Returns {"basis": "sales"|"engagement"|"none", "make_next": [...], "good_looks": [...], "note": str}."""
+    from .niches import LIBRARY
+    from .products import all_product_types
+
+    rows = (store or Store()).performance()
+    types = list(all_product_types())
+    made = {(r["niche_name"], r["product_type"]) for r in rows}
+    sales = sum(r["units"] for r in rows)
+    engagement = sum(r["views"] + r["favourites"] for r in rows)
+    basis = "sales" if sales else "engagement" if engagement else "none"
+
+    def score(r):  # revenue counts most; favourites show intent more than views
+        return r["revenue"] * 10 + r["units"] * 3 + r["favourites"] * 1.5 + r["views"] * 0.05
+
+    ranked = [r for r in sorted(rows, key=score, reverse=True) if score(r) > 0]
+    out: list[dict] = []
+    for r in ranked[:3]:   # more of what works: same audience, a different product
+        for t in types:
+            if (r["niche_name"], t) not in made and t != "wall_art":
+                why = (f"{r['niche_name']} {r['product_type'].replace('_', ' ')} has {r['units']} sale(s) and {r['views']} views so far. "
+                       "A matching product speaks to the same buyers.")
+                out.append({"niche": r["niche_name"], "product_type": t, "reason": why, "kind": "same audience"})
+                break
+    best_type = ranked[0]["product_type"] if ranked else None
+    if best_type:   # same product type for audiences you have not tried
+        tried = {r["niche_name"] for r in rows}
+        for nz in LIBRARY.values():
+            if nz.name not in tried and len(out) < limit:
+                out.append({"niche": nz.name, "product_type": best_type,
+                            "reason": f"{best_type.replace('_', ' ')} is your best result so far. This audience is new to you.", "kind": "new audience"})
+    if not out:   # nothing learned yet: untried built-in combinations
+        for nz in LIBRARY.values():
+            for t in ("weekly_planner", "habit_tracker", "checklist_pack"):
+                if (nz.name, t) not in made and len(out) < limit:
+                    out.append({"niche": nz.name, "product_type": t, "reason": "You have not tried this yet.", "kind": "untried"})
+                    break
+    looks: dict[str, float] = {}
+    for r in ranked:
+        pal = (r["style"] or "").split("-")[0]
+        if pal:
+            looks[pal] = looks.get(pal, 0) + score(r)
+    note = {"sales": f"Based on {sales} recorded sale(s). Small numbers can mislead, so treat these as hints and keep testing.",
+            "engagement": "No sales recorded yet. These lean on views and favourites, which are only a weak signal.",
+            "none": "No results recorded yet. Record views and sales (Sales & learning) and these suggestions will learn from them."}[basis]
+    return {"basis": basis, "make_next": out[:limit], "good_looks": [k for k, _ in sorted(looks.items(), key=lambda kv: -kv[1])[:3]], "note": note}
