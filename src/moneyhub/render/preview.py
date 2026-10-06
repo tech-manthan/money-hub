@@ -52,7 +52,13 @@ def layout_preview_png(product_type: str, layout: str, palette: str = "", fonts:
     size = "eink" if eink and "eink" in pt.supported_sizes else "a5" if "a5" in pt.supported_sizes else pt.default_sizes[0]
     with tempfile.TemporaryDirectory() as tmp:
         ctx = BuildContext(niche=niche, style=style, out_dir=Path(tmp), sizes=[size], seed=seed, providers=["builtin"], options=opts)
-        res = pt.build(ctx, pt.builtin_content(niche, random.Random(seed), opts))
+        content = pt.builtin_content(niche, random.Random(seed), opts)
+        shown = pt.layout_preview_image(ctx, content)
+        if shown is not None:
+            buf = io.BytesIO()
+            shown.save(buf, "PNG", optimize=True)
+            return buf.getvalue()
+        res = pt.build(ctx, content)
         pdf = next(f.path for f in res.files if f.kind == "pdf")
         doc = pdfium.PdfDocument(str(pdf))
         index = 0

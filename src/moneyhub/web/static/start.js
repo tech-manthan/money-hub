@@ -90,7 +90,7 @@
     if (val('lookmode') !== 'pick') return {};
     const o = { palette: $('#use-brand').checked ? '' : val('palette'), brand: $('#use-brand').checked ? sel('brand') : '', fonts: val('fonts'),
                 header: sel('header'), radius: sel('radius'), grid: sel('grid'), seed: sel('seed') };
-    if (val('product_type') === 'wall_art') { o.motif = sel('motif'); o.layout = sel('layout'); }
+    if (val('product_type') === 'wall_art') { o.motif = sel('motif'); }
     return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== ''));
   }
   let extraLayouts = [];   // generated or described layouts the person added, kept while they browse
@@ -153,7 +153,7 @@
     if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
     $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
-    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', layout: '--layout', seed: '--seed' };
+    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';

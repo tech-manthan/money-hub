@@ -30,15 +30,15 @@ moneyhub ui
 - **Exports**: `exports/` has kdp, notion, canva (`moneyhub export ...`). KDP numbers (gutter, paper thickness, bleed) come from KDP's help pages; confirm them before relying on them.
 - **Video engines** (`render/motion.py`): pillow (default), remotion, manim, hyperframes. HyperFrames telemetry is switched off in code.
 - **Recording the tour**: `python scripts/record_tour.py` re-makes `web/static/media/*.mp4` from the real UI (offline, temp data, natural voice if installed). Re-run it when the wizard changes.
-- Tests: ~280, about 5 minutes (`pytest -q`). CI is `.github/workflows/ci.yml` (not yet run on GitHub).
+- Tests: ~290, about 4 minutes (`pytest -q`). CI is `.github/workflows/ci.yml` (not yet run on GitHub).
 
 ## Known gaps (not verified on a real Mac / device yet)
 Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `claude_svg` works), how exports behave inside Canva/Notion/KDP's previewer, GoodNotes link behaviour, e-ink tablets, xlsx recalculation in Excel/Numbers. Not built: marketplace API publishing (by design), KDP export for non-planner products, layouts for product types other than weekly/daily planner, Penpot/Canva native template files.
 
 ## Pending work (start here in a new session)
 Do these in order; commit each with tests; no pushes unless the owner asks (3+ commits are local and unpushed at the time of writing).
-1. **Wall-art motifs**: render a contact sheet of the 6 new motifs (terrazzo, rainbow, scallop, topo, bouquet, retro) at full page size, fix any that look wrong (the earlier sheet was cropped), add a test that every motif in `art.MOTIFS` yields a valid SVG.
-2. **Wall-art page layouts** are still the old 5 fixed text layouts: move them to the `layouts.py` spec system (presets + `auto:N` + described), with thumbnails in the wizard.
+1. ~~Wall-art motifs~~ done (scallop/topo/bouquet/retro redrawn; test covers every motif).
+2. ~~Wall-art page layouts~~ done: `WallArtSpec` in `layouts.py` (presets stacked/headline/framed/poster/divided + `mixed`, `auto:N`, described); `art_boxes()` is the one geometry source for the page template and the editable SVG; `--layout 0-4` is a hidden alias for the first five presets. Default is now `stacked` (was mixed).
 3. **Layouts for the other product types** (habit tracker print pages, journal, checklist pack, worksheet pack, card deck, ebook guide, budget print pages): spec model + presets + generator + fit check each, following `weekly_planner.py`.
 4. **KDP export for more products** (checklists/worksheets already supported; add card deck as a printed deck is not a KDP product, so skip; consider journal/guide cover polish and a real cover image option).
 5. **Verify on real platforms** (needs the owner): import the Notion zip into Notion, the Canva PDF into Canva, the KDP interior/cover in KDP's previewer, the e-ink PDFs on a device, GoodNotes links, xlsx in Excel/Numbers. Fix what breaks and add tests.

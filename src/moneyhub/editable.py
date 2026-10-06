@@ -174,25 +174,27 @@ def poster_svg(d: dict, palette_ink: str, w: int = 1000, h: int = 1250) -> str:
         return (f'<text id="{ident}" x="{x}" y="{top + fsz * .85:.1f}" font-family="{family or fam}" font-weight="700" font-size="{fsz}" '
                 f'fill="{fill}" text-anchor="{anchor}">{tsp}</text>')
 
-    lay = d["layout"]
+    b = d["b"]
     small = d.get("small") or ""
     ssz = round(3 * 0.01634 * w)
 
     def small_t(top):
         return text(w / 2, top, w * .7, fsz=ssz, content=small, ident="small-text", family="Caveat") if small else ""
 
-    if lay == 0:
-        out += [motif(*box(.12, .08, .76, .46)), text(w / 2, h * .60, w * .76), small_t(h * .91 - ssz)]
-    elif lay == 1:
-        out += [text(w / 2, h * .12, w * .76), motif(*box(.05, .41, .90, .56))]
-    elif lay == 2:
-        out += [f'<rect id="frame" x="{w * .06}" y="{h * .045}" width="{w * .88}" height="{h * .91}" rx="12" fill="none" stroke="{fg}" stroke-width="3" opacity=".7"/>',
-                motif(*box(.30, .12, .40, .26)), text(w / 2, h * .44, w * .68), small_t(h * .89 - ssz)]
-    elif lay == 3:
-        out += [motif(*box(-.15, -.06, 1.3, .62)), text(w * .11, h * .70, w * .78, anchor="start", fsz=round(5.6 * 0.01634 * w))]
+    if b["frame"]:
+        out.append(f'<rect id="frame" x="{w * .06}" y="{h * .045}" width="{w * .88}" height="{h * .91}" rx="12" fill="none" stroke="{fg}" stroke-width="3" opacity=".7"/>')
+    if b["motif"]:
+        m = b["motif"]
+        out.append(motif(*box(m["l"] / 100, m["t"] / 100, m["w"] / 100, m["h"] / 100)))
+    if b["rule"] is not None:
+        out.append(f'<rect id="rule" x="{w * .44}" y="{h * b["rule"] / 100}" width="{w * .12}" height="4" fill="{fg}"/>')
+    mw = w * (100 - 2 * b["margin"]) / 100
+    if b["align"] == "left":
+        out.append(text(w * b["margin"] / 100, h * d["text_top"] / 100, mw, anchor="start"))
     else:
-        out += [motif(*box(.20, .14, .60, .30)), f'<rect id="rule" x="{w * .44}" y="{h * .50}" width="{w * .12}" height="4" fill="{fg}"/>',
-                text(w / 2, h * .54, w * .72), small_t(h * .91 - ssz)]
+        out.append(text(w / 2, h * d["text_top"] / 100, mw))
+    if b["small"] is not None:
+        out.append(small_t(h * (1 - b["small"] / 100) - ssz))
     out.append("</svg>")
     return "".join(out)
 
@@ -253,7 +255,9 @@ def export_editable(folder: Path, pid: int | None = None) -> Path:
     if spec["request"]["product_type"] == "wall_art":
         from .products.wall_art import make_designs
         from .products.wall_art import WallArtContent
-        designs = make_designs(WallArtContent.model_validate(spec["content"]), style, spec["request"]["seed"], use_ai=False)[0]
+        opts = spec["request"].get("options") or {}
+        designs = make_designs(WallArtContent.model_validate(spec["content"]), style, spec["request"]["seed"], use_ai=False, motif=opts.get("motif"),
+                               layout=opts.get("page_layout") or ("custom" if opts.get("layout_spec") else None), layout_spec=opts.get("layout_spec"))[0]
         for i, d in enumerate(designs):
             p = out / "posters" / f"design-{i + 1:02d}.svg"
             p.write_text(poster_svg(d, spec["style"]["palette"]), encoding="utf-8")

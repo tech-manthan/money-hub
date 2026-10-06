@@ -15,7 +15,7 @@ def test_choose_style_pins_only_what_is_asked():
 
 def test_styles_command_lists_every_knob():
     out = runner.invoke(app, ["styles"]).output
-    for word in ("--palette", "--fonts", "--header", "--radius", "--grid", "--motif", "--layout", "--art-provider"):
+    for word in ("--palette", "--fonts", "--header", "--radius", "--grid", "--motif", "--page-layout", "wall_art", "stacked", "--art-provider"):
         assert word in out
 
 

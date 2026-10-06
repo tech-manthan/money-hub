@@ -5,6 +5,7 @@ from typer.testing import CliRunner
 from moneyhub.cli import app as cli
 from moneyhub.pipeline import Request, generate
 from moneyhub.products import all_product_types
+from moneyhub.products.base import ProductType
 from moneyhub.render.preview import layout_preview_png
 from moneyhub.web.app import app
 
@@ -14,12 +15,12 @@ WITH_LAYOUTS = {k: t for k, t in all_product_types().items() if t.layouts}
 def test_planners_offer_several_layouts_and_the_first_is_the_default():
     assert {"weekly_planner", "daily_planner"} <= set(WITH_LAYOUTS)
     for t in WITH_LAYOUTS.values():
-        assert len(t.layouts) >= 3 and t.layout_marker
+        assert len(t.layouts) >= 3 and (t.layout_marker or type(t).layout_preview_image is not ProductType.layout_preview_image)
 
 
 @pytest.mark.parametrize("key", sorted(WITH_LAYOUTS))
 def test_every_layout_really_looks_different(key):
-    pics = {name: layout_preview_png(key, name, palette="sage") for name in WITH_LAYOUTS[key].layouts}
+    pics = {name: layout_preview_png(key, name, palette="sage") for name in WITH_LAYOUTS[key].layouts if name != "mixed"}   # mixed shows one of the others
     assert len(set(pics.values())) == len(pics)
 
 
@@ -124,3 +125,39 @@ def test_api_designs_a_layout_and_rejects_a_bad_one(monkeypatch):
     assert local.get('/api/layout-preview.png?product_type=weekly_planner&layout=custom&spec={"days":"nope"}').status_code == 422
     good = '{"body":"top","days":"list","boxes":3}'
     assert local.get(f"/api/layout-preview.png?product_type=weekly_planner&layout=custom&spec={good}").status_code == 200
+
+
+# ---------------------------------------------------------------- wall art layouts
+def test_wall_art_has_layouts_and_every_one_looks_different():
+    t = get_product_type("wall_art")
+    assert next(iter(t.layouts)) == "stacked" and "mixed" in t.layouts and t.auto_layout
+    pics = {name: layout_preview_png("wall_art", name, palette="sage") for name in t.layouts if name != "mixed"}
+    assert len(set(pics.values())) == len(pics)
+
+
+def test_every_generated_wall_art_spec_is_consistent_and_its_text_fits():
+    from moneyhub.products.wall_art import fit_text
+    for seed in range(1, 300):
+        s = lay.random_art_spec(seed)
+        assert s == s.normalised()
+        b = lay.art_boxes(s)
+        for text in ("Rest is part of the work", "x" * 70):
+            fs, top = fit_text(text, b)
+            assert 2.4 <= fs <= 6 and 0 <= top < 100
+
+
+def test_wall_art_old_numbers_map_to_presets_and_bad_layouts_are_refused():
+    r = CliRunner().invoke(cli, ["make", "nurse", "wall_art", "--page-layout", "bogus", "--llm", "builtin"])
+    assert r.exit_code != 0 and "stacked" in r.output
+    assert CliRunner().invoke(cli, ["make", "nurse", "wall_art", "--layout", "9", "--llm", "builtin"]).exit_code != 0
+    res = generate(Request("nurse", "wall_art", providers=["builtin"], seed=3, sizes=["4x5"], with_images=False, with_video=False,
+                           options={"page_layout": "poster"}))
+    assert res.qa_status in ("pass", "warn")
+
+
+def test_wall_art_described_and_generated_layouts_build():
+    spec, how = lay.spec_from_text("wall_art", "frame it, no artwork, big text", None)
+    assert how == "random"
+    for opts in ({"layout_spec": spec.model_dump()}, {"page_layout": "auto:5"}, {"page_layout": "mixed"}):
+        res = generate(Request("nurse", "wall_art", providers=["builtin"], seed=3, sizes=["4x5"], with_images=False, with_video=False, options=opts))
+        assert res.qa_status in ("pass", "warn")

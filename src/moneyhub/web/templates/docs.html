@@ -102,7 +102,7 @@ moneyhub export canva 4 --link "https://www.canva.com/design/..."</pre>
 <h2 id="cli">Everything also works from the command line</h2>
 <p>Run <code>source .venv/bin/activate</code> first. Then:</p>
 <pre class="copybox">moneyhub make "nurse" weekly_planner               # one product
-moneyhub make "nurse" wall_art --palette plum --fonts classic --motif arches --layout 2
+moneyhub make "nurse" wall_art --palette plum --fonts classic --motif arches --page-layout framed
 moneyhub styles                                    # every look and layout option you can choose
 moneyhub layouts weekly_planner                    # picture of page layouts to choose from
 moneyhub next                                      # what to make next, learned from your sales
@@ -132,9 +132,9 @@ moneyhub ui --port 8766                            # this web app</pre>
   <tr><td><code>--header</code></td><td>{{ headers|join(', ') }}</td></tr>
   <tr><td><code>--radius</code></td><td>{{ radii|join(', ') }} (pixels)</td></tr>
   <tr><td><code>--grid</code></td><td>{{ grids|join(', ') }}</td></tr>
-  <tr><td><code>--motif</code> / <code>--layout</code></td><td>Wall art only: {{ motifs|join(', ') }} / 0-4</td></tr>
+  <tr><td><code>--motif</code></td><td>Wall art only: {{ motifs|join(', ') }}</td></tr>
   <tr><td><code>--brand</code>, <code>--eink</code></td><td>Your hex colour; e-ink black-and-white version</td></tr>
-  <tr><td><code>--page-layout</code>, <code>--layout-prompt</code></td><td>Planner layouts: a preset, <code>auto:NUMBER</code>, or a description in words</td></tr>
+  <tr><td><code>--page-layout</code>, <code>--layout-prompt</code></td><td>Weekly/daily planner and wall art layouts: a preset, <code>auto:NUMBER</code>, or a description in words</td></tr>
   <tr><td><code>--seed</code></td><td>Any number. Repeats a look.</td></tr>
   <tr><td><code>--llm</code></td><td>e.g. <code>builtin</code> (offline) or <code>claude_cli,builtin</code></td></tr>
   <tr><td><code>--ai-art</code>, <code>--art-provider</code></td><td>AI poster backgrounds (wall art, needs a key)</td></tr>

@@ -98,7 +98,6 @@
       </div>
       <div class="row" id="wall-opts" hidden>
         <div><label for="motif">Poster artwork (wall art only)</label><select id="motif" name="motif"><option value="">Mixed</option>{% for m in motifs %}<option value="{{ m }}">{{ m|capitalize }}</option>{% endfor %}</select></div>
-        <div><label for="layout">Poster text layout (wall art only)</label><select id="layout" name="layout"><option value="">Mixed</option>{% for n in range(5) %}<option value="{{ n }}">Layout {{ n + 1 }}</option>{% endfor %}</select></div>
       </div>
       <div class="row"><div><label for="seed">Look number (optional)</label><input type="number" id="seed" name="seed" placeholder="Leave empty">
         <div class="meta">Every look has a number. Type one you liked before to get the same look again.</div></div></div>

@@ -74,6 +74,10 @@ class ProductType(ABC, Generic[C]):
 
     auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option
 
+    def layout_preview_image(self, ctx: "BuildContext", content):
+        """A PIL image showing the chosen layout, for products whose files are not PDFs (None = use the PDF page marked by layout_marker)."""
+        return None
+
     def has_layout(self, key: str) -> bool:
         return key in self.layouts or (self.auto_layout and key.split(":")[0] in ("auto", "custom"))
 

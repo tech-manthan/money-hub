@@ -50,7 +50,7 @@ def make(
     radius: int = typer.Option(None, help=f"Card corner radius in px: {', '.join(map(str, RADII))}"),
     grid: str = typer.Option(None, help=f"Grid line style: {', '.join(GRIDS)}"),
     motif: str = typer.Option(None, help="Wall art: background motif (see `moneyhub styles`); default varies per poster"),
-    layout: int = typer.Option(None, help="Wall art: text layout 0-4; default varies per poster"),
+    layout: int = typer.Option(None, hidden=True, help="Old wall-art layout number 0-4; use --page-layout instead"),
     art_provider: str = typer.Option(None, help="AI art provider chain, e.g. 'claude_svg' (Claude draws vector art) or 'huggingface,together' (implies --ai-art)"),
     marketplaces: str = typer.Option(None, help="Guides to write: etsy,gumroad,payhip,kofi,pinterest (default all)"),
     llm: str = typer.Option(None, help="Provider chain override, e.g. 'claude_cli,builtin' or 'builtin'"),
@@ -72,6 +72,9 @@ def make(
         brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
+    if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
+        from .layouts import ART_PRESETS
+        page_layout = list(ART_PRESETS)[layout]
     if page_layout:
         from .products import get_product_type
         try:
@@ -85,7 +88,7 @@ def make(
         from . import layouts as _lay
         from .llm import get_router
         if product not in _lay.SPEC_MODELS:
-            raise typer.BadParameter(f"{product} has no generated layouts (try weekly_planner or daily_planner)", param_hint="--layout-prompt")
+            raise typer.BadParameter(f"{product} has no generated layouts (try weekly_planner, daily_planner or wall_art)", param_hint="--layout-prompt")
         spec_obj, how = _lay.spec_from_text(product, layout_prompt, get_router(), _csv(llm))
         layout_spec = spec_obj.model_dump()
         typer.echo(f"Layout '{spec_obj.name}' ({'designed by your AI helper' if how == 'ai' else 'generated; no AI helper was available'}): {spec_obj.model_dump_json()}")
@@ -103,7 +106,7 @@ def make(
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
     opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
-                              "layout": layout, "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
+                              "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
     if marketplaces:
@@ -131,7 +134,6 @@ def styles():
     typer.echo(f"Corner radius px (--radius): {', '.join(map(str, RADII))}")
     typer.echo(f"Grid lines (--grid): {', '.join(GRIDS)}")
     typer.echo(f"Wall art motifs (--motif): {', '.join(MOTIFS)}")
-    typer.echo("Wall art layouts (--layout): 0-4")
     typer.echo("\nPage layouts (--page-layout), by product:")
     from .products import all_product_types as _all
     for key, t in _all().items():

@@ -446,12 +446,14 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
     if brand and not is_hex_colour(brand):
         raise HTTPException(422, "Brand colour must look like #2F6B57")
     pt = all_product_types().get(product_type)
+    if layout.strip() and not page_layout and product_type == "wall_art":   # the old numbered select: the first five presets, or "mixed"
+        from ..layouts import ART_PRESETS
+        page_layout = list(ART_PRESETS)[int(layout)] if layout.strip().isdigit() and int(layout) < 5 else "mixed" if layout.strip() == "mixed" else ""
     if page_layout and (not pt or not pt.has_layout(page_layout)):
         raise HTTPException(422, f"Unknown page layout: {page_layout}")
     look = {**({"page_layout": page_layout} if page_layout else {}), **({"layout_spec": json.loads(_checked_spec(product_type, layout_spec))} if layout_spec else {}), **({"brand": "#" + brand.lstrip("#")} if brand else {}), **({"eink": True} if eink else {}),
             **({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
-            **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {}),
-            **({"layout": int(layout)} if layout.strip().isdigit() and 0 <= int(layout) <= 4 else {})}
+            **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {})}
     ids = []
     for n in [x.strip() for x in niche.split(",") if x.strip()]:
         req = GenRequest(

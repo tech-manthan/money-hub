@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import io
+import math
 import random
+import tempfile
 import zipfile
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from .. import layouts as lay
 from ..config import get_config
 from ..art import MOTIFS, SVG_PROVIDERS, generate_art, motif_svg
 from ..niches import NicheProfile
@@ -49,6 +52,14 @@ class WallArt(ProductType[WallArtContent]):
     supported_sizes = list(RATIOS)
     price_range = (4.0, 12.0)
     typical_formats = "High-resolution JPG (5 ratio packs, 300 DPI at A4)"
+    layouts = {"stacked": "Stacked: big artwork on top, text underneath",
+               "headline": "Headline: text first, artwork along the bottom",
+               "framed": "Framed: a thin border, small artwork, centred text",
+               "poster": "Poster: artwork bleeding off the top, big left-aligned text",
+               "divided": "Divided: small artwork, a divider line, then the text",
+               "mixed": "Mixed: a different layout on each poster"}
+    auto_layout = True
+    layout_marker = ""
 
     def size_options(self):
         return [(k, f"{k.replace('x', ':')} ratio - {v[4]}") for k, v in RATIOS.items()]
@@ -69,13 +80,24 @@ class WallArt(ProductType[WallArtContent]):
             "song lyrics. Optional small script line (<= 5 words)."
         )
 
+    def layout_preview_image(self, ctx: BuildContext, content: WallArtContent):
+        """One poster in the chosen layout, for the wizard thumbnails (the real build makes zip packs, not a PDF)."""
+        designs, _ = make_designs(content.model_copy(update={"quotes": content.quotes[:1] * 4}), ctx.style, ctx.seed, layout=self.layout_of(ctx),
+                                  layout_spec=ctx.options.get("layout_spec"))
+        w_in, h_in = RATIOS["4x5"][:2]
+        page = PageSize("4x5", "4x5", w_in, h_in, 10.0 * w_in / 8.5)
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = Path(tmp) / "p.pdf"
+            self.render_jobs(ctx, "wall_art.html.j2", [(page, pdf, {"designs": designs[:1]})], extra_css=_css(), margin=0)
+            return render_pages(pdf, [0], scale=0.9)[0]
+
     def build(self, ctx: BuildContext, content: WallArtContent) -> BuildResult:
         slug = self.slug(content.title)
         pal = ctx.style.palette
         use_ai = bool(ctx.options.get("ai_art"))
         designs, ai_used = make_designs(content, ctx.style, ctx.seed, use_ai, ctx.out_dir.parent / "art",
-                                        motif=ctx.options.get("motif"), layout=ctx.options.get("layout"),
-                                        art_providers=ctx.options.get("art_providers"))
+                                        motif=ctx.options.get("motif"), layout=self.layout_of(ctx),
+                                        layout_spec=ctx.options.get("layout_spec"), art_providers=ctx.options.get("art_providers"))
         files: list[ProductFile] = []
         previews: list[Path] = []
         renderer = ""
@@ -86,7 +108,7 @@ class WallArt(ProductType[WallArtContent]):
             page = PageSize(ratio, ratio, w_in, h_in, 10.0 * w_in / 8.5)
             pdf = ctx.out_dir.parent / "art" / f"{slug}-{ratio}.pdf"
             pdf.parent.mkdir(exist_ok=True)
-            renderer = self.render_jobs(ctx, "wall_art.html.j2", [(page, pdf, {"designs": designs})], extra_css=_css(designs), margin=0)
+            renderer = self.render_jobs(ctx, "wall_art.html.j2", [(page, pdf, {"designs": designs})], extra_css=_css(), margin=0)
             scale = px_w / (w_in * 72)
             imgs = render_pages(pdf, list(range(len(designs))), scale=scale)
             zpath = ctx.out_dir / f"{slug}-{ratio}.zip"
@@ -125,14 +147,17 @@ def style_mood(pal) -> str:
 
 
 def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = False, art_dir: Path | None = None,
-                 motif: str | None = None, layout: int | None = None,
+                 motif: str | None = None, layout: str | None = None, layout_spec: dict | None = None,
                  art_providers: list[str] | None = None) -> tuple[list[dict], str]:
-    """Colour scheme, motif and layout for every poster. Deterministic for a given seed."""
+    """Colour scheme, motif and layout for every poster. Deterministic for a given seed.
+    layout is a key from WallArt.layouts, "auto:<n>" or "custom" (with layout_spec); the default is the first preset."""
     pal = style.palette
     schemes = [(pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.accent, pal.accent_ink, True),
                (pal.paper, pal.ink, False), (pal.soft, pal.ink, False), (pal.ink, pal.paper, True)]
     designs, ai_used = [], ""
     chain = list(art_providers or get_config().get("render.art") or ["claude_svg"]) if use_ai else []
+    presets = list(lay.ART_PRESETS.values())
+    fixed = None if layout == "mixed" else lay.resolve("wall_art", layout, {"layout_spec": layout_spec} if layout_spec else None, seed)
     drawn: list[str] = []   # motifs drawn by the writing model, reused across the posters
     if "claude_svg" in chain and SVG_PROVIDERS["claude_svg"].available():
         drawn = SVG_PROVIDERS["claude_svg"].motifs(pal, style_audience(style), style_mood(pal))
@@ -141,7 +166,9 @@ def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = Fal
     for i, q in enumerate(content.quotes):
         bg, fg, dark = schemes[i % len(schemes)]
         kind = motif or MOTIFS[(seed + i) % len(MOTIFS)]
-        n = len(q.text)
+        spec = fixed or presets[(i + seed) % len(presets)]
+        boxes = lay.art_boxes(spec)
+        fs, text_top = fit_text(q.text, boxes)
         ai_bg = None
         if image_chain and art_dir is not None:
             made = generate_art(f"minimal abstract background art, soft shapes, {pal.key} colour palette, "
@@ -152,25 +179,41 @@ def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = Fal
                 made[0].save(p)
                 ai_bg, ai_used = p.as_uri(), made[1]
         designs.append({
-            "text": q.text, "small": q.small, "bg": bg, "fg": fg, "layout": layout if layout is not None else (i + seed) % 5,
+            "text": q.text, "small": q.small, "bg": bg, "fg": fg, "b": boxes, "text_top": text_top, "layout": spec.name,
             "svg": drawn[i % len(drawn)] if drawn else motif_svg(kind, pal, seed * 31 + i, on_dark=dark), "ai_bg": ai_bg,
-            "fs": 5.4 if n <= 26 else 4.4 if n <= 56 else 3.6,
+            "fs": fs,
         })
     return designs, ai_used
 
 
-def _css(designs) -> str:
-    rules = [
+PAGE_EM_W = 61.2   # page width in em: the page's base font is 10 * width_in / 8.5 pt
+MIN_ASPECT = 1.25   # the squattest print ratio (4:5); text that fits there fits on every taller one
+
+
+def fit_text(text: str, boxes: dict) -> tuple[float, float]:
+    """Font size (em) and top (percent of page height) that keep the text inside its region on every print ratio."""
+    n, region = len(text), boxes["text"]
+    big = boxes["align"] == "left" and region["anchor"] == "bottom"
+    fs = (5.6 if n <= 26 else 4.6 if n <= 56 else 3.8) if big else (5.4 if n <= 26 else 4.4 if n <= 56 else 3.6)
+    width_em = PAGE_EM_W * (100 - 2 * boxes["margin"]) / 100
+    room = region["t1"] - region["t0"]
+    while True:
+        lines = math.ceil(n * fs * 0.55 * 1.1 / width_em)
+        height = lines * fs * 1.14 / (PAGE_EM_W * MIN_ASPECT) * 100
+        if height <= room or fs <= 2.4:
+            break
+        fs = round(fs - 0.2, 1)
+    top = {"top": region["t0"], "bottom": region["t1"] - height, "middle": (region["t0"] + region["t1"] - height) / 2}[region["anchor"]]
+    return fs, round(top, 1)
+
+
+def _css() -> str:
+    return "\n".join([
         ".page.art { display:block; padding:0; }",
         ".art .motif { position:absolute; display:block; }",
         ".art .motif svg { width:100%; height:100%; }",
-        ".art .txt { position:absolute; text-align:center; font-family:var(--font-h); font-weight:700; line-height:1.14; }",
-        ".art .txt.big { font-size:5.6em; }",
+        ".art .txt { position:absolute; font-family:var(--font-h); font-weight:700; line-height:1.14; }",
         ".art .small-t { position:absolute; text-align:center; font-family:var(--font-s); font-size:3em; opacity:.85; }",
         ".art .frame { position:absolute; left:6%; right:6%; top:4.5%; bottom:4.5%; border:3px solid; border-radius:var(--radius); opacity:.7; }",
         ".art .rule { position:absolute; left:44%; right:44%; height:4px; }",
-    ]
-    # font size per design (can't style by index in the template without inline CSS)
-    for i, d in enumerate(designs):
-        rules.append(f".page.art:nth-child({i + 1}) .txt:not(.big) {{ font-size:{d['fs']}em; }}")
-    return "\n".join(rules)
+    ])
