@@ -24,7 +24,7 @@ def render_guides(out_dir: Path, kit: ListingKit, build, images: dict[str, list[
             continue
         ctx = dict(common)
         if m == "etsy":
-            ctx.update(images=[rel(p) for p in images.get("etsy", [])], has_xlsx=any(f.kind == "xlsx" for f in build.files), colour=style_palette)
+            ctx.update(video=[rel(p) for p in images.get("video", []) if "listing" in p.name], images=[rel(p) for p in images.get("etsy", [])], has_xlsx=any(f.kind == "xlsx" for f in build.files), colour=style_palette)
         elif m in ("gumroad",):
             gi = images.get("gumroad", [])
             ctx.update(cover=rel(gi[0]) if gi else "", thumb=rel(gi[1]) if len(gi) > 1 else "")
@@ -36,7 +36,7 @@ def render_guides(out_dir: Path, kit: ListingKit, build, images: dict[str, list[
             ctx.update(square=rel(ki[0]) if ki else "")
         elif m == "pinterest":
             pins = [{"image": rel(p), "title": copy.pin_titles[i % len(copy.pin_titles)]} for i, p in enumerate(images.get("pinterest", []))]
-            ctx.update(pins=pins, pin_description=copy.pin_description, marketplace_hint="Etsy/Gumroad/Payhip")
+            ctx.update(video=[rel(p) for p in images.get("video", []) if "pin" in p.name], pins=pins, pin_description=copy.pin_description, marketplace_hint="Etsy/Gumroad/Payhip")
         path = out_dir / "listing" / f"guide-{m}.md"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(_env.get_template(f"{m}.md.j2").render(**ctx), encoding="utf-8")

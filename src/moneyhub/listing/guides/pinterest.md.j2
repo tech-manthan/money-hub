@@ -16,6 +16,10 @@ You post pins yourself (Pinterest's developer rules also require a person to rev
 **Destination link:** (your {{ marketplace_hint }} listing URL)
 {% endfor %}
 
+{% if video %}
+### Video pin - `{{ video[0] }}`
+Upload as a video pin (MP4, 2:3). Use the same title/description; video pins often get extra reach.
+{% endif %}
 ## Description (500 characters max) - use on every pin, change a few words each time
 ```
 {{ pin_description }}

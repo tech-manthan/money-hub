@@ -24,25 +24,29 @@ def _csv(v: str | None) -> list[str] | None:
 @app.callback()
 def main(verbose: bool = typer.Option(False, "--verbose", "-v")):
     logging.basicConfig(level=logging.INFO if verbose else logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-    for noisy in ("fontTools", "weasyprint", "httpx"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+    for noisy in ("fontTools", "weasyprint", "httpx"):  # noqa
+        logging.getLogger(noisy).setLevel(logging.ERROR)
 
 
 @app.command()
 def make(
     niche: str = typer.Argument(..., help="Any niche, e.g. 'ADHD', 'nurse', 'dog training'"),
-    product: str = typer.Argument("weekly_planner", help="weekly_planner | habit_tracker | budget_tracker | guided_journal | worksheet_pack | card_deck"),
+    product: str = typer.Argument("weekly_planner", help="run `moneyhub types` for the list"),
     sizes: str = typer.Option(None, help="Comma list: letter,a4,a5,tablet"),
     seed: int = typer.Option(None, help="Reuse a seed to reproduce a look"),
     palette: str = typer.Option(None, help=f"One of: {', '.join(palette_keys())}"),
     llm: str = typer.Option(None, help="Provider chain override, e.g. 'claude_cli,builtin' or 'builtin'"),
     weeks: int = typer.Option(None, help="Weekly planner: number of weeks (4-60)"),
     no_images: bool = typer.Option(False, help="Skip listing images/pins"),
+    no_video: bool = typer.Option(False, help="Skip the MP4 pin / listing video"),
+    ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
+    days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
+    no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
 ):
     """Generate one product with its images, listing copy and upload guides."""
-    opts = {"weeks": weeks} if weeks else {}
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": ai_art or None, "no_research": no_research or None}.items() if v}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette,
-                  providers=_csv(llm), options=opts, with_images=not no_images)
+                  providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video)
     res = generate(req, progress=lambda m: typer.echo(f"  - {m}"))
     typer.echo(f"\n{res.title}  [{res.qa_status.upper()}]")
     typer.echo(f"Folder: {res.folder}")
@@ -87,9 +91,41 @@ def types():
 
 
 @app.command()
-def niche(text: str):
+def niche(text: str, research: bool = typer.Option(False, help="Use an LLM to research it (cached) if it is not built in")):
     """Show the profile the system will use for a niche."""
-    typer.echo(resolve_niche(text).model_dump_json(indent=2))
+    if research:
+        from .niches import smart_resolve
+        profile, source = smart_resolve(text)
+        typer.echo(f"# source: {source}")
+        typer.echo(profile.model_dump_json(indent=2))
+    else:
+        typer.echo(resolve_niche(text).model_dump_json(indent=2))
+
+
+@app.command()
+def ideas(n: int = typer.Option(15, help="How many ideas"), focus: str = typer.Option(None, help="e.g. 'pets', 'students', 'health professionals'"),
+          llm: str = typer.Option(None)):
+    """Brainstorm niche + product ideas (LLM hypotheses - validate with Etsy/Pinterest searches before building)."""
+    from .ideas import suggest_ideas
+    data = suggest_ideas(n, focus, _csv(llm))
+    typer.echo(f"(from {data['source']}; hypotheses, not live search data)\n")
+    for i, d in enumerate(data["ideas"], 1):
+        typer.echo(f"{i:>2}. [{d['product_type']}] {d['niche']}  - {d['angle']}")
+        typer.echo(f"      why: {d['why']}\n      validate: {', '.join(d['keywords'])}  (competition: {d['competition']})")
+
+
+@app.command()
+def regenerate(product_id: int, llm: str = typer.Option(None)):
+    """Make a fresh variation (new seed/look/copy) of an existing product's niche and type."""
+    st = Store()
+    p = st.product(product_id)
+    if not p:
+        raise typer.BadParameter("no such product")
+    spec = json.loads((Path(p["folder"]) / "spec.json").read_text())
+    r = spec["request"]
+    res = generate(Request(niche=r["niche"], product_type=r["product_type"], sizes=r.get("sizes"), providers=_csv(llm),
+                           options=r.get("options") or {}), progress=lambda m: typer.echo(f"  - {m}"))
+    typer.echo(f"{res.title} [{res.qa_status}] {res.folder}")
 
 
 @app.command()
@@ -120,6 +156,21 @@ def report():
     rows = Store().performance()
     for r in rows:
         typer.echo(f"#{r['id']:<4} ${r['revenue']:<8.2f} {r['units']:>3} sold {r['views']:>6} views {r['favourites']:>4} favs  {r['title']} [{r['style']}]")
+
+
+@app.command()
+def doctor():
+    """Check this machine (PDF engine, fonts, ffmpeg, AI providers, optional tools) and print how to fix gaps."""
+    from . import doctor as d
+    bad_required = 0
+    for it in d.run():
+        mark = "ok " if it.ok else ("!! " if it.required else "-- ")
+        typer.echo(f"{mark}{it.name:<46} {it.detail}")
+        if not it.ok and it.fix:
+            typer.echo(f"      fix: {it.fix}")
+        bad_required += (not it.ok and it.required)
+    typer.echo("\nRequired tools OK." if not bad_required else f"\n{bad_required} required item(s) need attention.")
+    raise typer.Exit(1 if bad_required else 0)
 
 
 @app.command()

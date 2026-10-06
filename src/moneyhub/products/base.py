@@ -14,7 +14,7 @@ from ..design import Style
 from ..llm import LLMRouter, get_router
 from ..niches import NicheProfile
 from ..render.html import PAGE_SIZES, PageSize, render_html
-from ..render.pdf import render_pdf
+from ..render.pdf import render_many, render_pdf
 
 log = logging.getLogger("moneyhub.products")
 C = TypeVar("C", bound=BaseModel)
@@ -69,6 +69,13 @@ class ProductType(ABC, Generic[C]):
     price_range: ClassVar[tuple[float, float]] = (4.0, 12.0)
     typical_formats: ClassVar[str] = "PDF"
 
+    def size_options(self) -> list[tuple[str, str]]:
+        """(key, label) choices offered in the UI/CLI for this product type."""
+        return [(k, PAGE_SIZES[k].label) for k in self.supported_sizes if k in PAGE_SIZES]
+
+    def size_label(self, key: str) -> str:
+        return dict(self.size_options()).get(key, key).split(" (")[0]
+
     # --- content -----------------------------------------------------
     @abstractmethod
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> C: ...
@@ -103,6 +110,16 @@ class ProductType(ABC, Generic[C]):
                           extra_css: str = "", margin: float = 3.4, **tctx) -> str:
         html = render_html(template, ctx.style, page, extra_css=extra_css, margin=margin, **tctx)
         return render_pdf(html, out, page_css_size=page.css_size)
+
+    def render_jobs(self, ctx: BuildContext, template: str, jobs: list[tuple[PageSize, Path, dict]],
+                    extra_css=None, margin: float = 3.4) -> str:
+        """Render one PDF per (page, out_path, template_context) job, in parallel. extra_css may be a str or f(page)."""
+        built = []
+        for page, out, tctx in jobs:
+            css = extra_css(page) if callable(extra_css) else (extra_css or "")
+            built.append((render_html(template, ctx.style, page, extra_css=css, margin=margin, **tctx), out, page.css_size))
+        names = render_many(built)
+        return names[0] if names else ""
 
     @staticmethod
     def slug(text: str) -> str:

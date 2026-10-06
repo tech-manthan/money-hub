@@ -297,3 +297,50 @@ def library_keys() -> list[str]:
 
 def niche_to_dict(n: NicheProfile) -> dict[str, Any]:
     return n.model_dump()
+
+
+# ---------------------------------------------------------------- LLM niche research (cached)
+def _cache_path(key: str):
+    from .config import get_config
+    return get_config().output_dir / "niches" / f"{key}.json"
+
+
+def research_niche(text: str, router=None, providers: list[str] | None = None) -> NicheProfile | None:
+    """Ask an LLM to build a full niche profile. Returns None when no provider is available/usable."""
+    from .design import PALETTES
+    from .llm import get_router
+
+    router = router or get_router()
+    moods = sorted({m for p in PALETTES for m in p.mood})
+    key = generic_profile(text).key
+    prompt = (
+        f"Create a niche profile for selling printable planners, trackers, journals and worksheets to this audience: "
+        f"'{text}'.\nUse key '{key}' and a short display name. Choose mood from: {', '.join(moods)}.\n"
+        "Exact list sizes: weekly_boxes 6 (<= 4 words each), daily_labels 4 (<= 2 words), habits 10, prompts 12, "
+        "affirmations 10, seo_keywords 10 (real buyer search phrases), worksheet_topics 6, budget_extra 3, pain_points 3. "
+        "Everything must be specific to the audience's real life, not generic productivity filler."
+    )
+    system = "You are a market researcher and product designer for Etsy and Gumroad digital products."
+    return router.complete_json("research", system, prompt, NicheProfile, providers=providers)
+
+
+def smart_resolve(text: str, router=None, providers: list[str] | None = None) -> tuple[NicheProfile, str]:
+    """Library match, else cached research, else fresh LLM research, else generic. Returns (profile, source)."""
+    import json
+
+    base = resolve_niche(text)
+    if base.key in LIBRARY:
+        return base, "library"
+    cache = _cache_path(base.key)
+    if cache.exists():
+        try:
+            return NicheProfile.model_validate_json(cache.read_text()), "cache"
+        except ValueError:
+            pass
+    found = research_niche(text, router, providers)
+    if found is not None:
+        found = found.model_copy(update={"key": base.key})
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(found.model_dump_json(indent=2))
+        return found, "researched"
+    return base, "generic"

@@ -27,6 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 anthropic = ["anthropic>=1.0"]
 chromium = ["playwright>=1.40"]
+video = ["imageio-ffmpeg>=0.5"]
 dev = ["pytest>=8"]
 
 [project.scripts]

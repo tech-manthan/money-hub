@@ -8,6 +8,7 @@ llm:
     content: [claude_cli, anthropic, gemini, groq, openrouter, ollama, builtin]
     listing: [groq, gemini, claude_cli, anthropic, openrouter, ollama, builtin]
     research: [claude_cli, anthropic, gemini, groq, openrouter, ollama, builtin]
+    motion: [groq, gemini, claude_cli, anthropic, openrouter, ollama, builtin]
   providers:
     claude_cli:            # `claude -p` (Claude Code headless). Personal use / your own pipeline.
       command: claude
@@ -37,8 +38,13 @@ llm:
 render:
   # PDF renderers tried in order: weasyprint (default, no browser), chromium (Playwright).
   pdf: [weasyprint, chromium]
-  # Optional: image generation providers for decorative art (off by default).
+  # Optional AI image providers for art backgrounds (off by default): huggingface (HF_TOKEN), together (TOGETHER_API_KEY),
+  # openai (OPENAI_API_KEY), local_http (MONEYHUB_ART_URL). Use with product option ai_art=1. Check each provider's terms before selling output.
   art: []
+  # Short MP4 pin + Etsy listing video (needs ffmpeg or `pip install imageio-ffmpeg`).
+  videos: true
+  # workers: 4        # parallel PDF renders
+  # chromium_path: /Applications/Chromium.app/Contents/MacOS/Chromium
 
 defaults:
   page_sizes: [letter, a4]

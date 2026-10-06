@@ -6,9 +6,10 @@ Time needed: about 20 minutes. Open **Shop Manager > Listings > Add a listing**.
 {% for img in images -%}
 {{ loop.index }}. `{{ img }}`
 {% endfor %}
-- Etsy recommends images at least 2000 px on the shortest side (4:3 ratio, 2700 x 2025 works well). These are already sized.
+{% if video %}- **Video (optional, 1 per listing):** `{{ video[0] }}` - add it in the photo section (5-15 s works best).
+{% endif %}- Etsy recommends images at least 2000 px on the shortest side (4:3 ratio, 2700 x 2025 works well). These are already sized.
 - The first image is your thumbnail in search - check it is readable at a small size.
-{% if has_xlsx %}- **Spreadsheet products:** add 1-2 real screenshots of the workbook open in Excel or Google Sheets (Dashboard + Budget/Tracker sheet) as photos 7 and 8. Buyers trust real screenshots.
+{% if has_xlsx %}- **Spreadsheet products:** `images/etsy/07-spreadsheet-illustration.jpg` is a drawn illustration of the layout with sample numbers. Add 1-2 real screenshots of the workbook open in Excel or Google Sheets (Dashboard + Budget/Tracker sheet) as photos 7 and 8. Buyers trust real screenshots.
 {% endif %}
 ## 2. Title (max 140 characters)
 ```

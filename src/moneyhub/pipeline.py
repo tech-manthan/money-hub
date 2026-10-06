@@ -15,11 +15,10 @@ from .listing.guides_render import MARKETPLACES, render_guides
 from .listing.images import make_images
 from .listing.kit import ListingKit, make_kit
 from .llm import get_router
-from .niches import NicheProfile, resolve_niche
+from .niches import NicheProfile, resolve_niche, smart_resolve
 from .products import get_product_type
 from .products.base import BuildContext, BuildResult
 from .qa import Check, run_checks, summarize
-from .render.html import PAGE_SIZES
 from .store import Store
 from .uniqueness import fingerprint_text, most_similar
 
@@ -38,6 +37,7 @@ class Request:
     marketplaces: list[str] = field(default_factory=lambda: ["etsy", "gumroad", "payhip", "kofi", "pinterest"])
     options: dict = field(default_factory=dict)
     with_images: bool = True
+    with_video: bool = True
 
 
 @dataclass
@@ -59,10 +59,14 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     router = get_router()
     ptype = get_product_type(req.product_type)
     say("Researching niche profile")
-    niche: NicheProfile = resolve_niche(req.niche)
+    if req.options.get("no_research"):
+        niche, niche_source = resolve_niche(req.niche), "generic"
+    else:
+        niche, niche_source = smart_resolve(req.niche, router, req.providers)
+    say(f"Niche profile: {niche.name} ({niche_source})")
     seed = req.seed if req.seed is not None else random.SystemRandom().randrange(1, 10**6)
     style = choose_style(seed=seed, mood=niche.mood, palette=req.palette, fonts=req.fonts)
-    sizes = [s for s in (req.sizes or ptype.default_sizes) if s in PAGE_SIZES and s in ptype.supported_sizes] or ptype.default_sizes
+    sizes = [s for s in (req.sizes or ptype.default_sizes) if s in ptype.supported_sizes] or ptype.default_sizes
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
     folder = cfg.output_dir / "products" / f"{stamp}-{niche.key}-{ptype.key}"
@@ -82,11 +86,12 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
 
     say("Writing listing copy")
     kit: ListingKit = make_kit(niche, ptype, build, router, random.Random(seed), providers=req.providers)
-    labels = [PAGE_SIZES[s].label.split(" (")[0] for s in sizes]
+    labels = [ptype.size_label(s) for s in sizes]
     images: dict[str, list[Path]] = {}
     if req.with_images:
         say("Creating listing images and pins")
-        images = make_images(build, style, folder, ptype.key, kit.copy_, labels)
+        images = make_images(build, style, folder, ptype.key, kit.copy_, labels, router=router, niche=niche,
+                             providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)))
     say("Writing marketplace guides")
     render_guides(folder, kit, build, images, style.palette.key, req.marketplaces)
     (folder / "listing").mkdir(exist_ok=True)
@@ -106,7 +111,7 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
 
     (folder / "spec.json").write_text(json.dumps({
         "request": {"niche": req.niche, "product_type": req.product_type, "sizes": sizes, "seed": seed, "options": req.options},
-        "style": style.describe(), "content_source": content_source, "listing_source": kit.source,
+        "style": style.describe(), "niche_source": niche_source, "content_source": content_source, "listing_source": kit.source,
         "content": json.loads(content.model_dump_json()),
     }, indent=2), encoding="utf-8")
 

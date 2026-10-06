@@ -85,7 +85,26 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
             checks.append(Check(f"{f.path.name}: internal links", "pass" if links else "fail", f"{links} link annotations on first pages"))
     for f in [x for x in build.files if x.kind == "xlsx"]:
         checks += _xlsx_checks(f.path)
+    for f in [x for x in build.files if x.kind == "zip"]:
+        checks += _zip_checks(f.path)
     return checks
+
+
+def _zip_checks(path: Path) -> list[Check]:
+    import zipfile
+
+    from PIL import Image
+
+    size_mb = path.stat().st_size / 1e6
+    out = [Check(f"{path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)")]
+    with zipfile.ZipFile(path) as z:
+        jpgs = [n for n in z.namelist() if n.lower().endswith(".jpg")]
+        out.append(Check(f"{path.name}: images", "pass" if jpgs else "fail", f"{len(jpgs)} JPG files"))
+        if jpgs:
+            with z.open(jpgs[0]) as fh:
+                im = Image.open(fh)
+                out.append(Check(f"{path.name}: resolution", "pass" if min(im.size) >= 2400 else "warn", f"{im.size[0]}x{im.size[1]} px"))
+    return out
 
 
 def _xlsx_checks(path: Path) -> list[Check]:

@@ -17,13 +17,18 @@ const form = document.getElementById('make-form');
 if (form) {
   const out = document.getElementById('jobs');
   const type = document.getElementById('product_type');
-  const sizeBoxes = [...form.querySelectorAll('input[name=sizes]')];
+  const sizeMap = JSON.parse(document.getElementById('size-map').textContent);
+  const sizeBox = document.getElementById('size-box');
   const weeks = document.getElementById('weeks-wrap');
   function syncType() {
     const opt = type.selectedOptions[0];
-    const supported = (opt.dataset.sizes || '').split(',');
     const defaults = (opt.dataset.defaults || '').split(',');
-    sizeBoxes.forEach(b => { b.disabled = !supported.includes(b.value); b.checked = defaults.includes(b.value); b.parentElement.style.opacity = b.disabled ? .4 : 1; });
+    sizeBox.innerHTML = '';
+    (sizeMap[type.value] || []).forEach(([key, label]) => {
+      const l = document.createElement('label');
+      l.innerHTML = `<input type="checkbox" name="sizes" value="${key}" ${defaults.includes(key) ? 'checked' : ''}> ${label}`;
+      sizeBox.appendChild(l);
+    });
     weeks.style.display = type.value === 'weekly_planner' ? '' : 'none';
     document.getElementById('type-desc').textContent = opt.dataset.desc || '';
   }

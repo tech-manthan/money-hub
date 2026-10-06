@@ -289,6 +289,51 @@ def pin(pages: list[Image.Image], headline: str, sub: str, variant: int, brush: 
     return img.convert("RGB")
 
 
+def _framed(art: Image.Image, height: int, frame=(58, 42, 34), mat=(250, 248, 244)) -> Image.Image:
+    art = fit_height(art.convert("RGB"), height)
+    pad, bw = int(height * 0.07), max(8, int(height * 0.025))
+    w, h = art.width + pad * 2, art.height + pad * 2
+    out = Image.new("RGB", (w + bw * 2, h + bw * 2), frame)
+    out.paste(Image.new("RGB", (w, h), mat), (bw, bw))
+    out.paste(art, (bw + pad, bw + pad))
+    inner = ImageDraw.Draw(out)
+    inner.rectangle((bw + pad - 2, bw + pad - 2, bw + pad + art.width + 1, bw + pad + art.height + 1), outline=(220, 216, 208), width=2)
+    return out
+
+
+def gallery_wall(arts: list[Image.Image], title: str, subtitle: str, brush: Brush, size=(2700, 2025)) -> Image.Image:
+    """Framed prints hanging on a softly lit wall: the standard wall-art listing photo."""
+    W, H = size
+    img = Image.new("RGBA", size, brush.soft + (255,))
+    shade = Image.new("RGBA", size, (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shade)
+    for y in range(H):  # soft vertical light falloff
+        sd.line((0, y, W, y), fill=(0, 0, 0, int(34 * y / H)))
+    img.alpha_composite(shade)
+    d = ImageDraw.Draw(img)
+    d.rectangle((0, int(H * 0.86), W, H), fill=(166, 138, 112, 255))   # floor
+    d.rectangle((0, int(H * 0.84), W, int(H * 0.86)), fill=(244, 240, 233, 255))  # skirting
+    n = min(3, len(arts))
+    base_h = [0.52, 0.42, 0.32][:n]
+    region_x, region_w = int(W * 0.36), int(W * 0.60)
+    gap = int(W * 0.03)
+    k = 1.0
+    for _ in range(12):
+        frames = [_framed(a, int(H * h * k)) for a, h in zip(arts, base_h)]
+        if sum(f.width for f in frames) + gap * (n - 1) <= region_w:
+            break
+        k *= 0.93
+    x = region_x
+    top = int(H * 0.12)
+    avail = int(H * 0.68)
+    for f in frames:
+        paste_with_shadow(img, f, (x, top + (avail - f.height) // 3), blur=22, offset=(10, 18), opacity=90)
+        x += f.width + gap
+    d.text((int(W * 0.05), int(H * 0.2)), subtitle.upper(), font=brush.body(40), fill=brush.accent)
+    draw_text_block(d, (int(W * 0.05), int(H * 0.26)), title, brush.heading(100), brush.ink, int(W * 0.27), 1.08)
+    return img.convert("RGB")
+
+
 def save(img: Image.Image, path: Path, quality: int = 92) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix.lower() in (".jpg", ".jpeg"):

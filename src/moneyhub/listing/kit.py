@@ -75,13 +75,17 @@ _TYPE_WORDS = {
     "guided_journal": ["guided journal", "journal prompts", "printable journal", "30 day journal", "daily journal", "journal pdf"],
     "worksheet_pack": ["printable worksheets", "worksheet pack", "classroom printables", "homeschool worksheets", "practice sheets", "worksheets pdf"],
     "card_deck": ["printable cards", "affirmation cards", "prompt cards", "card deck", "flash cards", "cards pdf"],
+    "wall_art": ["printable wall art", "digital wall art", "wall art set", "poster print", "affirmation print", "downloadable art"],
+    "daily_planner": ["daily planner", "daily planner printable", "to do list", "day planner pdf", "daily schedule", "productivity planner"],
+    "checklist_pack": ["printable checklists", "checklist bundle", "to do checklist", "organizer printable", "checklist pdf", "planner inserts"],
+    "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],
 }
 
 
 def _builtin_copy(niche: NicheProfile, ptype: ProductType, build: BuildResult, rng: random.Random) -> ListingCopy:
     words = _TYPE_WORDS.get(ptype.key, [ptype.label.lower()])
     nm = niche.name
-    title_parts = [f"{nm} {ptype.label}", words[1].title(), words[2 % len(words)].title(), "Instant Download", "Printable PDF" if "PDF" in ptype.typical_formats else "Digital Download",
+    title_parts = [f"{nm} {ptype.label}", words[1 % len(words)].title(), words[2 % len(words)].title(), "Instant Download", "Printable PDF" if "PDF" in ptype.typical_formats else "Digital Download",
                    niche.seo_keywords[0].title() if niche.seo_keywords else ""]
     seen_t, uniq = set(), []
     for part in title_parts:
@@ -106,7 +110,7 @@ def _builtin_copy(niche: NicheProfile, ptype: ProductType, build: BuildResult, r
         f"{kw[0].title()} - a simple {ptype.label.lower()} for {nm.lower()}s"[:100],
         f"A {ptype.label.lower()} made for {niche.audience.split(' who ')[0]}"[:100],
         f"{nm} {words[0]} - {rng.choice(['digital download', 'PDF', 'print at home'])}",
-        f"Best {nm.lower()} {words[1]} to start this week",
+        f"Best {nm.lower()} {words[1 % len(words)]} to start this week",
     ]
     headlines = [
         niche.tagline.rstrip(".") or f"{nm} {ptype.label}", f"{nm} {ptype.label}", f"Made for {nm.lower()}s"[:48],

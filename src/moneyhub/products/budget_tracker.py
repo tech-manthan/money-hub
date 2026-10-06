@@ -77,11 +77,9 @@ class BudgetTracker(ProductType[BudgetContent]):
         _build_xlsx(xlsx_path, content, ctx)
         files = [ProductFile(xlsx_path, "xlsx", "Excel / Google Sheets workbook (formulas, dashboard, charts)", True)]
         renderer, pages = "", 0
-        for size in ctx.sizes:
-            page = ctx.page(size)
-            out = ctx.out_dir / f"{slug}-printable-{size}.pdf"
-            renderer = self.pdf_from_template(ctx, "budget_print.html.j2", page, out,
-                                              extra_css=_BUDGET_CSS, margin=2.8, content=content)
+        jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-printable-{s}.pdf", {"content": content}) for s in ctx.sizes]
+        renderer = self.render_jobs(ctx, "budget_print.html.j2", jobs, extra_css=_BUDGET_CSS, margin=2.8)
+        for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 3, 5]))
         features = [
@@ -93,7 +91,8 @@ class BudgetTracker(ProductType[BudgetContent]):
             "Printable monthly budget, bill tracker and savings pages (PDF)",
             f"Categories tailored for {ctx.niche.audience}",
         ]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer,
+                           meta={"sheet_kind": "budget", "groups": [(g.name, len(g.categories)) for g in content.expense_groups]})
 
 
 _BUDGET_CSS = """

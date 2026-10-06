@@ -3,7 +3,7 @@
 {%- endmacro %}
 
 {% macro lines(n=6) -%}
-<div class="lines">{% for i in range(n) %}<div></div>{% endfor %}</div>
+<div class="lines" style="min-height:{{ n * 1.9 }}em"></div>
 {%- endmacro %}
 
 {% macro box(label, n=5, cls='') -%}

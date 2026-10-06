@@ -68,8 +68,7 @@ h1,h2,h3,.h { font-family: var(--font-h), 'DejaVu Serif', serif; margin: 0; colo
 .fill > .card { flex:1; }
 .card.soft { background: var(--soft); border-color: var(--soft); }
 .card .label { margin-bottom: .35em; }
-.lines { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.lines div { flex: 1; border-bottom: 1px var(--gridstyle) var(--line); min-height: 1.1em; }
+.lines { flex: 1; min-height: 1.1em; }
 .dots { flex: 1; background-image: radial-gradient(circle, var(--line) 0.7px, transparent 0.9px); background-size: 1.1em 1.1em; }
 .check { display: inline-block; width: .85em; height: .85em; border: 1.2px solid var(--accent); border-radius: 50%; margin-right: .25em; vertical-align: -.1em; }
 .sq { display: inline-block; width: .85em; height: .85em; border: 1.2px solid var(--accent); border-radius: 2px; vertical-align: -.1em; }
@@ -89,9 +88,20 @@ def make_env() -> Environment:
 _env = make_env()
 
 
+def lines_css(style: Style, page: PageSize) -> str:
+    """Ruled lines as one repeating SVG background (a single element is far faster to lay out than N divs)."""
+    lh = 1.9 * page.base_pt * 96 / 72  # px
+    dash = {"solid": "", "dotted": "stroke-dasharray='1.5 4' stroke-linecap='round'", "dashed": "stroke-dasharray='9 6'"}[style.grid]
+    col = style.palette.line.replace("#", "%23")
+    svg = (f"<svg xmlns='http://www.w3.org/2000/svg' width='200' height='{lh:.2f}' viewBox='0 0 200 {lh:.2f}' preserveAspectRatio='none'>"
+           f"<line x1='0' y1='{lh - 0.8:.2f}' x2='200' y2='{lh - 0.8:.2f}' stroke='{col}' stroke-width='1.1' {dash}/></svg>")
+    return (f".lines{{background-image:url(\"data:image/svg+xml;utf8,{svg}\");background-repeat:repeat-y;"
+            f"background-size:100% {lh:.2f}px;background-position:0 100%;}}")
+
+
 def base_css(style: Style, page: PageSize, margin: float = 3.4) -> str:
     css = _env.from_string(BASE_CSS).render(page=page, margin=margin)
-    return "\n".join([style.font_css(), style.css_vars(), css])
+    return "\n".join([style.font_css(), style.css_vars(), css, lines_css(style, page)])
 
 
 def render_html(template: str, style: Style, page: PageSize, extra_css: str = "", margin: float = 3.4, **ctx) -> str:

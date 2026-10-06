@@ -23,4 +23,5 @@ def all_product_types() -> dict[str, ProductType]:
 
 
 def _load_all() -> None:
-    from . import budget_tracker, card_deck, journal, habit_tracker, weekly_planner, worksheet_pack  # noqa: F401
+    from . import (budget_tracker, card_deck, checklist_pack, daily_planner, ebook_guide, habit_tracker, journal,  # noqa: F401
+                   wall_art, weekly_planner, worksheet_pack)

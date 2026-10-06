@@ -52,10 +52,9 @@ class CardDeck(ProductType[CardContent]):
     def build(self, ctx: BuildContext, content: CardContent) -> BuildResult:
         slug = self.slug(content.title)
         files, renderer, pages = [], "", 0
-        for size in ctx.sizes:
-            page = ctx.page(size)
-            out = ctx.out_dir / f"{slug}-{size}.pdf"
-            renderer = self.pdf_from_template(ctx, "cards.html.j2", page, out, extra_css=_CARD_CSS, margin=0, content=content)
+        jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
+        renderer = self.render_jobs(ctx, "cards.html.j2", jobs, extra_css=_CARD_CSS, margin=0)
+        for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2]))
         features = [f"{len(content.cards)} cards (poker size 2.5 x 3.5 in)", "Cut guides on every sheet",

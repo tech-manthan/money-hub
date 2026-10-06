@@ -1,0 +1,28 @@
+{% for d in designs %}
+{% set ink = style.palette.ink %}
+<section class="page art a{{ d.layout }}" style="padding:0;background:{{ d.bg }};color:{{ d.fg }};">
+  {% if d.ai_bg %}<img src="{{ d.ai_bg }}" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;">
+  <div style="position:absolute;left:0;top:0;right:0;bottom:0;background:{{ d.bg }};opacity:.55;"></div>{% endif %}
+  {% if d.layout == 0 %}
+    <div class="motif" style="left:12%;right:12%;top:8%;height:46%;">{{ d.svg|safe }}</div>
+    <div class="txt" style="left:12%;right:12%;top:60%;">{{ d.text }}</div>
+    {% if d.small %}<div class="small-t" style="left:12%;right:12%;bottom:8%;">{{ d.small }}</div>{% endif %}
+  {% elif d.layout == 1 %}
+    <div class="txt" style="left:12%;right:12%;top:12%;">{{ d.text }}</div>
+    <div class="motif" style="left:5%;right:5%;bottom:3%;height:56%;">{{ d.svg|safe }}</div>
+  {% elif d.layout == 2 %}
+    <div class="frame" style="border-color:{{ d.fg }};"></div>
+    <div class="motif" style="left:30%;right:30%;top:12%;height:26%;">{{ d.svg|safe }}</div>
+    <div class="txt" style="left:16%;right:16%;top:44%;">{{ d.text }}</div>
+    {% if d.small %}<div class="small-t" style="left:16%;right:16%;bottom:11%;">{{ d.small }}</div>{% endif %}
+  {% elif d.layout == 3 %}
+    <div class="motif" style="left:-15%;right:-15%;top:-6%;height:62%;opacity:.95;">{{ d.svg|safe }}</div>
+    <div class="txt big" style="left:11%;right:11%;bottom:12%;text-align:left;">{{ d.text }}</div>
+  {% else %}
+    <div class="motif" style="left:20%;right:20%;top:14%;height:30%;">{{ d.svg|safe }}</div>
+    <div class="rule" style="top:50%;background:{{ d.fg }};"></div>
+    <div class="txt" style="left:14%;right:14%;top:54%;">{{ d.text }}</div>
+    {% if d.small %}<div class="small-t" style="left:14%;right:14%;bottom:9%;">{{ d.small }}</div>{% endif %}
+  {% endif %}
+</section>
+{% endfor %}

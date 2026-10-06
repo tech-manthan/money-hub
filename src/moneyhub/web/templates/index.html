@@ -9,12 +9,13 @@
         <div class="meta" id="niche-note" style="margin-top:4px">Built-in profiles: {{ niches|join(', ') }}. Anything else works too.</div></div>
       <div><label for="product_type">Product type</label>
         <select id="product_type" name="product_type">
-          {% for k, t in types.items() %}<option value="{{ k }}" data-sizes="{{ t.supported_sizes|join(',') }}" data-defaults="{{ t.default_sizes|join(',') }}" data-desc="{{ t.description }}">{{ t.label }}</option>{% endfor %}
+          {% for k, t in types.items() %}<option value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-desc="{{ t.description }}">{{ t.label }}</option>{% endfor %}
         </select><div class="meta" id="type-desc" style="margin-top:4px"></div></div>
     </div>
     <div class="row">
-      <div><label>Sizes</label><div class="checks">{% for k, s in sizes.items() %}<label><input type="checkbox" name="sizes" value="{{ k }}"> {{ s.label }}</label>{% endfor %}</div></div>
+      <div><label>Sizes / formats</label><div class="checks" id="size-box"></div></div>
     </div>
+    <script id="size-map" type="application/json">{{ size_map|tojson }}</script>
     <div class="row">
       <div><label for="palette">Colour palette</label><select id="palette" name="palette"><option value="">Auto (matched to niche mood)</option>{% for p in palettes %}<option value="{{ p.key }}">{{ p.key }}</option>{% endfor %}</select></div>
       <div><label for="llm">AI provider chain</label>
@@ -27,6 +28,7 @@
           <option value="ollama,builtin">Local (Ollama)</option>
         </select>
         <div class="meta" style="margin-top:4px">Available now: {% for p in providers %}{{ '✓' if p.available else '–' }} {{ p.name }}{{ ', ' if not loop.last }}{% endfor %}</div></div>
+      <div><label>Options</label><div class="checks"><label><input type="checkbox" name="no_video" value="1"> Skip videos</label><label title="Wall art only; needs an image provider key"><input type="checkbox" name="ai_art" value="1"> AI art backgrounds</label></div></div>
       <div id="weeks-wrap"><label for="weeks">Weeks (planner)</label><input type="number" id="weeks" name="weeks" min="4" max="60" placeholder="52"></div>
       <div><label for="seed">Seed (optional)</label><input type="number" id="seed" name="seed" placeholder="random look"></div>
     </div>

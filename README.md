@@ -7,22 +7,25 @@ It is built for your own use: the quality of each product comes from a niche-awa
 ## Quick start (macOS / Linux)
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[anthropic,chromium,dev]"
-# macOS: WeasyPrint needs Pango:  brew install pango
+bash scripts/setup.sh                # installs Pango/ffmpeg via Homebrew (macOS), creates .venv, installs everything, runs `moneyhub doctor`
+source .venv/bin/activate
 
-moneyhub types                       # product types, niches, which AI providers are ready
+moneyhub doctor                      # checks PDF engine, fonts, ffmpeg, AI providers; prints how to fix anything missing
+moneyhub ideas --focus pets          # brainstorm niche + product ideas (hypotheses to validate)
 moneyhub make "beginner knitting" weekly_planner --weeks 52
 moneyhub make adhd budget_tracker --llm builtin      # offline, no AI
+moneyhub make "new moms" wall_art                    # high-res print packs in 5 ratios
 moneyhub batch "nurse,teacher,wedding" --products weekly_planner,guided_journal
-moneyhub ui                          # web UI at http://127.0.0.1:8765
+moneyhub ui                          # web studio at http://127.0.0.1:8765
 ```
+
+Manual install instead: `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[anthropic,chromium,video,dev]"` (macOS also needs `brew install pango`).
 
 Each run creates `out/products/<timestamp>-<niche>-<type>/`:
 
 ```
 product/   the files you sell (PDFs, XLSX)
-images/    etsy/ (6 listing photos), gumroad/, payhip/, kofi/, pinterest/ (6 pins 1000x1500)
+images/    etsy/ (6+ listing photos), gumroad/, payhip/, kofi/, pinterest/ (6 pins 1000x1500), video/ (MP4 pin + Etsy listing video)
 listing/   listing.json, etsy title/tags/description, pins.json, guide-<marketplace>.md
 spec.json  exactly what was generated (seed, style, content) - reproducible
 upload-package.zip
@@ -37,8 +40,21 @@ upload-package.zip
 | `guided_journal` | 30 daily prompt pages, gratitude/mood/step boxes, weekly check-ins |
 | `worksheet_pack` | Worksheets with directions + answer key (math/language for teachers; reflective exercises otherwise) |
 | `card_deck` | Affirmation/prompt/action cards, 9 per sheet with cut guides |
+| `daily_planner` | Undated one-page-per-day planner: hourly schedule, top 3, to-do, niche boxes |
+| `checklist_pack` | Bundle of niche-specific tick-box checklists |
+| `ebook_guide` | Short printable guide: chapters, key points, action steps (best with an LLM; review facts before selling) |
+| `wall_art` | Typographic posters with procedural artwork (optional AI backgrounds) as 300-DPI-class JPG packs in 5 ratios (2:3, 3:4, 4:5, 5:7, ISO A) plus a framed gallery-wall listing photo |
 
 Adding a product type = one module in `src/moneyhub/products/` with a content model, an offline builder, an LLM brief and a `build()`.
+
+## Research helpers
+- `moneyhub ideas` / the **Ideas** page: LLM-brainstormed niche + product combos with the search phrases to validate on Etsy and Pinterest.
+- Unknown niches are **researched by the LLM into a full profile** (cached in `out/niches/`), so "wheelchair users travel" gets real, specific content instead of a generic template. `moneyhub niche "<text>" --research` shows the profile.
+
+## Motion, art and previews
+- **Videos:** every product gets a 1000x1500 MP4 for Pinterest video pins and a 1920x1080 listing video. An LLM writes the scene plan (hook, page, benefits, call to action); a Pillow + ffmpeg renderer animates it. Needs ffmpeg (`brew install ffmpeg` or `pip install imageio-ffmpeg`). Skip with `--no-video`.
+- **AI art (optional, off by default):** set a key (`HF_TOKEN`, `TOGETHER_API_KEY`, `OPENAI_API_KEY`) or `MONEYHUB_ART_URL` for a local server, list the provider under `render.art` in `moneyhub.yaml`, then use `--ai-art` for wall art backgrounds. Check each provider's terms before selling generated images. Default artwork is procedural SVG (no licence questions).
+- **Spreadsheet previews:** habit and budget trackers get an illustrated spreadsheet-window listing photo with sample numbers. Replace it with real screenshots of your finished workbook when you can.
 
 ## AI providers (all optional)
 Configured per task in `moneyhub.yaml`; each task tries providers in order and falls back automatically:
@@ -62,5 +78,5 @@ See `docs/research.md` for the research behind the design.
 
 ## Development
 ```bash
-pytest          # ~50 s; covers content validity for every niche x product, LLM fallback, pipeline, UI, spreadsheets
+pytest          # ~3 min; content validity for every niche x product, LLM fallback and research, pipeline, wall-art packs, video, UI, spreadsheets
 ```

@@ -105,3 +105,29 @@ def render_pdf(html: str, out: Path, *, page_css_size: str, backends: list[str] 
             log.warning("pdf backend %s failed: %s", n, e)
             last = e
     raise RuntimeError(f"no PDF backend could render the document: {last}")
+
+
+def _render_job(args: tuple) -> str:
+    html, out, css_size, backends = args
+    return render_pdf(html, Path(out), page_css_size=css_size, backends=backends)
+
+
+def render_many(jobs: list[tuple[str, Path, str]], backends: list[str] | None = None) -> list[str]:
+    """Render several (html, out_path, css_size) jobs, in parallel processes when worthwhile.
+
+    Uses the 'spawn' start method, which is safe with Pango/Chromium on macOS, Windows and Linux."""
+    import os
+    from concurrent.futures import ProcessPoolExecutor
+    import multiprocessing as mp
+
+    cfg_workers = get_config().get("render.workers")
+    workers = int(cfg_workers) if cfg_workers else min(4, os.cpu_count() or 1)
+    payload = [(h, str(o), c, backends) for h, o, c in jobs]
+    if len(payload) <= 1 or workers <= 1:
+        return [_render_job(a) for a in payload]
+    try:
+        with ProcessPoolExecutor(max_workers=min(workers, len(payload)), mp_context=mp.get_context("spawn")) as ex:
+            return list(ex.map(_render_job, payload))
+    except Exception as e:  # noqa: BLE001 - never fail a build because multiprocessing is unavailable
+        log.warning("parallel render failed (%s); falling back to sequential", e)
+        return [_render_job(a) for a in payload]

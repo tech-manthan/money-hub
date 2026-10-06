@@ -1,0 +1,21 @@
+{% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.days ~ ' daily pages', 'Hourly schedule', 'Top 3 priorities']) }}
+{% for d in range(1, content.days + 1) %}
+<section class="page dp">
+  {{ header(style, 'Day ' ~ d, 'Date: ____ / ____ / ________      Mood:  ☺  ☹  ☻') }}
+  <div class="dp-body">
+    <div class="dp-sched card"><div class="label">Schedule</div>
+      {% for h in range(content.start_hour, content.end_hour + 1) %}<div class="dp-hour"><span>{{ (h - 1) % 12 + 1 }}{{ 'am' if h < 12 or h == 24 else 'pm' }}</span><i></i></div>{% endfor %}
+    </div>
+    <div class="dp-side">
+      <div class="card soft"><div class="label">{{ content.priorities_label }}</div>
+        {% for i in range(3) %}<div class="dp-pri"><b>{{ i + 1 }}</b><i></i></div>{% endfor %}</div>
+      <div class="card" style="flex:1.6;"><div class="label">{{ content.todo_label }}</div>
+        {% for i in range(8) %}<div class="dp-todo"><span class="sq"></span><i></i></div>{% endfor %}</div>
+      {% for b in content.boxes %}{{ box(b, 3) }}{% endfor %}
+      <div class="card"><div class="label">Daily checks</div><div class="dp-checks">{% for l in content.daily_labels %}<span><i class="check"></i>{{ l }}</span>{% endfor %}</div></div>
+    </div>
+  </div>
+  {{ footer(content.quotes[(d - 1) % content.quotes|length]) }}
+</section>
+{% endfor %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block main %}
+<h1>Ideas</h1>
+<p class="meta">AI-brainstormed niche + product ideas. These are <b>hypotheses from general market knowledge, not live search data</b>: before building, type the suggested phrases into Etsy search (look at autocomplete and the number of results) and Pinterest search, then generate a few products and see what sells.</p>
+<div class="panel">
+  <form id="ideas-form" class="row" style="align-items:end">
+    <div><label for="focus">Focus (optional)</label><input type="text" id="focus" name="focus" placeholder="e.g. pets, students, health professionals, hobbies"></div>
+    <div><label for="n">How many</label><input type="number" id="n" name="n" value="15" min="5" max="30"></div>
+    <div><button type="submit">Brainstorm ideas</button> <span id="ideas-status" class="meta"></span></div>
+  </form>
+</div>
+<h2>Latest ({{ data.ideas|length }}{% if data.source %} - from {{ data.source }}{% endif %})</h2>
+<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+{% for i in data.ideas %}
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;gap:8px"><b>{{ i.niche }}</b><span class="badge draft">{{ i.product_type|replace('_',' ') }}</span></div>
+    <p style="margin:.4em 0">{{ i.angle }}</p>
+    <p class="meta" style="margin:.2em 0">{{ i.why }}</p>
+    <p class="meta" style="margin:.4em 0"><b>Validate:</b> {{ i.keywords|join(' · ') }}<br><b>Competition (guess):</b> {{ i.competition }}</p>
+    <form class="gen-idea" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}"><button class="sm">Generate this</button> <span class="meta"></span></form>
+  </div>
+{% endfor %}
+</div>
+<script>
+document.getElementById('ideas-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const st = document.getElementById('ideas-status'); st.textContent = 'Brainstorming… (up to a minute)';
+  const { job } = await (await fetch('/api/ideas', { method: 'POST', body: new FormData(e.target) })).json();
+  const t = setInterval(async () => {
+    const j = await (await fetch('/api/jobs/' + job)).json();
+    if (j.status === 'done') { clearInterval(t); location.reload(); }
+    if (j.status === 'error') { clearInterval(t); st.textContent = 'Error: ' + j.error; }
+  }, 1500);
+});
+document.querySelectorAll('.gen-idea').forEach(f => f.addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(); fd.append('niche', f.dataset.niche); fd.append('product_type', f.dataset.type);
+  await fetch('/api/jobs', { method: 'POST', body: fd });
+  f.querySelector('.meta').innerHTML = 'Queued - follow it on the <a href="/">Studio</a> page.';
+}));
+</script>
+{% endblock %}

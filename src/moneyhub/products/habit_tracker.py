@@ -63,11 +63,9 @@ class HabitTracker(ProductType[HabitContent]):
         _build_xlsx(xlsx_path, content, ctx)
         files = [ProductFile(xlsx_path, "xlsx", "Excel / Google Sheets workbook (checkboxes, auto % & chart)", True)]
         renderer, pages = "", 0
-        for size in ctx.sizes:
-            page = ctx.page(size)
-            out = ctx.out_dir / f"{slug}-printable-{size}.pdf"
-            renderer = self.pdf_from_template(
-                ctx, "habit_tracker_print.html.j2", page, out, extra_css=_HT_CSS, margin=2.6, content=content)
+        jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-printable-{s}.pdf", {"content": content}) for s in ctx.sizes]
+        renderer = self.render_jobs(ctx, "habit_tracker_print.html.j2", jobs, extra_css=_HT_CSS, margin=2.6)
+        for page, out, _ in jobs:
             _repeat_page(out, page_index=1, copies=11)  # one month page rendered once, cloned for 12 months
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2]))
@@ -79,7 +77,8 @@ class HabitTracker(ProductType[HabitContent]):
             f"Designed for {ctx.niche.audience}",
             "Works in Excel, Google Sheets and Numbers",
         ]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer,
+                           meta={"sheet_kind": "habit", "habits": content.habits})
 
 
 def _repeat_page(pdf, page_index: int, copies: int) -> None:

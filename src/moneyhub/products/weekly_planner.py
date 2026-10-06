@@ -79,12 +79,15 @@ class WeeklyPlanner(ProductType[PlannerContent]):
         renderer = ""
         slug = self.slug(content.title)
         pages = 0
+        jobs, meta = [], []
         for size in ctx.sizes:
             page = ctx.page(size)
             hyper = size == "tablet"
             out = ctx.out_dir / f"{slug}-{size}{'-hyperlinked' if hyper else ''}.pdf"
-            renderer = self.pdf_from_template(ctx, "weekly_planner.html.j2", page, out,
-                                              extra_css=_extra_css(page), content=content, hyper=hyper)
+            jobs.append((page, out, {"content": content, "hyper": hyper}))
+            meta.append((page, out, hyper))
+        renderer = self.render_jobs(ctx, "weekly_planner.html.j2", jobs, extra_css=_extra_css)
+        for page, out, hyper in meta:
             pages = pdf_page_count(out)
             label = f"{page.label}" + (" - hyperlinked for GoodNotes / Notability" if hyper else " - printable")
             files.append(ProductFile(out, "pdf", label, True, preview_pages=[0, 2 + 0, 4, 15]))

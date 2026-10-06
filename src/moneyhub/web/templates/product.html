@@ -13,11 +13,12 @@
     <button class="danger" name="status" value="rejected">Reject</button>
     <a class="btn ghost" href="/files/{{ p.id }}/upload-package.zip?download=1">Download upload package</a>
   </form>
+  <form method="post" action="/product/{{ p.id }}/regenerate" style="margin-top:8px"><button class="ghost sm">Make a new variation of this</button> <span class="meta">same niche and type, new look and copy</span></form>
 </div>
 
 <h2>Preview</h2>
-<div class="pages">{% for pg in pages %}<a href="/preview/{{ p.id }}/{{ pg.pdf }}/{{ pg.i }}.png" target="_blank"><img loading="lazy" src="/preview/{{ p.id }}/{{ pg.pdf }}/{{ pg.i }}.png"></a>{% endfor %}</div>
-{% if not pages %}<p class="meta">No PDF in this product - open the spreadsheet from the files list.</p>{% endif %}
+<div class="pages">{% for pg in pages %}<a href="{{ pg.url }}" target="_blank"><img loading="lazy" src="{{ pg.url }}"></a>{% endfor %}</div>
+{% if not pages %}<p class="meta">No page previews for this product - open the files from the list below.</p>{% endif %}
 
 <div class="two">
   <div>
@@ -44,7 +45,7 @@
 <h2>Images by marketplace</h2>
 <div class="tabs">{% for m, imgs in images.items() if imgs %}<button data-group="img" data-tab="img-{{ m }}" class="{{ 'on' if loop.first }}">{{ m }} ({{ imgs|length }})</button>{% endfor %}</div>
 {% for m, imgs in images.items() if imgs %}
-<div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endfor %}</div></div>
+<div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}{% if i.endswith('.mp4') %}<div><video controls preload="metadata" style="width:100%;border-radius:8px" src="/files/{{ p.id }}/{{ i }}"></video><div class="meta">{{ i.split('/')[-1] }}</div></div>{% else %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endif %}{% endfor %}</div></div>
 {% endfor %}
 
 <h2>Upload guides</h2>

@@ -22,8 +22,8 @@ WeasyPrint (PDF), Playwright/Chromium (optional alternate PDF renderer), XlsxWri
 ## LLM options
 `claude -p` (Claude Code headless), Anthropic API, Gemini/Groq/OpenRouter free tiers, Ollama (local), plus an offline builtin library. Every task has its own ordered chain with automatic fallback (see `moneyhub.yaml`). Note: Anthropic has been scoping subscription usage to first-party Claude Code; use an API key if you ever wrap this in something you sell to others.
 
-## Not yet built / ideas
-- Real spreadsheet screenshots for mockups (needs Excel/LibreOffice rendering on your machine).
-- Remotion/Manim motion graphics for video pins.
-- Optional AI art provider (cloud image API) for wall-art products.
+## Still open / ideas
+- Real spreadsheet screenshots (needs Excel or a working LibreOffice on your machine); `moneyhub doctor` reports what is available.
+- Remotion/Manim as alternative motion engines (the built-in Pillow + ffmpeg renderer covers pins and listing videos).
 - Penpot/Open Design as a visual editing step.
+- Marketplace automation beyond manual upload (Etsy Open API needs approval; Gumroad has no create-product API).

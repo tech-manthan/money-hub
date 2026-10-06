@@ -6,5 +6,8 @@
 <div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Chains per task</h2>
 <table>{% for k, v in tasks.items() %}<tr><td>{{ k }}</td><td class="meta">{{ v|join(' → ') }}</td></tr>{% endfor %}</table>
 <p class="meta">Each task tries providers in order and falls back automatically; “builtin” is the offline library. Edit <code>moneyhub.yaml</code> (or create <code>moneyhub.local.yaml</code>) to change order, models or add providers.</p></div>
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">AI art providers (optional)</h2>
+<table><tr><th>Provider</th><th>Key</th><th>Enabled in config</th></tr>{% for a in art %}<tr><td>{{ a.name }}</td><td>{{ 'found' if a.available else 'missing' }}</td><td>{{ 'yes' if a.enabled else 'no' }}</td></tr>{% endfor %}</table>
+<p class="meta">Wall art uses procedural, licence-free artwork by default. To add AI backgrounds, set a key and list the provider under <code>render.art</code> in <code>moneyhub.yaml</code>, then tick "AI art backgrounds". Check the provider's terms before selling generated images.</p></div>
 <div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Rendering &amp; output</h2><p>PDF renderers (in order): {{ renderers|join(', ') }}<br>Output folder: <code>{{ out }}</code></p></div>
 {% endblock %}

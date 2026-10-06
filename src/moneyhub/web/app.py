@@ -30,17 +30,17 @@ app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 
 JOBS: dict[str, dict] = {}
-_queue: "queue.Queue[tuple[str, GenRequest]]" = queue.Queue()
+_queue: "queue.Queue[tuple[str, object]]" = queue.Queue()
 
 
 def _worker() -> None:
     while True:
-        jid, req = _queue.get()
+        jid, fn = _queue.get()
         job = JOBS[jid]
         job["status"] = "running"
         try:
-            res = generate(req, progress=lambda m: job["log"].append(m))
-            job.update(status="done", product_id=res.product_id, qa=res.qa_status)
+            job.update(fn(job))
+            job["status"] = "done"
         except Exception as e:  # noqa: BLE001
             job.update(status="error", error=f"{type(e).__name__}: {e}", trace=traceback.format_exc()[-1500:])
         finally:
@@ -65,6 +65,20 @@ def _first_image(folder: str) -> str | None:
 
 
 # ------------------------------------------------------------------ pages
+def _submit(label: str, fn) -> str:
+    jid = uuid.uuid4().hex[:8]
+    JOBS[jid] = {"status": "queued", "log": [], "created": time.time(), "label": label}
+    _queue.put((jid, fn))
+    return jid
+
+
+def _gen_fn(req: GenRequest):
+    def run(job):
+        res = generate(req, progress=lambda m: job["log"].append(m))
+        return {"product_id": res.product_id, "qa": res.qa_status}
+    return run
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     products = _store().products()
@@ -73,7 +87,7 @@ def index(request: Request):
         qa = json.loads(p["qa"] or "[]")
         p["qa_status"] = "fail" if any(c["status"] == "fail" for c in qa) else "warn" if any(c["status"] == "warn" for c in qa) else "pass"
     return templates.TemplateResponse(request, "index.html", _ctx(
-        request, products=products, types=all_product_types(), niches=sorted(LIBRARY), sizes=PAGE_SIZES, palettes=PALETTES,
+        request, products=products, types=all_product_types(), niches=sorted(LIBRARY), size_map={k: t.size_options() for k, t in all_product_types().items()}, palettes=PALETTES,
         providers=get_router().status(), jobs=sorted(JOBS.items(), key=lambda kv: -kv[1]["created"])[:6]))
 
 
@@ -91,9 +105,11 @@ def product(request: Request, pid: int):
     pages = []
     if pdfs:
         n = pdf_page_count(folder / pdfs[0]["rel"])
-        pages = [{"pdf": pdfs[0]["rel"], "i": i} for i in list(range(min(n, 10)))]
+        pages = [{"url": f"/preview/{pid}/{pdfs[0]['rel']}/{i}.png"} for i in range(min(n, 10))]
+    elif (folder / "art").exists():
+        pages = [{"url": f"/files/{pid}/art/{f.name}"} for f in sorted((folder / "art").glob("preview-*.png"))]
     images = {}
-    for m in ("etsy", "gumroad", "payhip", "kofi", "pinterest"):
+    for m in ("etsy", "gumroad", "payhip", "kofi", "pinterest", "video"):
         d = folder / "images" / m
         images[m] = [str(x.relative_to(folder)) for x in sorted(d.glob("*"))] if d.exists() else []
     guides = {}
@@ -102,6 +118,31 @@ def product(request: Request, pid: int):
     return templates.TemplateResponse(request, "product.html", _ctx(
         request, p=p, qa=json.loads(p["qa"] or "[]"), listing=listing, spec=spec, files=files, pages=pages,
         images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else ""))
+
+
+@app.get("/ideas", response_class=HTMLResponse)
+def ideas_page(request: Request):
+    from ..ideas import load_ideas
+    return templates.TemplateResponse(request, "ideas.html", _ctx(request, data=load_ideas(), types=all_product_types()))
+
+
+@app.post("/api/ideas")
+def make_ideas(n: int = Form(15), focus: str = Form(""), llm: str = Form("")):
+    from ..ideas import suggest_ideas
+    provs = [x.strip() for x in llm.split(",") if x.strip()] or None
+    return {"job": _submit(f"ideas: {focus or 'any'}", lambda job: {"ideas": len(suggest_ideas(n, focus or None, provs)["ideas"])})}
+
+
+@app.post("/product/{pid}/regenerate")
+def regenerate(pid: int):
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    spec = json.loads((Path(p["folder"]) / "spec.json").read_text())
+    r = spec["request"]
+    _submit(f"{r['niche']} / {r['product_type']} (new variation)", _gen_fn(GenRequest(
+        niche=r["niche"], product_type=r["product_type"], sizes=r.get("sizes"), options=r.get("options") or {})))
+    return RedirectResponse("/", status_code=303)
 
 
 @app.get("/report", response_class=HTMLResponse)
@@ -114,25 +155,24 @@ def settings(request: Request):
     cfg = get_config()
     return templates.TemplateResponse(request, "settings.html", _ctx(
         request, providers=get_router().status(), tasks=cfg.get("llm.tasks"), out=str(cfg.output_dir),
-        renderers=cfg.get("render.pdf")))
+        renderers=cfg.get("render.pdf"), art=__import__("moneyhub.art", fromlist=["art_status"]).art_status()))
 
 
 # ------------------------------------------------------------------ actions
 @app.post("/api/jobs")
 def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: list[str] = Form(default=[]),
-               palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form("")):
+               palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form(""),
+               ai_art: str = Form(""), no_video: str = Form("")):
     ids = []
     for n in [x.strip() for x in niche.split(",") if x.strip()]:
         req = GenRequest(
             niche=n, product_type=product_type, sizes=sizes or None, palette=palette or None,
             providers=[x.strip() for x in llm.split(",") if x.strip()] or None,
             seed=int(seed) if seed.strip().isdigit() else None,
-            options={"weeks": int(weeks)} if weeks.strip().isdigit() else {},
+            options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {})},
+            with_video=not no_video,
         )
-        jid = uuid.uuid4().hex[:8]
-        JOBS[jid] = {"status": "queued", "log": [], "created": time.time(), "label": f"{n} / {product_type}"}
-        _queue.put((jid, req))
-        ids.append(jid)
+        ids.append(_submit(f"{n} / {product_type}", _gen_fn(req)))
     return {"jobs": ids}
 
 

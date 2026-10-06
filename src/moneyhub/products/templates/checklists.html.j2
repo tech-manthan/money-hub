@@ -1,0 +1,18 @@
+{% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.checklists|length ~ ' checklists', 'Tick-box layouts', 'Print as often as you like']) }}
+{% for cl in content.checklists %}
+<section class="page">
+  {{ header(style, cl.title, content.title) }}
+  {% if cl.intro %}<p class="muted" style="margin:0 0 .8em;max-width:36em;">{{ cl.intro }}</p>{% endif %}
+  <div style="columns:2;column-gap:1.4em;flex:1;min-height:0;">
+    {% for g in cl.groups %}
+    <div style="break-inside:avoid;margin-bottom:1em;">
+      <div class="label" style="margin-bottom:.4em;">{{ g.name }}</div>
+      {% for it in g['items'] %}<div class="cl-item"><span class="sq"></span><span>{{ it }}</span></div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <div style="height:5.5em;margin-top:.6em;display:flex;flex-direction:column;">{{ box('Notes', 3, 'soft') }}</div>
+  {{ footer(content.title, false, 'Date: ____________') }}
+</section>
+{% endfor %}

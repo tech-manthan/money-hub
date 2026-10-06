@@ -142,10 +142,9 @@ class WorksheetPack(ProductType[WorksheetContent]):
     def build(self, ctx: BuildContext, content: WorksheetContent) -> BuildResult:
         slug = self.slug(content.title)
         files, renderer, pages = [], "", 0
-        for size in ctx.sizes:
-            page = ctx.page(size)
-            out = ctx.out_dir / f"{slug}-{size}.pdf"
-            renderer = self.pdf_from_template(ctx, "worksheets.html.j2", page, out, margin=3.0, content=content)
+        jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
+        renderer = self.render_jobs(ctx, "worksheets.html.j2", jobs, margin=3.0)
+        for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2, len(content.sheets) + 1]))
         features = [f"{len(content.sheets)} ready-to-print worksheets", "Complete answer key", f"Level: {content.level}",

@@ -1,0 +1,83 @@
+"""Undated daily planner: hourly schedule, top-3 priorities, to-do list, niche boxes."""
+from __future__ import annotations
+
+import random
+
+from pydantic import BaseModel, Field
+
+from ..niches import NicheProfile
+from ..render.raster import pdf_page_count
+from .base import BuildContext, BuildResult, ProductFile, ProductType
+from .registry import register
+
+
+class DailyContent(BaseModel):
+    title: str
+    subtitle: str = "Undated daily planner"
+    tagline: str = Field(description="One short line (<= 70 chars)")
+    priorities_label: str = Field(default="Top 3 today", description="<= 4 words")
+    todo_label: str = Field(default="To do", description="<= 3 words")
+    boxes: list[str] = Field(min_length=1, max_length=3, description="1-3 niche-specific small boxes (<= 4 words)")
+    daily_labels: list[str] = Field(min_length=3, max_length=4)
+    quotes: list[str] = Field(min_length=6, max_length=14)
+    start_hour: int = Field(default=6, ge=4, le=10)
+    end_hour: int = Field(default=21, ge=16, le=24)
+    days: int = Field(default=60, ge=7, le=120)
+
+
+@register
+class DailyPlanner(ProductType[DailyContent]):
+    key = "daily_planner"
+    label = "Daily planner"
+    description = "Undated one-page-per-day planner with hourly schedule, priorities, to-do list and niche boxes."
+    content_model = DailyContent
+    default_sizes = ["letter", "a4"]
+    supported_sizes = ["letter", "a4", "a5"]
+    price_range = (5.0, 12.0)
+
+    def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> DailyContent:
+        q = (list(niche.affirmations) * 2)[:12]
+        return DailyContent(
+            title=f"{niche.name} Daily Planner", tagline=niche.tagline[:70], boxes=niche.weekly_boxes[:2] or ["Notes"],
+            daily_labels=niche.daily_labels[:4] or ["Water", "Move", "Rest"], quotes=q,
+            days=int(options.get("days", 60)),
+        )
+
+    def llm_brief(self, niche: NicheProfile, options: dict) -> str:
+        return (
+            "Write the content for an UNDATED DAILY PLANNER page layout for this niche. Choose box labels and daily checks "
+            "that match this audience's actual day (start/end hours too: e.g. night-shift workers start later). "
+            f"Set days to {int(options.get('days', 60))}."
+        )
+
+    def build(self, ctx: BuildContext, content: DailyContent) -> BuildResult:
+        slug = self.slug(content.title)
+        jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
+        renderer = self.render_jobs(ctx, "daily_planner.html.j2", jobs, extra_css=_CSS, margin=3.0)
+        files, pages = [], 0
+        for page, out, _ in jobs:
+            pages = pdf_page_count(out)
+            files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2, 5]))
+        features = [f"{content.days} undated daily pages", "Hourly schedule + top 3 priorities", "To-do list with tick boxes",
+                    f"Boxes made for {ctx.niche.name.lower()}: {', '.join(content.boxes)}", "Letter, A4 and A5 compatible", "Print at home or at a print shop"]
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+
+
+_CSS = """
+.dp-body { flex:1; display:flex; gap:.8em; min-height:0; }
+.dp-sched { flex:none; width:38%; }
+.dp-hour { flex:1; display:flex; align-items:flex-end; border-bottom:1px solid var(--line); font-size:.62em; color:var(--muted); min-height:0; }
+.dp-hour span { width:3em; flex:none; padding-bottom:.15em; }
+.dp-hour i { flex:1; }
+.dp-side { flex:1; display:flex; flex-direction:column; gap:.55em; min-height:0; }
+.dp-side .card { min-height:0; }
+.dp-pri { display:flex; align-items:flex-end; flex:1; border-bottom:1px solid var(--line); }
+.dp-pri b { width:1.5em; color:var(--accent); font-family:var(--font-h); font-size:1.1em; }
+.dp-pri i { flex:1; }
+.dp-todo { display:flex; align-items:flex-end; flex:1; border-bottom:1px solid var(--line); padding-bottom:.1em; }
+.dp-todo .sq { margin-right:.5em; margin-bottom:.15em; }
+.dp-todo i { flex:1; }
+.dp-checks { display:flex; flex-wrap:wrap; gap:.3em 1em; font-size:.75em; color:var(--muted); margin-top:.1em; }
+.cl-item { display:flex; align-items:flex-start; margin:.3em 0; font-size:.9em; }
+.cl-item .sq { flex:none; margin:.2em .6em 0 0; }
+"""
