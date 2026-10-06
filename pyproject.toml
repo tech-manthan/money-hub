@@ -12,6 +12,7 @@ dependencies = [
   "xlsxwriter>=3.2",
   "openpyxl>=3.1",
   "pillow>=10",
+  "numpy>=1.26",
   "pypdf>=4",
   "pypdfium2>=4",
   "jinja2>=3.1",

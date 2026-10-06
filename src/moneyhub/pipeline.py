@@ -72,7 +72,11 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     sizes = [s for s in (req.sizes or ptype.default_sizes) if s in ptype.supported_sizes] or ptype.default_sizes
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    folder = cfg.output_dir / "products" / f"{stamp}-{niche.key}-{ptype.key}"
+    base = f"{stamp}-{niche.key}-{ptype.key}"
+    folder, n = cfg.output_dir / "products" / base, 1
+    while folder.exists():  # same-second runs must not share (and overwrite) a folder
+        n += 1
+        folder = cfg.output_dir / "products" / f"{base}-{n}"
     pdir = folder / "product"
     pdir.mkdir(parents=True, exist_ok=True)
 
