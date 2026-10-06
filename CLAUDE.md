@@ -34,3 +34,15 @@ moneyhub ui
 
 ## Known gaps (not verified on a real Mac / device yet)
 Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `claude_svg` works), how exports behave inside Canva/Notion/KDP's previewer, GoodNotes link behaviour, e-ink tablets, xlsx recalculation in Excel/Numbers. Not built: marketplace API publishing (by design), KDP export for non-planner products, layouts for product types other than weekly/daily planner, Penpot/Canva native template files.
+
+## Pending work (start here in a new session)
+Do these in order; commit each with tests; no pushes unless the owner asks (3+ commits are local and unpushed at the time of writing).
+1. **Wall-art motifs**: render a contact sheet of the 6 new motifs (terrazzo, rainbow, scallop, topo, bouquet, retro) at full page size, fix any that look wrong (the earlier sheet was cropped), add a test that every motif in `art.MOTIFS` yields a valid SVG.
+2. **Wall-art page layouts** are still the old 5 fixed text layouts: move them to the `layouts.py` spec system (presets + `auto:N` + described), with thumbnails in the wizard.
+3. **Layouts for the other product types** (habit tracker print pages, journal, checklist pack, worksheet pack, card deck, ebook guide, budget print pages): spec model + presets + generator + fit check each, following `weekly_planner.py`.
+4. **KDP export for more products** (checklists/worksheets already supported; add card deck as a printed deck is not a KDP product, so skip; consider journal/guide cover polish and a real cover image option).
+5. **Verify on real platforms** (needs the owner): import the Notion zip into Notion, the Canva PDF into Canva, the KDP interior/cover in KDP's previewer, the e-ink PDFs on a device, GoodNotes links, xlsx in Excel/Numbers. Fix what breaks and add tests.
+6. **CI**: push the branch (owner's call) and fix whatever the GitHub macOS/Linux matrix reports.
+7. **Image-AI providers** (Hugging Face / Together / OpenAI) are untested: needs a key from the owner; test via Settings > Test, then a wall-art build with `--art-provider huggingface`.
+8. **Penpot**: try importing an `editable/*.svg` into a real Penpot and fix import problems.
+9. After UI changes, re-run `python scripts/record_tour.py` (about 6 minutes) and re-run the full test suite.
