@@ -35,7 +35,7 @@ document.querySelectorAll('.gen-idea').forEach(f => f.addEventListener('submit',
   e.preventDefault();
   const fd = new FormData(); fd.append('niche', f.dataset.niche); fd.append('product_type', f.dataset.type);
   await fetch('/api/jobs', { method: 'POST', body: fd });
-  f.querySelector('.meta').innerHTML = 'Queued - follow it on the <a href="/">Studio</a> page.';
+  f.querySelector('.meta').innerHTML = 'Queued - follow it on <a href="/products">My products</a> (it appears when finished).';
 }));
 </script>
 {% endblock %}

@@ -15,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ..config import get_config
-from ..design import PALETTES
+from ..art import MOTIFS, art_status
+from ..design import FONT_PAIRS, GRIDS, HEADERS, PALETTES, RADII
 from ..llm import get_router
 from ..niches import LIBRARY, resolve_niche
 from ..pipeline import Request as GenRequest, generate
@@ -23,9 +24,10 @@ from ..products import all_product_types
 from ..render.html import PAGE_SIZES
 from ..render.raster import pdf_page_count, render_pages
 from ..store import Store
+from . import guide
 
 HERE = Path(__file__).resolve().parent
-app = FastAPI(title="MoneyHub")
+app = FastAPI(title="MoneyHub", docs_url=None, redoc_url=None, openapi_url=None)  # /docs is our own user guide
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 
@@ -79,16 +81,64 @@ def _gen_fn(req: GenRequest):
     return run
 
 
-@app.get("/", response_class=HTMLResponse)
-def index(request: Request):
+def _catalogue() -> list[dict]:
     products = _store().products()
     for p in products:
         p["thumb"] = _first_image(p["folder"])
         qa = json.loads(p["qa"] or "[]")
         p["qa_status"] = "fail" if any(c["status"] == "fail" for c in qa) else "warn" if any(c["status"] == "warn" for c in qa) else "pass"
+    return products
+
+
+def _look_ctx() -> dict:
+    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=MOTIFS, plain=guide)
+
+
+MEDIA = HERE / "static" / "media"
+CLIPS = [("idea", "1. Pick an idea", "Choose who you want to help and what to make for them."),
+         ("look", "2. Pick a look", "Let MoneyHub choose, or pick colours and fonts yourself."),
+         ("make", "3. Make it", "Review your choices and watch it being made."),
+         ("publish", "4. Check and publish", "Approve it, download the upload package and follow the guide.")]
+
+
+def _media() -> dict:
+    have = lambda n: (MEDIA / n).exists()  # noqa: E731 - videos are recorded by scripts/record_tour.py
+    return {"tour": have("tour.mp4"), "clips": [(k, t, d, have(f"{k}.mp4")) for k, t, d in CLIPS],
+            "samples": sorted(f"media/samples/{f.name}" for f in (MEDIA / "samples").glob("*.jpg")) if (MEDIA / "samples").is_dir() else []}
+
+
+@app.get("/", response_class=HTMLResponse)
+def landing(request: Request):
+    types = all_product_types()
+    return templates.TemplateResponse(request, "landing.html", _ctx(
+        request, types=types, plain=guide, media=_media(), products=_catalogue()[:1]))
+
+
+@app.get("/docs", response_class=HTMLResponse)
+def docs(request: Request):
+    return templates.TemplateResponse(request, "docs.html", _ctx(
+        request, types=all_product_types(), media=_media(), providers=get_router().status(), arts=art_status(),
+        niches=[n.name for n in LIBRARY.values()], **_look_ctx()))
+
+
+@app.get("/make", response_class=HTMLResponse)
+def start(request: Request):
+    types = all_product_types()
+    return templates.TemplateResponse(request, "start.html", _ctx(
+        request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), steps=guide.STEPS,
+        size_map={k: t.size_options() for k, t in types.items()}, ai_art=any(a["available"] for a in art_status()), **_look_ctx()))
+
+
+@app.get("/products", response_class=HTMLResponse)
+def products_page(request: Request):
+    return templates.TemplateResponse(request, "products.html", _ctx(request, products=_catalogue()))
+
+
+@app.get("/advanced", response_class=HTMLResponse)
+def advanced(request: Request):
     return templates.TemplateResponse(request, "index.html", _ctx(
-        request, products=products, types=all_product_types(), niches=sorted(LIBRARY), size_map={k: t.size_options() for k, t in all_product_types().items()}, palettes=PALETTES,
-        providers=get_router().status(), jobs=sorted(JOBS.items(), key=lambda kv: -kv[1]["created"])[:6]))
+        request, products=[], types=all_product_types(), niches=sorted(LIBRARY), size_map={k: t.size_options() for k, t in all_product_types().items()},
+        providers=get_router().status(), jobs=sorted(JOBS.items(), key=lambda kv: -kv[1]["created"])[:6], **_look_ctx()))
 
 
 @app.get("/product/{pid}", response_class=HTMLResponse)
@@ -231,14 +281,22 @@ def settings(request: Request):
 @app.post("/api/jobs")
 def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: list[str] = Form(default=[]),
                palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form(""),
-               ai_art: str = Form(""), no_video: str = Form("")):
+               ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
+               radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form("")):
+    bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
+                                        (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
+    if bad:
+        raise HTTPException(422, f"Unknown {bad[0][2]}: {bad[0][0]}")
+    look = {**({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
+            **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {}),
+            **({"layout": int(layout)} if layout.strip().isdigit() and 0 <= int(layout) <= 4 else {})}
     ids = []
     for n in [x.strip() for x in niche.split(",") if x.strip()]:
         req = GenRequest(
-            niche=n, product_type=product_type, sizes=sizes or None, palette=palette or None,
+            niche=n, product_type=product_type, sizes=sizes or None, palette=palette or None, fonts=fonts or None,
             providers=[x.strip() for x in llm.split(",") if x.strip()] or None,
             seed=int(seed) if seed.strip().isdigit() else None,
-            options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {})},
+            options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look},
             with_video=not no_video,
         )
         ids.append(_submit(f"{n} / {product_type}", _gen_fn(req)))

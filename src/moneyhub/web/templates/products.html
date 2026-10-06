@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% block main %}
+<h1>My products</h1>
+
+{% if not products %}<p class="meta">Nothing yet. <a href="/make">Make your first product</a>.</p>{% endif %}
+<div class="grid cards">
+{% for p in products %}
+  <a class="card" href="/product/{{ p.id }}">
+    <div class="img">{% if p.thumb %}<img loading="lazy" src="/files/{{ p.id }}/{{ p.thumb }}">{% else %}no preview{% endif %}</div>
+    <div class="body"><div class="t">{{ p.title }}</div>
+      <div class="meta">{{ p.niche_name }} · {{ p.product_type|replace('_',' ') }} · ${{ '%.2f'|format(p.price or 0) }}</div>
+      <div style="margin-top:6px"><span class="badge {{ p.status }}">{{ p.status }}</span> <span class="badge {{ p.qa_status }}">QA {{ p.qa_status }}</span></div></div>
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

@@ -38,7 +38,7 @@ moneyhub = "moneyhub.cli:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-moneyhub = ["web/templates/*", "web/static/*", "listing/guides/*.md", "render/*.css"]
+moneyhub = ["web/templates/*", "web/static/*", "web/static/media/*", "web/static/media/samples/*", "listing/guides/*.md", "render/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

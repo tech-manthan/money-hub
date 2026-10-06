@@ -1,0 +1,147 @@
+{% extends "base.html" %}{% block main %}
+<h1>How to use MoneyHub</h1>
+<div class="docs">
+<nav class="toc" aria-label="On this page">
+  <a href="#start">Quick start</a><a href="#tour">Video tour</a><a href="#steps">Using the app</a><a href="#after">After it's made</a>
+  <a href="#cli">Command line</a><a href="#ai">AI helpers</a><a href="#rules">Shop rules</a><a href="#glossary">Plain-English glossary</a><a href="#trouble">Troubleshooting</a><a href="#limits">What it can't do yet</a>
+</nav>
+<div class="doc">
+
+<h2 id="start">Quick start</h2>
+<ol class="next">
+  <li>Open <a href="/make"><b>Make a product</b></a>.</li>
+  <li>Press <b>Surprise me</b> (or pick an audience), then <b>Next</b> twice, then <b>Make my product</b>.</li>
+  <li>When it's done, open it from the green button and look through the pages.</li>
+</ol>
+<p class="meta">That's the whole loop. The rest of this page explains each choice.</p>
+
+<h2 id="tour">Video tour</h2>
+{% if media.tour %}
+<video class="tour" controls preload="metadata" poster="/static/media/tour.jpg"><source src="/static/media/tour.mp4" type="video/mp4"></video>
+<p class="meta">The full tour. Each step also has its own short clip below.</p>
+{% else %}<p class="meta">The tour videos have not been recorded yet. Run <code>python scripts/record_tour.py</code> from the project folder; it records them from the real app.</p>{% endif %}
+
+<h2 id="steps">Using the app, step by step</h2>
+{% for key, title, desc, has in media.clips %}
+<div class="panel clip">
+  <div><h3>{{ title }}</h3><p>{{ desc }}</p>
+  {% if key == 'idea' %}<ul>
+    <li><b>Audience cards.</b> Each card is a group of people with a common need, with the product we suggest for them. Click one.</li>
+    <li><b>Surprise me</b> picks one at random. Good when you have no idea.</li>
+    <li><b>Type my own</b> lets you describe any group, such as "dog trainers". If an AI helper is set up, it researches the group first.</li>
+    <li><b>What to make.</b> The suggested product is pre-selected. Change it any time. Not sure? Planners and checklists are the easiest to start with.</li></ul>
+  {% elif key == 'look' %}<ul>
+    <li><b>Choose for me</b> (recommended) matches colours and fonts to the audience's mood.</li>
+    <li><b>I'll pick</b> shows {{ palettes|length }} colour sets and {{ fonts|length }} font styles. "More detail" lets you set the page title style, corners and line style.</li>
+    <li><b>Wall art</b> also lets you choose the poster artwork ({{ motifs|join(', ') }}) and text layout.</li>
+    <li><b>Look number.</b> Every look has a number. Enter one you liked to repeat it.</li></ul>
+  {% elif key == 'make' %}<ul>
+    <li>You see a one-line summary of what will be made. Check it, then press <b>Make my product</b>.</li>
+    <li>It usually takes 20 seconds to 3 minutes. Progress shows as a checklist. You can leave the page open.</li>
+    <li>"Show the matching command" prints the same request for a terminal.</li></ul>
+  {% else %}<ul>
+    <li>Open the product and look through the preview pages and images.</li>
+    <li>Read the <b>quality checks</b>. Fix anything marked ✗ before selling (use "Make a new variation" if needed).</li>
+    <li>Press <b>Approve</b>, then <b>Download upload package</b>.</li>
+    <li>Open the upload guide for your shop and copy the title, description and tags.</li></ul>{% endif %}
+  </div>
+  {% if has %}<video controls playsinline preload="none" poster="/static/media/{{ key }}.jpg"><source src="/static/media/{{ key }}.mp4" type="video/mp4"></video>{% endif %}
+</div>
+{% endfor %}
+
+<h2 id="after">After it's made</h2>
+<ul>
+  <li><b>Where the files are.</b> In the <code>out/products/</code> folder, one folder per product: <code>product/</code> (what customers get), <code>listing/</code> (text), <code>images/</code> (listing photos and pins) and <code>upload-package.zip</code>.</li>
+  <li><b>Make a new variation</b> keeps the audience and product but changes the look and wording.</li>
+  <li><b>Editing.</b> Use the editable files option on the product page to adjust text and positions in a design tool.</li>
+  <li><b>Track results.</b> Record when you list a product and when it sells. The <a href="/report">Sales &amp; learning</a> page shows which audiences, products and looks work.</li>
+  <li><b>Launch videos.</b> <code>moneyhub brag</code> (or the product page) makes a short video with music and share text for Pinterest, Reels and TikTok.</li>
+</ul>
+
+<h2 id="cli">Everything also works from the command line</h2>
+<p>Run <code>source .venv/bin/activate</code> first. Then:</p>
+<pre class="copybox">moneyhub make "nurse" weekly_planner               # one product
+moneyhub make "nurse" wall_art --palette plum --fonts classic --motif arches --layout 2
+moneyhub styles                                    # every look option you can choose
+moneyhub types                                     # product types, audiences, AI helpers
+moneyhub ideas --focus pets                        # brainstorm what to make
+moneyhub batch "nurse,teacher" --products weekly_planner,habit_tracker
+moneyhub list                                      # your products
+moneyhub regenerate 3                              # new variation of product 3
+moneyhub approve 3                                 # mark it ready
+moneyhub risk 3                                    # brand/claim check on the listing text
+moneyhub listed 3 etsy https://etsy.com/... --price 6.5
+moneyhub sale 3 etsy 6.5                           # record a sale
+moneyhub report                                    # what's working
+moneyhub bundle 3,4,5 --name "Nurse Bundle"        # sell products together
+moneyhub sample 3                                  # free preview PDF
+moneyhub brag 3                                    # launch video + share text
+moneyhub calendar                                  # seasonal opportunities
+moneyhub keywords "nurse planner"                  # search phrases to check by hand
+moneyhub doctor                                    # check your setup
+moneyhub ui --port 8766                            # this web app</pre>
+<h3>Look options for <code>moneyhub make</code></h3>
+<table>
+  <tr><th>Flag</th><th>Choices</th></tr>
+  <tr><td><code>--palette</code></td><td>{% for p in palettes %}{{ p.key }}{{ ', ' if not loop.last }}{% endfor %}</td></tr>
+  <tr><td><code>--fonts</code></td><td>{% for f in fonts %}{{ f.key }}{{ ', ' if not loop.last }}{% endfor %}</td></tr>
+  <tr><td><code>--header</code></td><td>{{ headers|join(', ') }}</td></tr>
+  <tr><td><code>--radius</code></td><td>{{ radii|join(', ') }} (pixels)</td></tr>
+  <tr><td><code>--grid</code></td><td>{{ grids|join(', ') }}</td></tr>
+  <tr><td><code>--motif</code> / <code>--layout</code></td><td>Wall art only: {{ motifs|join(', ') }} / 0-4</td></tr>
+  <tr><td><code>--seed</code></td><td>Any number. Repeats a look.</td></tr>
+  <tr><td><code>--llm</code></td><td>e.g. <code>builtin</code> (offline) or <code>claude_cli,builtin</code></td></tr>
+  <tr><td><code>--ai-art</code>, <code>--art-provider</code></td><td>AI poster backgrounds (wall art, needs a key)</td></tr>
+  <tr><td><code>--marketplaces</code></td><td>Which upload guides to write: etsy, gumroad, payhip, kofi, pinterest</td></tr>
+  <tr><td><code>--no-video</code>, <code>--no-images</code></td><td>Skip slower parts</td></tr>
+</table>
+<p class="meta">Audiences you can type: {{ niches|join(', ') }}, or any text.</p>
+
+<h2 id="ai">AI helpers (optional)</h2>
+<p>MoneyHub always works offline using built-in content. An AI helper writes more tailored text. It tries these in order and falls back automatically:</p>
+<table><tr><th>Helper</th><th>Status</th><th>How to enable</th></tr>
+{% for p in providers %}<tr><td>{{ p.name }}</td><td>{{ 'ready' if p.available else 'not set up' }}</td><td class="meta">{% if p.name == 'claude_cli' %}Install and log in to Claude Code{% elif p.name == 'builtin' %}Always on{% elif p.name == 'ollama' %}Install Ollama and run it{% else %}Set the API key in your terminal (see Settings){% endif %}</td></tr>{% endfor %}</table>
+<p><b>AI poster backgrounds</b> (wall art): {% for a in arts %}{{ a.name }} {{ '✓' if a.available else '–' }}{{ ', ' if not loop.last }}{% endfor %}. Each needs its own key, and you must add it to <code>render.art</code> in <code>moneyhub.yaml</code>. Check that provider's terms before selling images it makes.</p>
+<p class="meta">Never paste an API key into a file you share or commit.</p>
+
+<h2 id="rules">Shop rules MoneyHub helps with</h2>
+<ul>
+  <li><b>Etsy AI disclosure.</b> Listing descriptions include the line Etsy asks for. Keep it.</li>
+  <li><b>No brand names.</b> The risk check flags trademarked and brand terms in titles and tags. Fix them before listing.</li>
+  <li><b>Pinterest safe zone.</b> Pin text stays out of the bottom 20%, where Pinterest overlays its own buttons.</li>
+  <li><b>Quality first.</b> A product is only "ready" when the quality checks pass.</li>
+  <li><b>No income claims.</b> Don't promise buyers or yourself specific earnings.</li>
+  <li><b>Check the current rules.</b> Marketplace rules change. Read the shop's own help pages before you list.</li>
+</ul>
+
+<h2 id="glossary">Plain-English glossary</h2>
+<table>
+  <tr><td><b>Niche / audience</b></td><td>The group of people a product is for, such as nurses or new parents.</td></tr>
+  <tr><td><b>Printable</b></td><td>A file the customer prints at home. They download it; nothing is shipped.</td></tr>
+  <tr><td><b>Palette</b></td><td>The set of colours used across the product.</td></tr>
+  <tr><td><b>Seed / look number</b></td><td>A number that fixes the random choices, so the same number gives the same look.</td></tr>
+  <tr><td><b>Listing kit</b></td><td>The title, description, tags and pictures for your shop page.</td></tr>
+  <tr><td><b>Upload package</b></td><td>A zip with the files to upload, plus guides.</td></tr>
+  <tr><td><b>QA (quality checks)</b></td><td>Automatic checks for problems such as text that doesn't fit or missing files.</td></tr>
+  <tr><td><b>Pin</b></td><td>A Pinterest picture that links to your listing.</td></tr>
+  <tr><td><b>Offline mode</b></td><td>Making a product without any AI service, using built-in content.</td></tr>
+</table>
+
+<h2 id="trouble">Troubleshooting</h2>
+<ul>
+  <li><b>"Address already in use" when starting.</b> Another program uses that port. Run <code>moneyhub ui --port 8766</code>.</li>
+  <li><b>Something won't generate.</b> Run <code>moneyhub doctor</code>. It lists what is missing and how to fix it.</li>
+  <li><b>It's slow.</b> AI helpers add time. Untick "Also make short videos" in step 3, or use <code>--llm builtin</code> on the command line.</li>
+  <li><b>PDF or fonts look wrong on Mac.</b> Make sure Homebrew's <code>pango</code> is installed (<code>brew install pango</code>), then rerun setup.</li>
+  <li><b>Preview images are missing.</b> Open the product page again; previews are made on first view.</li>
+</ul>
+
+<h2 id="limits">What it can't do yet</h2>
+<ul>
+  <li>It does not upload to any marketplace. That is by design.</li>
+  <li>Not built yet: Amazon KDP export, Canva and Notion files, e-ink planner versions, spell-check.</li>
+  <li>Not yet verified on every setup: Etsy's current photo and video limits, Excel/Numbers recalculation of spreadsheets, GoodNotes link behaviour.</li>
+  <li>Ideas and keyword suggestions are educated guesses, not live sales data. Check them by hand on Etsy and Pinterest.</li>
+</ul>
+</div></div>
+{% endblock %}

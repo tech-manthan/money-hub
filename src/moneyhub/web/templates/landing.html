@@ -1,0 +1,69 @@
+{% extends "base.html" %}{% block main %}
+<section class="lp-hero">
+  <div class="lp-copy">
+    <p class="eyebrow">Digital products, made simple</p>
+    <h1>Turn an idea into a printable you can sell, in minutes.</h1>
+    <p class="lead">Planners, trackers, journals, worksheets and wall art. Pick who it is for and how it looks. MoneyHub makes the files, the shop listing text and the Pinterest pictures.
+      You don't need design skills or a niche in mind.</p>
+    <div class="actions">
+      <a class="btn big" href="/make">Start making →</a>
+      {% if media.tour %}<a class="btn ghost big" href="#tour">▶ Watch the tour</a>{% endif %}
+      <a class="btn ghost big" href="/docs">How to use it</a>
+    </div>
+    <p class="meta">Runs on your own computer. Nothing is posted anywhere for you: you upload the finished files to your shop yourself.</p>
+  </div>
+  <div class="lp-shot">
+    {% if media.samples %}<div class="stack">{% for s in media.samples[:3] %}<img src="/static/{{ s }}" alt="Sample product image {{ loop.index }}" loading="lazy">{% endfor %}</div>
+    {% else %}<div class="stack ph"><span>Sample images appear here after you make your first product.</span></div>{% endif %}
+  </div>
+</section>
+
+{% if media.tour %}
+<section id="tour" class="lp-sec">
+  <h2>See it in action</h2>
+  <video class="tour" controls preload="metadata" poster="/static/media/tour.jpg"><source src="/static/media/tour.mp4" type="video/mp4">Your browser can't play this video.</video>
+</section>
+{% endif %}
+
+<section class="lp-sec">
+  <h2>Three steps. That's all.</h2>
+  <div class="grid steps3">
+    {% for key, title, desc, has in media.clips[:3] %}
+    <div class="panel">
+      {% if has %}<video muted loop playsinline preload="none" poster="/static/media/{{ key }}.jpg" onmouseenter="this.play()" onmouseleave="this.pause()" controls><source src="/static/media/{{ key }}.mp4" type="video/mp4"></video>{% endif %}
+      <h3>{{ title }}</h3><p class="meta">{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="lp-sec">
+  <h2>What you get with every product</h2>
+  <div class="grid feat">
+    <div class="panel"><b>📄 The product</b><p class="meta">Print-ready PDFs, spreadsheets or image packs, with a Start Here page for your customers.</p></div>
+    <div class="panel"><b>✍️ Shop listing text</b><p class="meta">Title, description and tags written for Etsy, Gumroad and more, including the required AI-use line for Etsy.</p></div>
+    <div class="panel"><b>📌 Pinterest pins</b><p class="meta">Pictures sized for Pinterest, with text kept clear of the bottom area that Pinterest covers.</p></div>
+    <div class="panel"><b>🖼️ Listing photos &amp; video</b><p class="meta">Mock-up images and a short video for your listing.</p></div>
+    <div class="panel"><b>✅ Quality &amp; safety checks</b><p class="meta">Checks for layout problems and for brand names you must not use. A product is only "ready" when checks pass.</p></div>
+    <div class="panel"><b>📦 Upload package</b><p class="meta">One zip and a step-by-step guide for each shop, so you know what goes where.</p></div>
+  </div>
+</section>
+
+<section class="lp-sec">
+  <h2>What you can make</h2>
+  <div class="grid types">
+    {% for k, t in types.items() %}<div class="panel"><b>{{ t.label }}</b><p class="meta">{{ plain.PRODUCT_PLAIN[k] }}</p></div>{% endfor %}
+  </div>
+</section>
+
+<section class="lp-sec">
+  <h2>Questions people ask</h2>
+  <details class="help"><summary>I don't know what to sell. Can I still use this?</summary><p>Yes. Step 1 shows ready-made audiences (nurses, teachers, new parents…) and a Surprise me button. The <a href="/ideas">Ideas page</a> brainstorms more.</p></details>
+  <details class="help"><summary>Will it make me money?</summary><p>No tool can promise that. MoneyHub saves you the making. Whether a product sells depends on your audience, your listing and your promotion. Start with a few small tests.</p></details>
+  <details class="help"><summary>Does it post to Etsy for me?</summary><p>No, on purpose. You review each product and upload it yourself, which keeps you in control and within each shop's rules.</p></details>
+  <details class="help"><summary>Do I need an AI account or paid keys?</summary><p>No. It works fully offline with built-in content. If you have Claude Code or an API key, the writing gets more tailored to your audience.</p></details>
+  <details class="help"><summary>Can I use the command line instead?</summary><p>Yes. Everything in the app also works from a terminal. See <a href="/docs#cli">the command-line guide</a>.</p></details>
+</section>
+
+<section class="lp-cta panel"><h2>Ready? Your first product takes about a minute.</h2><a class="btn big" href="/make">Start making →</a></section>
+{% endblock %}

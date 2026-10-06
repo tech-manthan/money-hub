@@ -136,8 +136,15 @@ class Style:
                 "radius": self.radius, "grid": self.grid, "seed": self.seed}
 
 
+HEADERS = ["band", "rule", "box"]
+RADII = [0, 6, 12, 18]
+GRIDS = ["solid", "dotted", "dashed"]
+
+
 def choose_style(seed: int | None = None, mood: str | None = None, palette: str | None = None,
-                 fonts: str | None = None) -> Style:
+                 fonts: str | None = None, header: str | None = None, radius: int | None = None,
+                 grid: str | None = None) -> Style:
+    """Random look from the seed; any of palette/fonts/header/radius/grid can be pinned."""
     seed = random.SystemRandom().randrange(1, 10**6) if seed is None else seed
     rng = random.Random(seed)
     pool = [p for p in PALETTES if mood and mood in p.mood] or PALETTES
@@ -145,11 +152,20 @@ def choose_style(seed: int | None = None, mood: str | None = None, palette: str 
     fp = next((f for f in FONT_PAIRS if f.key == fonts), None) or rng.choice(FONT_PAIRS)
     return Style(
         palette=pal, fonts=fp,
-        header=rng.choice(["band", "rule", "box"]),
-        radius=rng.choice([0, 6, 12, 18]),
-        grid=rng.choice(["solid", "dotted", "dashed"]),
+        header=_pick(rng, HEADERS, header),
+        radius=_pick(rng, RADII, radius),
+        grid=_pick(rng, GRIDS, grid),
         seed=seed,
     )
+
+
+def _pick(rng: random.Random, choices: list, wanted):
+    choice = rng.choice(choices)  # always draw, so pinning one knob does not reshuffle the others
+    return wanted if wanted is not None else choice
+
+
+def font_keys() -> list[str]:
+    return [f.key for f in FONT_PAIRS]
 
 
 def palette_keys() -> list[str]:

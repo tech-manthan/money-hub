@@ -1,0 +1,140 @@
+{% extends "base.html" %}{% block main %}
+<section class="hero">
+  <h1>Make something you can sell, in 3 easy steps</h1>
+  <p>No experience needed. You pick who it is for and how it looks. MoneyHub makes the printable files, the shop listing text and the Pinterest pictures.
+    <b>You stay in control:</b> nothing is published for you. You upload the finished files to your shop yourself.</p>
+</section>
+
+<ol class="stepper" id="stepper">
+  <li data-step="1" class="on"><span>1</span> Pick an idea</li>
+  <li data-step="2"><span>2</span> Pick a look</li>
+  <li data-step="3"><span>3</span> Make it</li>
+</ol>
+
+<form id="wizard" autocomplete="off">
+<!-- ============ STEP 1 ============ -->
+<section class="step panel on" data-step="1">
+  <h2>Who do you want to help?</h2>
+  <p class="meta">People buy printables that solve a small everyday problem, like planning a week or tracking a habit. Choose a group of people below.
+    For each one we have already picked a product that suits them. You can change it.</p>
+  <div class="actions">
+    <button type="button" class="ghost" id="surprise">🎲 Surprise me</button>
+    <button type="button" class="ghost" id="custom-toggle">✍️ Type my own audience</button>
+  </div>
+  <div id="custom-box" hidden>
+    <label for="custom-niche">Describe the people</label>
+    <input type="text" id="custom-niche" placeholder="e.g. dog trainers, new gardeners, night-shift workers">
+    <div class="meta">Any group works. If an AI helper is available it researches the group first. Offline, it uses a general profile.</div>
+  </div>
+  <div class="grid ideas" id="ideas">
+    {% for i in ideas %}
+    <label class="idea">
+      <input type="radio" name="idea" value="{{ loop.index0 }}" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}">
+      <span class="in"><span class="ic">{{ i.icon }}</span><b>{{ i.niche }}</b>
+        <span class="meta">For {{ i.audience }}.</span>
+        <span class="prob">Helps with: {{ i.problem|lower }}</span>
+        <span class="sug">We'd make: {{ i.product_label }}</span></span>
+    </label>
+    {% endfor %}
+  </div>
+  <h2>What should we make for them?</h2>
+  <div class="grid types" id="types">
+    {% for k, t in types.items() %}
+    <label class="type">
+      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}">
+      <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span></span>
+    </label>
+    {% endfor %}
+  </div>
+  <p class="msg" id="msg-1" role="alert"></p>
+  <div class="nav"><span></span><button type="button" data-go="2">Next: pick a look →</button></div>
+  <details class="help"><summary>Not sure what will sell?</summary>
+    <p>Nobody can promise a sale, so test small. Make two or three different products, list them, and see which one gets views. The
+      <a href="/ideas">Ideas page</a> brainstorms more audiences, and shows search phrases to check on Etsy and Pinterest before you commit.</p></details>
+</section>
+
+<!-- ============ STEP 2 ============ -->
+<section class="step panel" data-step="2">
+  <h2>How should it look?</h2>
+  <div class="grid choice">
+    <label class="opt"><input type="radio" name="lookmode" value="auto" checked><span class="in"><b>Choose for me</b><span class="meta">Recommended. We match colours and fonts to your audience's mood.</span></span></label>
+    <label class="opt"><input type="radio" name="lookmode" value="pick"><span class="in"><b>I'll pick</b><span class="meta">Choose colours and fonts yourself.</span></span></label>
+  </div>
+  <div id="look-pick" hidden>
+    <h3>Colours</h3>
+    <div class="swatches" id="palettes">
+      <label class="sw"><input type="radio" name="palette" value="" checked><span class="in"><span class="chips"><i style="background:linear-gradient(90deg,#3F6B55,#A8456B,#1F5F8B)"></i></span>Automatic</span></label>
+      {% for p in palettes %}
+      <label class="sw"><input type="radio" name="palette" value="{{ p.key }}"><span class="in"><span class="chips"><i style="background:{{ p.accent }}"></i><i style="background:{{ p.accent2 }}"></i><i style="background:{{ p.soft }}"></i></span>{{ p.key|capitalize }}</span></label>
+      {% endfor %}
+    </div>
+    <h3>Fonts</h3>
+    <div class="grid fontlist" id="fonts">
+      <label class="opt"><input type="radio" name="fonts" value="" checked><span class="in"><b>Automatic</b></span></label>
+      {% for f in fonts %}
+      <label class="opt"><input type="radio" name="fonts" value="{{ f.key }}"><span class="in"><b>{{ f.key|capitalize }}</b><span class="meta">{{ plain.FONT_PLAIN[f.key] }}</span></span></label>
+      {% endfor %}
+    </div>
+    <details class="help"><summary>More detail (optional)</summary>
+      <div class="row">
+        <div><label for="header">Page title style</label><select id="header" name="header"><option value="">Automatic</option>{% for h in headers %}<option value="{{ h }}">{{ plain.HEADER_PLAIN[h] }}</option>{% endfor %}</select></div>
+        <div><label for="radius">Corners</label><select id="radius" name="radius"><option value="">Automatic</option>{% for r in radii %}<option value="{{ r }}">{{ plain.RADIUS_PLAIN[r] }}</option>{% endfor %}</select></div>
+        <div><label for="grid">Lines on the pages</label><select id="grid" name="grid"><option value="">Automatic</option>{% for g in grids %}<option value="{{ g }}">{{ plain.GRID_PLAIN[g] }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row" id="wall-opts" hidden>
+        <div><label for="motif">Poster artwork (wall art only)</label><select id="motif" name="motif"><option value="">Mixed</option>{% for m in motifs %}<option value="{{ m }}">{{ m|capitalize }}</option>{% endfor %}</select></div>
+        <div><label for="layout">Poster text layout (wall art only)</label><select id="layout" name="layout"><option value="">Mixed</option>{% for n in range(5) %}<option value="{{ n }}">Layout {{ n + 1 }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row"><div><label for="seed">Look number (optional)</label><input type="number" id="seed" name="seed" placeholder="Leave empty">
+        <div class="meta">Every look has a number. Type one you liked before to get the same look again.</div></div></div>
+    </details>
+  </div>
+  <div class="nav"><button type="button" class="ghost" data-go="1">← Back</button><button type="button" data-go="3">Next: review →</button></div>
+</section>
+
+<!-- ============ STEP 3 ============ -->
+<section class="step panel" data-step="3">
+  <h2>Ready to make it</h2>
+  <p class="summary" id="summary"></p>
+  <div class="checks">
+    <label><input type="checkbox" id="opt-video" checked> Also make short videos (adds about a minute)</label>
+    <label id="ai-wrap" hidden><input type="checkbox" id="opt-ai" {% if not ai_art %}disabled{% endif %}> AI-made poster backgrounds {% if not ai_art %}<span class="meta">(not set up: needs an image API key, see Settings)</span>{% endif %}</label>
+  </div>
+  <p class="meta">Usually 20 seconds to 3 minutes. You can leave this page open while it works.</p>
+  <div class="nav"><button type="button" class="ghost" data-go="2">← Back</button><button type="submit" id="make">Make my product</button></div>
+  <details class="help"><summary>Show the matching command-line command</summary>
+    <p class="meta">Everything here can also be done in a terminal. This is the same request:</p><pre class="copybox" id="cli"></pre></details>
+</section>
+</form>
+
+<!-- ============ PROGRESS / RESULT ============ -->
+<section class="panel" id="progress" hidden>
+  <h2 id="p-title">Making your product…</h2>
+  <ol class="steps" id="p-steps">{% for k, label in steps %}<li data-key="{{ k }}"><span class="dot"></span>{{ label }}</li>{% endfor %}</ol>
+  <div id="p-done" hidden>
+    <p class="ok">Your product is ready.</p>
+    <p><a class="btn" id="p-link" href="#">Open my product</a> <a class="btn ghost" href="/make">Make another</a></p>
+    <h3>What to do next</h3>
+    <ol class="next">
+      <li><b>Look through the pages.</b> Open the product and check the preview. If you don't like the look, use "Make a new variation".</li>
+      <li><b>Press Approve</b> when you're happy, then <b>Download the upload package</b>.</li>
+      <li><b>Open the upload guide</b> for your shop (Etsy, Gumroad…). It tells you which file goes where and gives you the title, description and tags to copy.</li>
+      <li><b>Post the Pinterest pictures</b> that were made for you. They link people to your listing.</li>
+    </ol>
+  </div>
+  <div id="p-error" hidden><p class="bad" id="p-errmsg"></p><p><button type="button" id="retry">Try again</button></p></div>
+</section>
+
+{% if products %}
+<h2>Your latest products</h2>
+<div class="grid cards">
+{% for p in products %}
+  <a class="card" href="/product/{{ p.id }}"><div class="img">{% if p.thumb %}<img loading="lazy" src="/files/{{ p.id }}/{{ p.thumb }}">{% else %}no preview{% endif %}</div>
+    <div class="body"><div class="t">{{ p.title }}</div><div class="meta">{{ p.niche_name }} · {{ p.product_type|replace('_',' ') }}</div></div></a>
+{% endfor %}
+</div>
+<p><a href="/products">See all my products →</a></p>
+{% endif %}
+<p class="meta" style="margin-top:28px">Know exactly what you want? Use the <a href="/advanced">advanced studio</a> or the command line.</p>
+<script src="/static/start.js"></script>
+{% endblock %}

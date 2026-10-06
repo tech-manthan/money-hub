@@ -8,13 +8,19 @@ from pathlib import Path
 import typer
 
 from .config import get_config
-from .design import palette_keys
+from .design import GRIDS, HEADERS, PALETTES, RADII, FONT_PAIRS, font_keys, palette_keys
 from .niches import library_keys, resolve_niche
 from .pipeline import Request, generate, make_package
 from .products import all_product_types
 from .store import Store
 
 app = typer.Typer(help="MoneyHub - generate sellable digital products and listing kits.", no_args_is_help=True)
+
+
+def _check(value, allowed: list, flag: str):
+    if value is not None and value not in allowed:
+        raise typer.BadParameter(f"{value!r} is not valid; choose one of: {', '.join(map(str, allowed))}", param_hint=flag)
+    return value
 
 
 def _csv(v: str | None) -> list[str] | None:
@@ -35,6 +41,14 @@ def make(
     sizes: str = typer.Option(None, help="Comma list: letter,a4,a5,tablet"),
     seed: int = typer.Option(None, help="Reuse a seed to reproduce a look"),
     palette: str = typer.Option(None, help=f"One of: {', '.join(palette_keys())}"),
+    fonts: str = typer.Option(None, help=f"Font pair, one of: {', '.join(font_keys())}"),
+    header: str = typer.Option(None, help=f"Page header style: {', '.join(HEADERS)}"),
+    radius: int = typer.Option(None, help=f"Card corner radius in px: {', '.join(map(str, RADII))}"),
+    grid: str = typer.Option(None, help=f"Grid line style: {', '.join(GRIDS)}"),
+    motif: str = typer.Option(None, help="Wall art: background motif (see `moneyhub styles`); default varies per poster"),
+    layout: int = typer.Option(None, help="Wall art: text layout 0-4; default varies per poster"),
+    art_provider: str = typer.Option(None, help="AI art provider chain, e.g. 'huggingface,together' (implies --ai-art)"),
+    marketplaces: str = typer.Option(None, help="Guides to write: etsy,gumroad,payhip,kofi,pinterest (default all)"),
     llm: str = typer.Option(None, help="Provider chain override, e.g. 'claude_cli,builtin' or 'builtin'"),
     weeks: int = typer.Option(None, help="Weekly planner: number of weeks (4-60)"),
     no_images: bool = typer.Option(False, help="Skip listing images/pins"),
@@ -46,9 +60,27 @@ def make(
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
 ):
     """Generate one product with its images, listing copy and upload guides."""
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": ai_art or None, "no_research": no_research or None, "gsheet_url": gsheet_link}.items() if v}
-    req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette,
+    from .art import MOTIFS
+    _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
+    _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
+    art_chain = _csv(art_provider)
+    for a in art_chain or []:
+        _check(a, list(__import__("moneyhub.art", fromlist=["PROVIDERS"]).PROVIDERS), "--art-provider")
+    if (ai_art or art_chain) and product != "wall_art":
+        typer.echo("note: AI art backgrounds only apply to wall_art; ignoring for this product.", err=True)
+    if (ai_art or art_chain) and product == "wall_art":
+        from .art import PROVIDERS
+        usable = [n for n in (art_chain or get_config().get("render.art") or []) if n in PROVIDERS and PROVIDERS[n].available()]
+        if not usable:
+            typer.echo("note: no AI art provider is usable (set HF_TOKEN / TOGETHER_API_KEY / OPENAI_API_KEY and pass --art-provider NAME); "
+                       "falling back to built-in motifs.", err=True)
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+                              "gsheet_url": gsheet_link, "header": header, "radius": radius, "grid": grid, "motif": motif,
+                              "layout": layout, "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
+    req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
+    if marketplaces:
+        req.marketplaces = _csv(marketplaces)
     res = generate(req, progress=lambda m: typer.echo(f"  - {m}"))
     typer.echo(f"\n{res.title}  [{res.qa_status.upper()}]")
     typer.echo(f"Folder: {res.folder}")
@@ -56,6 +88,26 @@ def make(
     for c in res.checks:
         if c.status != "pass":
             typer.echo(f"  {c.status.upper()}: {c.name} - {c.detail}")
+
+
+@app.command()
+def styles():
+    """List every look option `make` accepts: palettes, fonts, headers, radii, grids, motifs, layouts, AI art providers."""
+    from .art import MOTIFS, art_status
+    typer.echo("Palettes (--palette):")
+    for p in PALETTES:
+        typer.echo(f"  {p.key:<11} accent {p.accent}  accent2 {p.accent2}  soft {p.soft}  mood: {', '.join(p.mood)}")
+    typer.echo("\nFont pairs (--fonts):")
+    for f in FONT_PAIRS:
+        typer.echo(f"  {f.key:<10} headings {f.heading}, body {f.body}, script {f.script}")
+    typer.echo(f"\nHeader styles (--header): {', '.join(HEADERS)}")
+    typer.echo(f"Corner radius px (--radius): {', '.join(map(str, RADII))}")
+    typer.echo(f"Grid lines (--grid): {', '.join(GRIDS)}")
+    typer.echo(f"Wall art motifs (--motif): {', '.join(MOTIFS)}")
+    typer.echo("Wall art layouts (--layout): 0-4")
+    typer.echo("\nAI art providers (--art-provider; need a key/URL, see doctor):")
+    for a in art_status():
+        typer.echo(f"  {'ok ' if a['available'] else '-- '} {a['name']}")
 
 
 @app.command()

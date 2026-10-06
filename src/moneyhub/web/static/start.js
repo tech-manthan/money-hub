@@ -1,0 +1,114 @@
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const form = $('#wizard');
+  let step = 1, customOn = false;
+
+  const val = name => ($(`input[name="${name}"]:checked`, form) || {}).value || '';
+  const sel = id => $('#' + id).value;
+  const typeLabel = () => { const r = $(`input[name="product_type"]:checked`); return r ? $('b', r.parentElement).textContent : ''; };
+  const niche = () => customOn ? $('#custom-niche').value.trim() : (($(`input[name="idea"]:checked`) || { dataset: {} }).dataset.niche || '');
+
+  function pickType(key) { const r = $(`input[name="product_type"][value="${key}"]`); if (r) r.checked = true; syncType(); }
+  function markSuggested(key) {
+    $$('#types .tag').forEach(t => t.hidden = true);
+    const r = $(`input[name="product_type"][value="${key}"]`);
+    if (r) $('.tag', r.parentElement).hidden = false;
+  }
+  function pickIdea(radio) {
+    radio.checked = true; setCustom(false);
+    pickType(radio.dataset.type); markSuggested(radio.dataset.type);
+    $('#msg-1').textContent = '';
+  }
+  function setCustom(on) {
+    customOn = on; $('#custom-box').hidden = !on;
+    $('#custom-toggle').textContent = on ? '← Back to the ready-made ideas' : '✍️ Type my own audience';
+    $('#ideas').classList.toggle('dim', on);
+    if (on) { $$('input[name="idea"]').forEach(r => r.checked = false); markSuggested(''); $('#custom-niche').focus(); }
+  }
+  function syncType() {
+    const wall = val('product_type') === 'wall_art';
+    $('#wall-opts').hidden = !wall; $('#ai-wrap').hidden = !wall;
+  }
+
+  $('#ideas').addEventListener('change', e => { if (e.target.name === 'idea') pickIdea(e.target); });
+  $('#types').addEventListener('change', syncType);
+  $('#custom-toggle').addEventListener('click', () => setCustom(!customOn));
+  $('#surprise').addEventListener('click', () => {
+    const all = $$('input[name="idea"]'); const r = all[Math.floor(Math.random() * all.length)];
+    pickIdea(r); r.closest('.idea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  $$('input[name="lookmode"]').forEach(r => r.addEventListener('change', () => { $('#look-pick').hidden = val('lookmode') !== 'pick'; }));
+
+  function go(n) {
+    if (n > step && step === 1) {
+      if (!niche()) { $('#msg-1').textContent = customOn ? 'Describe the people you want to help.' : 'Pick an idea above, or press “Surprise me”.'; return; }
+      if (!val('product_type')) { $('#msg-1').textContent = 'Choose what to make.'; return; }
+    }
+    step = n;
+    $$('.step').forEach(s => s.classList.toggle('on', +s.dataset.step === n));
+    $$('#stepper li').forEach(li => { const k = +li.dataset.step; li.classList.toggle('on', k === n); li.classList.toggle('done', k < n); });
+    if (n === 3) summarise();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  $$('[data-go]').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
+
+  function look() {
+    if (val('lookmode') !== 'pick') return {};
+    const o = { palette: val('palette'), fonts: val('fonts'), header: sel('header'), radius: sel('radius'), grid: sel('grid'), seed: sel('seed') };
+    if (val('product_type') === 'wall_art') { o.motif = sel('motif'); o.layout = sel('layout'); }
+    return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== ''));
+  }
+  function payload() {
+    const o = { niche: niche(), product_type: val('product_type'), ...look() };
+    if (!$('#opt-video').checked) o.no_video = '1';
+    if (val('product_type') === 'wall_art' && $('#opt-ai').checked) o.ai_art = '1';
+    return o;
+  }
+  function summarise() {
+    const l = look(), bits = [];
+    if (l.palette) bits.push(`<b>${l.palette}</b> colours`);
+    if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
+    $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
+    const p = payload(), flag = { palette: '--palette', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', layout: '--layout', seed: '--seed' };
+    let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
+    Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
+    if (p.no_video) cmd += ' --no-video';
+    if (p.ai_art) cmd += ' --ai-art';
+    $('#cli').textContent = cmd;
+  }
+
+  let timer = null;
+  async function make() {
+    const body = new FormData(); Object.entries(payload()).forEach(([k, v]) => body.append(k, v));
+    form.hidden = true; $('#stepper').hidden = true;
+    const box = $('#progress'); box.hidden = false; $('#p-done').hidden = $('#p-error').hidden = true;
+    $('#p-title').textContent = 'Making your product…'; $$('#p-steps li').forEach(li => li.className = '');
+    try {
+      const res = await fetch('/api/jobs', { method: 'POST', body });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const { jobs } = await res.json(); track(jobs[0]);
+    } catch (err) { fail(err.message); }
+  }
+  function fail(msg) {
+    clearInterval(timer);
+    $('#p-title').textContent = 'Something went wrong'; $('#p-errmsg').textContent = msg; $('#p-error').hidden = false;
+  }
+  function track(id) {
+    timer = setInterval(async () => {
+      let j; try { j = await (await fetch('/api/jobs/' + id)).json(); } catch { return; }
+      const items = $$('#p-steps li'); let cur = -1;
+      items.forEach((li, i) => { if (j.log.some(m => m.startsWith(li.dataset.key))) cur = i; });
+      items.forEach((li, i) => li.className = j.status === 'done' || i < cur ? 'done' : i === cur ? 'now' : '');
+      if (j.status === 'done') {
+        clearInterval(timer); $('#p-title').textContent = 'Done!'; $('#p-link').href = '/product/' + j.product_id; $('#p-done').hidden = false;
+        if (j.qa === 'fail') $('#p-done .ok').textContent = 'Your product is ready, but some quality checks failed. Open it to see what to fix.';
+      }
+      if (j.status === 'error') fail(j.error || 'The product could not be made.');
+    }, 1200);
+  }
+
+  form.addEventListener('submit', e => { e.preventDefault(); step === 3 ? make() : go(step + 1); });
+  $('#retry').addEventListener('click', () => { $('#progress').hidden = true; form.hidden = false; $('#stepper').hidden = false; go(3); });
+  syncType();
+})();

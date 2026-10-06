@@ -68,7 +68,8 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
         niche, niche_source = smart_resolve(req.niche, router, req.providers)
     say(f"Niche profile: {niche.name} ({niche_source})")
     seed = req.seed if req.seed is not None else random.SystemRandom().randrange(1, 10**6)
-    style = choose_style(seed=seed, mood=niche.mood, palette=req.palette, fonts=req.fonts)
+    style = choose_style(seed=seed, mood=niche.mood, palette=req.palette, fonts=req.fonts,
+                         header=req.options.get("header"), radius=req.options.get("radius"), grid=req.options.get("grid"))
     sizes = [s for s in (req.sizes or ptype.default_sizes) if s in ptype.supported_sizes] or ptype.default_sizes
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
