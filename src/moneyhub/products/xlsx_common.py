@@ -30,7 +30,17 @@ class XlsxTheme:
             return wb.add_format(base)
 
         border = {"border": 1, "border_color": p.line}
+        unlocked = {"locked": False}
         return {
+            # --- editable (unlocked) variants: cells the buyer is meant to type in or tick ---
+            "text_u": mk(**border, **unlocked),
+            "habit_u": mk(**border, **unlocked),
+            "cell_u": mk(align="center", **border, **unlocked),
+            "date_u": mk(num_format="yyyy-mm-dd", align="center", **border, **unlocked),
+            "money_u": mk(num_format='$#,##0.00', **border, **unlocked),
+            "money_in_u": mk(num_format='$#,##0.00', bg_color="#FFF8DC", **border, **unlocked),
+            "input_u": mk(bold=True, bg_color=p.soft, align="center", **border, **unlocked),
+            "notebox_u": mk(**border, bg_color="#FFFFFF", **unlocked),
             "title": mk(font_size=22, bold=True, font_color=p.accent),
             "tagline": mk(font_size=12, italic=True, font_color=p.muted),
             "body": mk(text_wrap=True, valign="top"),
@@ -61,3 +71,15 @@ class XlsxTheme:
             "red": wb.add_format({"font_color": "#B3261E", "bold": True}),
             "green": wb.add_format({"font_color": "#1B6B3A", "bold": True}),
         }
+
+
+PROTECT_OPTIONS = {
+    "objects": True, "scenarios": True, "format_cells": True, "format_columns": True, "format_rows": True,
+    "insert_rows": True, "delete_rows": True, "sort": True, "autofilter": True, "select_locked_cells": True, "select_unlocked_cells": True,
+}
+
+
+def protect(ws, enabled: bool = True) -> None:
+    """Lock formula cells (everything not explicitly unlocked). No password so buyers can unprotect with Review > Unprotect."""
+    if enabled:
+        ws.protect("", PROTECT_OPTIONS)

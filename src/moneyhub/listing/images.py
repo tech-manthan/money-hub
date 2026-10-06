@@ -89,6 +89,7 @@ def _videos(build, brush, out_dir, copy, pages, router, niche, providers, engine
         plan = motion.llm_plan(router, build.title, build.subtitle, build.features, niche.audience, providers)
     if plan is None:
         plan = motion.builtin_plan(build.title, build.subtitle, build.features, copy.pin_headlines[0] if copy.pin_headlines else build.title)
+    plan = motion.fit_duration(plan, 14.0)
     vids = []
     for name, size in (("pin-video-1000x1500.mp4", (1000, 1500)), ("listing-video-1920x1080.mp4", (1920, 1080))):
         v = motion.render_video(plan, pages, brush, out_dir / "images" / "video" / name, size, build.title, engines=engines)

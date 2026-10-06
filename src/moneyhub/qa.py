@@ -74,7 +74,8 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     for f in pdfs:
         n = pdf_page_count(f.path)
         size_mb = f.path.stat().st_size / 1e6
-        checks.append(Check(f"{f.path.name}: pages", "pass" if n >= 3 else "fail", f"{n} pages"))
+        min_pages = 1 if "Start-Here" in f.path.name else 3
+        checks.append(Check(f"{f.path.name}: pages", "pass" if n >= min_pages else "fail", f"{n} pages"))
         checks.append(Check(f"{f.path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)"))
         total, emb = _pdf_fonts_embedded(f.path)
         checks.append(Check(f"{f.path.name}: fonts embedded", "pass" if total == emb else "fail", f"{emb}/{total} fonts embedded"))
@@ -177,3 +178,30 @@ def summarize(checks: list[Check]) -> str:
     if any(c.status == "warn" for c in checks):
         return "warn"
     return "pass"
+
+
+def media_checks(folder: Path) -> list[Check]:
+    """Listing images and videos against marketplace limits."""
+    out: list[Check] = []
+    big = [f.name for f in sorted((folder / "images" / "etsy").glob("*.jpg")) if f.stat().st_size > 1_000_000]
+    n = len(list((folder / "images" / "etsy").glob("*.jpg")))
+    if n:
+        out.append(Check("Etsy photos under 1 MB each", "pass" if not big else "warn", f"{n} photos" if not big else f"too large: {', '.join(big)}"))
+    from PIL import Image
+    small = []
+    for f in sorted((folder / "images" / "etsy").glob("*.jpg")):
+        with Image.open(f) as im:
+            if min(im.size) < 2000:
+                small.append(f.name)
+    if n:
+        out.append(Check("Etsy photos at least 2000 px (shortest side)", "pass" if not small else "warn", "ok" if not small else ", ".join(small)))
+    from .render import motion
+    for v in sorted((folder / "images" / "video").glob("*.mp4")):
+        dur = motion.video_duration(v)
+        if dur is None:
+            continue
+        if "listing" in v.name:
+            out.append(Check(f"{v.name}: 5-15 s for Etsy", "pass" if 5 <= dur <= 15 else "warn", f"{dur:.1f} s, {v.stat().st_size / 1e6:.1f} MB (limit 100 MB)"))
+        else:
+            out.append(Check(f"{v.name}: 6-15 s works best on Pinterest", "pass" if 4 <= dur <= 15 else "warn", f"{dur:.1f} s"))
+    return out

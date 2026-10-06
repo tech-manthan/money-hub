@@ -92,45 +92,33 @@ class _Svg:
 
 # ----------------------------------------------------------------------------- pins
 def pin_svg(pages: list[Image.Image], headline: str, sub: str, variant: int, brush: g.Brush) -> str:
+    """Editable pin: same layout as the PNG pin (shared plan), with live text and separate image layers."""
+    plan = g.pin_plan(variant, headline, sub, brush, (PIN_W, PIN_H))
     s = _Svg(PIN_W, PIN_H, brush)
-    W, H = PIN_W, PIN_H
     hx = _Svg.hexc
-    v = variant % 4
-    hf, bf, sf = brush._h, brush._b, brush._s
-    if v == 0:
-        s.rect(0, 0, W, int(H * .62), hx(brush.soft), id="background")
-        pg_h = int(H * .52)
-        pw = round(pages[0].width * pg_h / pages[0].height)
-        s.page(pages[0], (W - pw) // 2 + 70, int(H * .07), pg_h, 3, "page-1")
-        if len(pages) > 1:
-            s.page(pages[1], int(W * .08), int(H * .17), int(H * .42), -6, "page-2")
-        s.rect(0, int(H * .62), W, H - int(H * .62), hx(brush.accent), id="band")
-        s.text(headline, W // 2, int(H * .67), 92, hx(brush.accent_ink), hf, max_w=W * .86, id="headline")
-        s.text(sub, W // 2, H - 105, 30, hx(brush.accent_ink), bf, max_w=W * .8, id="subtitle", upper=True, weight=700)
-    elif v == 1:
-        s.rect(0, 0, W, H, hx(brush.soft), id="background")
-        y = s.text(headline, W // 2, int(H * .06), 96, hx(brush.ink), hf, max_w=W * .86, gap=1.06, id="headline")
-        s.rect(W // 2 - 190, int(y + 20), 380, 74, hx(brush.accent), rx=37, id="chip")
-        s.text("INSTANT DOWNLOAD", W // 2, int(y + 20 + 20), 30, hx(brush.accent_ink), bf, id="chip-text")
-        pg_h = int(H * .56)
-        pw = round(pages[0].width * pg_h / pages[0].height)
-        s.page(pages[0], (W - pw) // 2, int(H * .4), pg_h, 0, "page-1")
-    elif v == 2:
-        s.rect(0, 0, W, H, hx(brush.accent), id="background")
-        s.ellipse(W * .2, H * .96, W * .5, H * .34, hx(brush.accent2), id="accent-shape")
-        s.text(headline, W // 2, int(H * .07), 100, hx(brush.accent_ink), hf, max_w=W * .84, gap=1.06, id="headline")
-        pg = pages[min(1, len(pages) - 1)]
-        pg_h = int(H * .52)
-        pw = round(pg.width * pg_h / pg.height)
-        s.page(pg, (W - pw) // 2, int(H * .38), pg_h, -4, "page-1")
-        s.text(sub, W // 2, H - 120, 60, hx(brush.accent_ink), sf, weight=700, max_w=W * .9, id="subtitle", max_lines=1)
-    else:
-        s.rect(0, 0, W, H, hx(brush.bg), id="background")
-        s.rect(40, 40, W - 80, H - 80, stroke=hx(brush.accent), sw=6, id="frame")
-        s.text(headline, W // 2, int(H * .08), 88, hx(brush.ink), hf, max_w=W * .78, id="headline")
-        for i, pgi in enumerate(pages[:3]):
-            s.page(pgi, int(W * .1) + i * int(W * .24), int(H * .46) + (i % 2) * 50, int(H * .38), (-5, 0, 5)[i % 3], f"page-{i + 1}")
-        s.text(sub, W // 2, H - 130, 32, hx(brush.accent), bf, max_w=W * .8, id="subtitle", upper=True)
+    for rid, x, y, w, h, col in plan["rects"]:
+        s.rect(x, y, w, h, hx(col), id=rid)
+    for rid, cx, cy, rx, ry, col in plan["ellipses"]:
+        s.ellipse(cx, cy, rx, ry, hx(col), id=rid)
+    for rid, x, y, w, h, col, sw in plan.get("frames", []):
+        s.rect(x, y, w, h, stroke=hx(col), sw=sw, id=rid)
+    for pi, x, y, ph, ang, pid, _ in plan["pages"]:
+        pg = pages[min(pi, len(pages) - 1)]
+        pw = round(pg.width * ph / pg.height)
+        if x == "center":
+            x = (PIN_W - pw) // 2
+        elif x is None:
+            x = (PIN_W - pw) // 2 + 60
+        s.page(pg, int(x), int(y), ph, ang, pid)
+    for cid, x, y, w, h, col, text, tcol in plan["chips"]:
+        s.rect(x, y, w, h, hx(col), rx=h // 2, id=cid)
+        s.text(text, x + w // 2, y + 20, 30, hx(tcol), brush._b, id=cid + "-text")
+    for t in plan["texts"]:
+        fam = t["font"].stem.split("-")[0]
+        yy = t["y"]
+        tsp = "".join(f'<tspan x="{t["x"]}" dy="{0 if i == 0 else t["size"] * t["gap"]:.1f}">{escape(l.upper() if t["upper"] else l)}</tspan>' for i, l in enumerate(t["lines"]))
+        s.raw(f'<text id="{t["id"]}" x="{t["x"]}" y="{yy + t["size"] * .85:.1f}" font-family="{fam}" font-weight="700" font-size="{t["size"]}" '
+              f'fill="{hx(t["fill"])}" text-anchor="{t["anchor"]}">{tsp}</text>')
     return s.render()
 
 

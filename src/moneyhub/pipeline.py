@@ -18,7 +18,9 @@ from .llm import get_router
 from .niches import NicheProfile, resolve_niche, smart_resolve
 from .products import get_product_type
 from .products.base import BuildContext, BuildResult
-from .qa import Check, run_checks, summarize
+from . import risk as riskmod
+from .qa import Check, media_checks, run_checks, summarize
+from .startpage import build_start_page
 from .store import Store
 from .uniqueness import fingerprint_text, most_similar
 
@@ -81,6 +83,10 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     say(f"Content from {content_source}; rendering files")
     build: BuildResult = ptype.build(ctx, content)
 
+    start = build_start_page(build, style, pdir, ptype.key, niche.key, req.options.get("gsheet_url"))
+    if start:
+        build.files.insert(0, start)
+
     say("Checking for similar existing products")
     fp = fingerprint_text(content.model_dump_json())
     similar = most_similar(fp, store.fingerprints())
@@ -104,11 +110,17 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     (folder / "listing" / "pins.json").write_text(json.dumps({"description": kit.copy_.pin_description, "pins": pins}, indent=2), encoding="utf-8")
 
     say("Running quality checks")
-    checks = run_checks(build, style, sizes)
+    checks = run_checks(build, style, sizes) + media_checks(folder)
     if similar[0] >= 0.6:
         checks.append(Check("Uniqueness", "warn", f"{similar[0]:.0%} similar to existing product #{similar[1]} '{similar[2]}' - change niche angle or regenerate"))
     else:
         checks.append(Check("Uniqueness", "pass", f"closest existing product is {similar[0]:.0%} similar"))
+    findings = riskmod.scan_listing(json.loads(kit.model_dump_json()), content.model_dump_json(), req.niche)
+    top = riskmod.status(findings)
+    checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",
+                        "nothing on the watch list" if not findings else "; ".join(f"{f.where}: '{f.term}' ({f.severity})" for f in findings[:6])))
+    if findings:
+        (folder / "listing" / "risk.json").write_text(json.dumps([f.to_dict() for f in findings], indent=2), encoding="utf-8")
     qa_status = summarize(checks)
 
     (folder / "spec.json").write_text(json.dumps({

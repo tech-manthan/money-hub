@@ -40,6 +40,27 @@ def builtin_plan(title: str, subtitle: str, features: list[str], headline: str) 
     ])
 
 
+def fit_duration(plan: MotionPlan, max_total: float = 14.0) -> MotionPlan:
+    """Scale scene lengths so the whole video is at most max_total seconds (Etsy clips listing videos at 15 s)."""
+    total = sum(sc.seconds for sc in plan.scenes)
+    if total <= max_total:
+        return plan
+    k = max_total / total
+    return MotionPlan(scenes=[sc.model_copy(update={"seconds": max(1.0, round(sc.seconds * k, 2))}) for sc in plan.scenes])
+
+
+def video_duration(path: Path) -> float | None:
+    """Duration in seconds (parsed from ffmpeg's banner), or None."""
+    import re
+
+    exe = ffmpeg_exe()
+    if not exe:
+        return None
+    r = subprocess.run([exe, "-i", str(path)], capture_output=True, text=True)
+    m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", r.stderr)
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else None
+
+
 def llm_plan(router, title: str, subtitle: str, features: list[str], audience: str, providers=None) -> MotionPlan | None:
     prompt = (
         f"Plan a 10-second silent social video for a digital product.\nProduct: {title} ({subtitle})\nAudience: {audience}\n"

@@ -12,7 +12,7 @@ from ..render.raster import pdf_page_count
 from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .habit_tracker import MONTHS
 from .registry import register
-from .xlsx_common import XlsxTheme
+from .xlsx_common import XlsxTheme, protect
 
 
 class ExpenseGroup(BaseModel):
@@ -129,23 +129,23 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
     st = sheets["Settings"]
     st.hide_gridlines(2); st.set_column("A:A", 2); st.set_column("B:B", 24); st.set_column("C:C", 18); st.set_column("E:G", 24)
     st.write("B2", "Settings", f["title"])
-    st.write("B4", "Month", f["label"]); st.write("C4", "January", f["input"])
+    st.write("B4", "Month", f["label"]); st.write("C4", "January", f["input_u"])
     st.data_validation("C4", {"validate": "list", "source": MONTHS})
-    st.write("B5", "Year", f["label"]); st.write("C5", 2026, f["input"])
+    st.write("B5", "Year", f["label"]); st.write("C5", 2026, f["input_u"])
     st.write("B6", "Month number", f["label"])
     st.write_formula("C6", '=MATCH(C4,{"January","February","March","April","May","June","July","August","September","October","November","December"},0)', f["calc"], 1)
     st.write("B7", "Month start", f["label"]); st.write_formula("C7", "=DATE(C5,C6,1)", f["date"])
     st.write("B8", "Month end", f["label"]); st.write_formula("C8", "=EOMONTH(C7,0)", f["date"])
     st.write("E3", "Expense categories (edit freely)", f["label"])
     for i in range(30):
-        st.write(3 + i, 4, categories[i] if i < len(categories) else "", f["input"])
+        st.write(3 + i, 4, categories[i] if i < len(categories) else "", f["input_u"])
     st.write("F3", "Group", f["label"])
     cat_group = {cat: g_.name for g_ in c.expense_groups for cat in g_.categories}
     for i in range(30):
-        st.write(3 + i, 5, cat_group.get(categories[i], "") if i < len(categories) else "", f["input"])
+        st.write(3 + i, 5, cat_group.get(categories[i], "") if i < len(categories) else "", f["input_u"])
     st.write("G3", "Income sources", f["label"])
     for i in range(10):
-        st.write(3 + i, 6, c.income[i] if i < len(c.income) else "", f["input"])
+        st.write(3 + i, 6, c.income[i] if i < len(c.income) else "", f["input_u"])
     CAT_RANGE = "Settings!$E$4:$E$33"
 
     # ---- Transactions -------------------------------------------------
@@ -158,8 +158,8 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
         tx.write(3, col, h, f["th_c"] if col in (0, 3, 4) else f["th"])
     N = 1000
     for r in range(4, 4 + N):
-        tx.write_blank(r, 0, None, f["date"]); tx.write_blank(r, 1, None, f["text"])
-        tx.write_blank(r, 2, None, f["text"]); tx.write_blank(r, 3, None, f["money"]); tx.write_blank(r, 4, None, f["cell"])
+        tx.write_blank(r, 0, None, f["date_u"]); tx.write_blank(r, 1, None, f["text_u"])
+        tx.write_blank(r, 2, None, f["text_u"]); tx.write_blank(r, 3, None, f["money_u"]); tx.write_blank(r, 4, None, f["cell_u"])
     tx.data_validation(4, 2, 3 + N, 2, {"validate": "list", "source": f"={CAT_RANGE}"})
     tx.data_validation(4, 4, 3 + N, 4, {"validate": "list", "source": ["Expense", "Income"]})
     tx.data_validation(4, 0, 3 + N, 0, {"validate": "date", "criteria": ">", "value": dt.date(1900, 1, 1)})
@@ -172,8 +172,8 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
     ]
     for i, (d, desc, cat, amt, typ) in enumerate(samples):
         r = 4 + i
-        tx.write_datetime(r, 0, dt.datetime.combine(d, dt.time()), f["date"]); tx.write(r, 1, desc + " (sample - delete me)", f["text"])
-        tx.write(r, 2, cat, f["text"]); tx.write(r, 3, amt, f["money"]); tx.write(r, 4, typ, f["cell"])
+        tx.write_datetime(r, 0, dt.datetime.combine(d, dt.time()), f["date_u"]); tx.write(r, 1, desc + " (sample - delete me)", f["text_u"])
+        tx.write(r, 2, cat, f["text_u"]); tx.write(r, 3, amt, f["money_u"]); tx.write(r, 4, typ, f["cell_u"])
     TD, TC, TA, TT = f"Transactions!$A$5:$A${4 + N}", f"Transactions!$C$5:$C${4 + N}", f"Transactions!$D$5:$D${4 + N}", f"Transactions!$E$5:$E${4 + N}"
 
     # ---- Budget -------------------------------------------------------
@@ -189,7 +189,7 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
         bu.merge_range(row, 1, row, 4, grp.name, f["group"]); row += 1
         for cat in grp.categories:
             bu.write(row, 1, cat, f["text"])
-            bu.write(row, 2, None, f["money_in"])
+            bu.write(row, 2, None, f["money_in_u"])
             bu.write_formula(row, 3, f'=SUMIFS({TA},{TC},B{row + 1},{TT},"Expense",{TD},">="&Settings!$C$7,{TD},"<="&Settings!$C$8)', f["money"], 0)
             bu.write_formula(row, 4, f'=IF(C{row + 1}="","",C{row + 1}-D{row + 1})', f["money"], "")
             row += 1
@@ -215,8 +215,8 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
         sv.write(3, 1 + col, h, f["th_c"] if col else f["th"])
     for i in range(8):
         r = 4 + i
-        sv.write(r, 1, c.savings_goals[i] if i < len(c.savings_goals) else "", f["text"])
-        sv.write(r, 2, None, f["money"]); sv.write(r, 3, None, f["money"])
+        sv.write(r, 1, c.savings_goals[i] if i < len(c.savings_goals) else "", f["text_u"])
+        sv.write(r, 2, None, f["money_u"]); sv.write(r, 3, None, f["money_u"])
         sv.write_formula(r, 4, f'=IF(OR(C{r + 1}="",C{r + 1}=0),"",MIN(1,D{r + 1}/C{r + 1}))', f["pct"], "")
     sv.conditional_format(4, 4, 11, 4, {"type": "data_bar", "bar_color": pal.accent, "bar_solid": True, "min_type": "num", "min_value": 0, "max_type": "num", "max_value": 1})
 
@@ -229,8 +229,8 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
         de.write(4, 1 + col, h, f["th_c"] if col else f["th"])
     for i in range(10):
         r = 5 + i
-        de.write(r, 1, None, f["text"]); de.write(r, 2, None, f["money"]); de.write(r, 3, None, f["text"])
-        de.write(r, 4, None, f["money"]); de.write(r, 5, None, f["money"])
+        de.write(r, 1, None, f["text_u"]); de.write(r, 2, None, f["money_u"]); de.write(r, 3, None, f["text_u"])
+        de.write(r, 4, None, f["money_u"]); de.write(r, 5, None, f["money_u"])
         de.write_formula(r, 6, f'=IF(C{r + 1}="","",MAX(0,C{r + 1}-F{r + 1}))', f["money"], "")
     de.write(16, 1, "Total remaining", f["text_b"])
     de.write_formula(16, 6, "=SUM(G6:G15)", f["money_b"], 0)
@@ -275,5 +275,8 @@ def _build_xlsx(path, c: BudgetContent, ctx: BuildContext) -> None:
     bar.set_size({"width": 560, "height": 340}); bar.set_legend({"position": "bottom"})
     da.insert_chart("H9", bar)
 
+    on = ctx.options.get("protect_sheets", True)
+    for name in ("Dashboard", "Settings", "Budget", "Savings", "Debt Payoff"):
+        protect(sheets[name], on)
     sheets["Start Here"].activate()
     wb.close()

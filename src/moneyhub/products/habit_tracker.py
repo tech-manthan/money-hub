@@ -10,7 +10,7 @@ from ..niches import NicheProfile
 from ..render.raster import pdf_page_count
 from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .registry import register
-from .xlsx_common import XlsxTheme
+from .xlsx_common import XlsxTheme, protect
 
 
 class HabitContent(BaseModel):
@@ -136,10 +136,10 @@ def _build_xlsx(path, content: HabitContent, ctx: BuildContext) -> None:
     ws.set_row(1, 34)
     ws.merge_range("B2:AH2", content.title, f["title"])
     ws.write("B4", "Month", f["label"])
-    ws.merge_range("C4:H4", "January", f["input"])
+    ws.merge_range("C4:H4", "January", f["input_u"])
     ws.data_validation("C4", {"validate": "list", "source": MONTHS})
     ws.write("J4", "Year", f["label"])
-    ws.merge_range("K4:N4", 2026, f["input"])
+    ws.merge_range("K4:N4", 2026, f["input_u"])
     ws.write("P4", "Days", f["label"])
     ws.write_formula("Q4", "=DAY(EOMONTH(DATE($K$4,MATCH($C$4,{\"January\",\"February\",\"March\",\"April\",\"May\",\"June\",\"July\",\"August\",\"September\",\"October\",\"November\",\"December\"},0),1),0))", f["calc"], 31)
     # header row
@@ -153,9 +153,9 @@ def _build_xlsx(path, content: HabitContent, ctx: BuildContext) -> None:
         row = first + r
         ws.set_row(row, 21)
         name = content.habits[r] if r < len(content.habits) else ""
-        ws.write(row, 1, name, f["habit"])
+        ws.write(row, 1, name, f["habit_u"])
         for d in range(31):
-            ws.insert_checkbox(row, 2 + d, False, f["cell"])
+            ws.insert_checkbox(row, 2 + d, False, f["cell_u"])
         rng = f"C{row + 1}:AG{row + 1}"
         ws.write_formula(row, 33, f'=IF(B{row + 1}="","",COUNTIF({rng},TRUE)/$Q$4)', f["pct"])
     last = first + n_rows - 1
@@ -174,7 +174,7 @@ def _build_xlsx(path, content: HabitContent, ctx: BuildContext) -> None:
     ws.merge_range(drow + 2, 2, drow + 2, 5, "", f["bigpct"])
     ws.write_formula(drow + 2, 2, f'=IFERROR(SUMPRODUCT((B{first + 1}:B{last + 1}<>"")*(C{first + 1}:AG{last + 1}=TRUE))/(COUNTIF(B{first + 1}:B{last + 1},"?*")*$Q$4),0)', f["bigpct"], 0)
     ws.write(drow + 4, 1, "Notes", f["label"])
-    ws.merge_range(drow + 4, 2, drow + 8, 33, "", f["notebox"])
+    ws.merge_range(drow + 4, 2, drow + 8, 33, "", f["notebox_u"])
 
     # ---- Insights ---------------------------------------------------
     ins = wb.add_worksheet("Insights")
@@ -201,4 +201,6 @@ def _build_xlsx(path, content: HabitContent, ctx: BuildContext) -> None:
     chart.set_y_axis({"reverse": True})
     chart.set_size({"width": 620, "height": 380})
     ins.insert_chart("F4", chart)
+    protect(ws, ctx.options.get("protect_sheets", True))
+    protect(ins, ctx.options.get("protect_sheets", True))
     wb.close()

@@ -43,9 +43,10 @@ def make(
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
+    gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
 ):
     """Generate one product with its images, listing copy and upload guides."""
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": ai_art or None, "no_research": no_research or None}.items() if v}
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": ai_art or None, "no_research": no_research or None, "gsheet_url": gsheet_link}.items() if v}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
     res = generate(req, progress=lambda m: typer.echo(f"  - {m}"))
@@ -127,6 +128,27 @@ def regenerate(product_id: int, llm: str = typer.Option(None)):
     res = generate(Request(niche=r["niche"], product_type=r["product_type"], sizes=r.get("sizes"), providers=_csv(llm),
                            options=r.get("options") or {}), progress=lambda m: typer.echo(f"  - {m}"))
     typer.echo(f"{res.title} [{res.qa_status}] {res.folder}")
+
+
+@app.command()
+def risk(product_id: int = typer.Argument(None), text: str = typer.Option(None, help="Check any text instead of a product")):
+    """Scan a product's listing text (or any --text) for brand/trademark terms, risky claims and rights language."""
+    from . import risk as riskmod
+    if text:
+        findings = riskmod.scan_text(text, "text")
+    else:
+        p = Store().product(product_id) if product_id else None
+        if not p:
+            raise typer.BadParameter("give a product id or --text")
+        folder = Path(p["folder"])
+        listing = json.loads((folder / "listing" / "listing.json").read_text())
+        spec = json.loads((folder / "spec.json").read_text())
+        findings = riskmod.scan_listing(listing, json.dumps(spec["content"]), spec["request"]["niche"])
+    if not findings:
+        typer.echo("Nothing on the watch list. (This is a safety net, not legal advice.)")
+    for f in findings:
+        typer.echo(f"[{f.severity.upper():6}] {f.where:<11} '{f.term}'  ({f.group}) - {f.advice}")
+    raise typer.Exit(1 if riskmod.status(findings) == "fail" else 0)
 
 
 @app.command()

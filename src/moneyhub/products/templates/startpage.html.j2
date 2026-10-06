@@ -1,0 +1,45 @@
+{% from '_macros.html.j2' import header, footer %}
+<section class="page" style="padding:3.2em;">
+  {{ header(style, 'Start here', title) }}
+  <p style="font-size:1.1em;max-width:38em;">Thank you for your purchase{% if shop.name %} from <b>{{ shop.name }}</b>{% endif %}. This page explains what you have, how to open or print it, and how you may use it.</p>
+
+  <div class="label" style="margin:1em 0 .4em;">What is included</div>
+  {% for f in files %}<div class="cl-item"><span class="sq"></span><span>{{ f }}</span></div>{% endfor %}
+
+  {% if has_print %}
+  <div class="label" style="margin:1.2em 0 .4em;">Printing (PDF files)</div>
+  <div class="steps">
+    <div><b>1.</b> Open the PDF in a PDF reader (for example Adobe Acrobat Reader, or Preview on a Mac).</div>
+    <div><b>2.</b> Choose the file that matches your paper: <b>US Letter</b> (8.5 x 11 in) or <b>A4</b> (210 x 297 mm){% if has_a5 %}; A5 for smaller planners{% endif %}.</div>
+    <div><b>3.</b> In the print window choose <b>Actual size</b> (or <b>Scale 100%</b>). Do not choose "Fit" or "Shrink to fit": that changes the size of the page.</div>
+    <div><b>4.</b> Print the pages you need. Standard paper is fine; use thicker paper or cardstock for cards. A print shop can print the file too.</div>
+    <div><b>5.</b> Home printers cannot print to the very edge of the paper, so the layouts keep a margin. If an edge is cut off, check that you printed at 100%.</div>
+  </div>
+  {% endif %}
+  {% if has_tablet %}
+  <div class="label" style="margin:1.2em 0 .4em;">Tablet use (hyperlinked planner)</div>
+  <div class="steps">
+    <div>Import the file called <b>hyperlinked</b> into a note-taking app that supports PDF links (for example GoodNotes or Notability). Tap the tabs at the bottom of each page to jump to the cover, goals, months, weeks and notes. Links may not work in apps that do not support PDF hyperlinks.</div>
+  </div>
+  {% endif %}
+  {% if has_xlsx %}
+  <div class="label" style="margin:1.2em 0 .4em;">Spreadsheet</div>
+  <div class="steps">
+    <div><b>Excel:</b> open the .xlsx file. Pick the month and year at the top, then type or tick in the shaded cells. Cells with formulas are protected so they are not changed by accident (Review > Unprotect Sheet, no password).</div>
+    <div><b>Google Sheets:</b> {% if gsheet %}use this link and choose "Make a copy": <a href="{{ gsheet }}" style="color:var(--accent)">{{ gsheet }}</a>{% else %}upload the .xlsx to Google Drive, open it with Google Sheets, then File > Save as Google Sheets. If tick boxes show TRUE/FALSE, select those cells and use Insert > Checkbox.{% endif %}</div>
+  </div>
+  {% endif %}
+
+  <div class="label" style="margin:1.2em 0 .4em;">Licence (personal use)</div>
+  <div class="steps small">
+    <div><b>You may:</b> print or use these files for yourself and your household{% if classroom %}, or in your own classroom with your own students{% endif %}; keep backup copies.</div>
+    <div><b>You may not:</b> resell, share, give away, upload or redistribute the files (or edited versions) in any form; claim them as your own; use them to make products for sale; or use them to train AI models.</div>
+    <div>Copyright stays with the seller. This is a digital product: no physical item is shipped. Colours can look different on screens and printers.</div>
+  </div>
+
+  <div class="card soft" style="margin-top:1.2em;">
+    <div class="label">Need help?</div>
+    {% if shop.email %}Message me {{ shop.email }}{% else %}Send me a message through the marketplace you bought from{% endif %} and I will fix any problem with your files quickly. If you enjoy your purchase, a short review helps a small shop a lot. Thank you!
+  </div>
+  {{ footer(title, false, shop.name or '') }}
+</section>

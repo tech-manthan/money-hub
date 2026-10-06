@@ -249,43 +249,99 @@ def square(pages, title, subtitle, brush: Brush, size=(1000, 1000)) -> Image.Ima
 
 
 # ----------------------------------------------------------------- pinterest pins (1000 x 1500)
+SAFE_BOTTOM = 0.78   # keep text and calls to action above the bottom ~20% (Save button / profile overlay)
+
+
+def fit_text(probe: ImageDraw.ImageDraw, text: str, font_path, max_size: int, min_size: int, max_w: int, max_h: int,
+             gap: float = 1.08, max_lines: int = 4) -> tuple[int, list[str]]:
+    """Largest font size (between min and max) whose wrapped block fits max_w x max_h."""
+    size = max_size
+    while True:
+        ft = ImageFont.truetype(str(font_path), size)
+        lines = wrap(probe, text, ft, max_w)
+        if (len(lines) <= max_lines and len(lines) * size * gap <= max_h) or size <= min_size:
+            return size, lines[:max_lines]
+        size -= 4
+
+
+def pin_plan(variant: int, headline: str, sub: str, brush: Brush, size=(1000, 1500)) -> dict:
+    """Layout for one pin (shared by the PNG renderer and the editable SVG export). All text sits above SAFE_BOTTOM."""
+    W, H = size
+    v = variant % 4
+    probe = ImageDraw.Draw(Image.new("RGB", (8, 8)))
+    plan: dict = {"v": v, "rects": [], "ellipses": [], "texts": [], "pages": [], "chips": []}
+    hf, bf, sf = brush._h, brush._b, brush._s
+    limit = int(H * SAFE_BOTTOM)
+
+    def add_text(text, x, y, font_path, fsize, fill, lines, anchor="middle", gap=1.08, upper=False, ident="text"):
+        plan["texts"].append({"id": ident, "x": x, "y": y, "font": font_path, "size": fsize, "fill": fill, "lines": lines, "anchor": anchor, "gap": gap, "upper": upper})
+        return y + int(fsize * gap) * len(lines)
+
+    if v == 0:  # product mock on top, headline band below
+        plan["rects"].append(("background", 0, 0, W, int(H * .55), brush.soft))
+        plan["rects"].append(("band", 0, int(H * .55), W, H - int(H * .55), brush.accent))
+        plan["pages"] += [(0, None, int(H * .06), int(H * .44), 3, "page-1", "cx+60"), (1, int(W * .08), int(H * .15), int(H * .36), -6, "page-2", None)]
+        y0 = int(H * .585)
+        sz, lines = fit_text(probe, headline, hf, 90, 56, int(W * .86), limit - 40 - y0 - 60, 1.08, 3)
+        y = add_text(headline, W // 2, y0, hf, sz, brush.accent_ink, lines, ident="headline")
+        ssz, sl = fit_text(probe, sub, bf, 30, 22, int(W * .8), 80, 1.1, 2)
+        add_text(sub, W // 2, min(limit - 20, y + 24), bf, ssz, brush.accent_ink, sl, upper=True, ident="subtitle")
+    elif v == 1:  # headline on top, mock below
+        plan["rects"].append(("background", 0, 0, W, H, brush.soft))
+        sz, lines = fit_text(probe, headline, hf, 96, 60, int(W * .86), int(H * .25), 1.06, 4)
+        y = add_text(headline, W // 2, int(H * .05), hf, sz, brush.ink, lines, gap=1.06, ident="headline")
+        plan["chips"].append(("chip", W // 2 - 190, int(y + 20), 380, 74, brush.accent, "INSTANT DOWNLOAD", brush.accent_ink))
+        plan["pages"].append((0, "center", int(max(H * .38, y + 120)), int(H * .5), 0, "page-1", None))
+    elif v == 2:  # accent background, script sub
+        plan["rects"].append(("background", 0, 0, W, H, brush.accent))
+        plan["ellipses"].append(("accent-shape", W * .2, H * .96, W * .5, H * .34, brush.accent2))
+        sz, lines = fit_text(probe, headline, hf, 100, 60, int(W * .84), int(H * .24), 1.06, 4)
+        y = add_text(headline, W // 2, int(H * .05), hf, sz, brush.accent_ink, lines, gap=1.06, ident="headline")
+        ssz, sl = fit_text(probe, sub, sf, 60, 40, int(W * .9), 90, 1.0, 1)
+        y = add_text(sub, W // 2, int(y + 6), sf, ssz, brush.accent_ink, sl, gap=1.0, ident="subtitle")
+        plan["pages"].append((1, "center", int(max(H * .4, y + 40)), int(H * .5), -4, "page-1", None))
+    else:  # framed, three pages cascade
+        plan["rects"].append(("background", 0, 0, W, H, brush.bg))
+        plan["frames"] = [("frame", 40, 40, W - 80, H - 80, brush.accent, 6)]
+        sz, lines = fit_text(probe, headline, hf, 88, 56, int(W * .78), int(H * .22), 1.08, 4)
+        y = add_text(headline, W // 2, int(H * .07), hf, sz, brush.ink, lines, ident="headline")
+        ssz, sl = fit_text(probe, sub, bf, 32, 22, int(W * .8), 80, 1.1, 2)
+        y = add_text(sub, W // 2, int(y + 10), bf, ssz, brush.accent, sl, upper=True, ident="subtitle")
+        top = int(max(H * .42, y + 40))
+        for i in range(3):
+            plan["pages"].append((i, int(W * .1) + i * int(W * .24), top + (i % 2) * 50, int(H * .36), (-5, 0, 5)[i % 3], f"page-{i + 1}", None))
+    return plan
+
+
 def pin(pages: list[Image.Image], headline: str, sub: str, variant: int, brush: Brush, size=(1000, 1500)) -> Image.Image:
     W, H = size
     img = Image.new("RGBA", size, brush.bg + (255,))
     d = ImageDraw.Draw(img)
-    v = variant % 4
-    if v == 0:  # photo-style: big mock on top, headline band below
-        d.rectangle((0, 0, W, int(H * 0.62)), fill=brush.soft)
-        p = fit_height(pages[0], int(H * 0.52))
-        paste_with_shadow(img, p, ((W - p.width) // 2 + 70, int(H * 0.07)), angle=3, blur=22)
-        if len(pages) > 1:
-            p2 = fit_height(pages[1], int(H * 0.42))
-            paste_with_shadow(img, p2, (int(W * 0.08), int(H * 0.17)), angle=-6, blur=22)
-        d.rectangle((0, int(H * 0.62), W, H), fill=brush.accent)
-        y = draw_text_block(d, (W // 2, int(H * 0.67)), headline, brush.heading(92), brush.accent_ink, int(W * 0.86), 1.08, anchor="c", max_lines=4)
-        d.text((W // 2, H - 90), sub.upper(), font=brush.body(30), fill=brush.accent_ink, anchor="mm")
-    elif v == 1:  # headline on top, mock below
-        d.rectangle((0, 0, W, H), fill=brush.soft)
-        y = draw_text_block(d, (W // 2, int(H * 0.06)), headline, brush.heading(96), brush.ink, int(W * 0.86), 1.06, anchor="c", max_lines=4)
-        chip(d, (W // 2 - 190, y + 20), "INSTANT DOWNLOAD", brush.body(30), brush.accent, brush.accent_ink)
-        p = fit_height(pages[0], int(H * 0.56))
-        paste_with_shadow(img, p, ((W - p.width) // 2, int(H * 0.4)))
-    elif v == 2:  # accent background, script headline
-        d.rectangle((0, 0, W, H), fill=brush.accent)
-        d.ellipse((-W * 0.3, H * 0.62, W * 0.7, H * 1.3), fill=brush.accent2 + (255,))
-        draw_text_block(d, (W // 2, int(H * 0.07)), headline, brush.heading(100), brush.accent_ink, int(W * 0.84), 1.06, anchor="c", max_lines=4)
-        p = fit_height(pages[min(1, len(pages) - 1)], int(H * 0.52))
-        paste_with_shadow(img, p, ((W - p.width) // 2, int(H * 0.38)), angle=-4, blur=22)
-        d.text((W // 2, H - 70), sub, font=brush.script(60), fill=brush.accent_ink, anchor="mm")
-    else:  # three pages cascade + framed headline
-        d.rectangle((0, 0, W, H), fill=brush.bg)
-        d.rectangle((40, 40, W - 40, H - 40), outline=brush.accent, width=6)
-        draw_text_block(d, (W // 2, int(H * 0.08)), headline, brush.heading(88), brush.ink, int(W * 0.78), 1.08, anchor="c", max_lines=4)
-        shown = pages[:3]
-        for i, pg in enumerate(shown):
-            q = fit_height(pg, int(H * 0.38))
-            paste_with_shadow(img, q, (int(W * 0.1) + i * int(W * 0.24), int(H * 0.46) + (i % 2) * 50), angle=(-5, 0, 5)[i % 3], blur=18)
-        d.text((W // 2, H - 100), sub.upper(), font=brush.body(32), fill=brush.accent, anchor="mm")
+    plan = pin_plan(variant, headline, sub, brush, size)
+    for _id, x, y, w, h, col in plan["rects"]:
+        d.rectangle((x, y, x + w, y + h), fill=col)
+    for _id, cx, cy, rx, ry, col in plan["ellipses"]:
+        d.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=col + (255,))
+    for _id, x, y, w, h, col, sw in plan.get("frames", []):
+        d.rectangle((x, y, x + w, y + h), outline=col, width=sw)
+    for pi, x, y, ph, ang, _id, hint in plan["pages"]:
+        pg = pages[min(pi, len(pages) - 1)]
+        q = fit_height(pg, ph)
+        if x == "center":
+            x = (W - q.width) // 2
+        elif x is None:
+            x = (W - q.width) // 2 + 60
+        paste_with_shadow(img, q, (int(x), int(y)), angle=ang, blur=20)
+    for _id, x, y, w, h, col, text, tcol in plan["chips"]:
+        d.rounded_rectangle((x, y, x + w, y + h), h // 2, fill=col)
+        d.text((x + w // 2, y + h // 2), text, font=brush.body(30), fill=tcol, anchor="mm")
+    for t in plan["texts"]:
+        ft = ImageFont.truetype(str(t["font"]), t["size"])
+        yy = t["y"]
+        for ln in t["lines"]:
+            ln = ln.upper() if t["upper"] else ln
+            d.text((t["x"], yy), ln, font=ft, fill=t["fill"], anchor="ma")
+            yy += int(t["size"] * t["gap"])
     return img.convert("RGB")
 
 
@@ -337,7 +393,12 @@ def gallery_wall(arts: list[Image.Image], title: str, subtitle: str, brush: Brus
 def save(img: Image.Image, path: Path, quality: int = 92) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix.lower() in (".jpg", ".jpeg"):
-        img.save(path, quality=quality, optimize=True)
+        q = quality
+        while True:  # Etsy: keep each listing image under about 1 MB or uploads may fail
+            img.save(path, quality=q, optimize=True)
+            if path.stat().st_size <= 1_000_000 or q <= 60:
+                break
+            q -= 6
     else:
         img.save(path, optimize=True)
     return path

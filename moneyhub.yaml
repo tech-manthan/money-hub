@@ -51,6 +51,12 @@ render:
   # remotion_browser: /path/to/chrome-headless-shell   # optional; Remotion downloads its own if unset
   # manim_command: /path/to/manim
 
+# Printed on the 'Start Here' page of every download (all optional).
+shop:
+  name: ""
+  email: ""
+  url: ""
+
 defaults:
   page_sizes: [letter, a4]
   marketplaces: [etsy, gumroad, payhip, kofi]
