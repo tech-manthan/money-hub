@@ -108,42 +108,49 @@ def motif_svg(kind: str, p: Palette, seed: int, on_dark: bool = False) -> str:
         for cx, cy, sc in ((250, 790, 1.0), (760, 800, 0.85)):
             parts.append(f"<g fill='{soft}'><circle cx='{cx}' cy='{cy}' r='{60 * sc:.0f}'/><circle cx='{cx + 70 * sc:.0f}' cy='{cy + 18 * sc:.0f}' r='{48 * sc:.0f}'/>"
                          f"<circle cx='{cx - 70 * sc:.0f}' cy='{cy + 20 * sc:.0f}' r='{46 * sc:.0f}'/><rect x='{cx - 90 * sc:.0f}' y='{cy + 20 * sc:.0f}' width='{180 * sc:.0f}' height='{46 * sc:.0f}' rx='{23 * sc:.0f}'/></g>")
-    elif kind == "scallop":   # overlapping fish-scale arcs
+    elif kind == "scallop":   # overlapping fish-scale arcs, clipped to a panel
         r, cols = 80, [accent, accent2, soft, line]
-        for row in range(8):
-            y = 380 + row * 62
+        parts.append("<clipPath id='sc'><rect x='80' y='200' width='840' height='720' rx='24'/></clipPath><g clip-path='url(#sc)'>")
+        for row in range(11):
+            y = 160 + row * 70
             for k in range(-1, 8):
-                x = k * 2 * r + (r if row % 2 else 0)
-                parts.append(f"<path d='M{x} {y} a{r} {r} 0 0 0 {2 * r} 0 Z' fill='{cols[(row + k) % 4]}' stroke='{accent}' stroke-width='3' opacity='0.96'/>")
+                x = k * 2 * r + (r if row % 2 else 0) + 40
+                parts.append(f"<circle cx='{x}' cy='{y}' r='{r}' fill='{cols[(row + k) % 4]}' stroke='{accent}' stroke-width='3'/>")
+        parts.append("</g>")
     elif kind == "topo":   # contour lines of a hill
         for i in range(12):
-            r = 440 - i * 36
+            r = 400 - i * 33
             ph = [rng.uniform(0, 6.28) for _ in range(2)]
             pts = []
-            for k in range(36):
-                a = 2 * math.pi * k / 36
-                rr = r * (1 + 0.1 * math.sin(3 * a + ph[0]) + 0.06 * math.sin(5 * a + ph[1]))
+            for k in range(120):
+                a = 2 * math.pi * k / 120
+                rr = r * (1 + 0.08 * math.sin(3 * a + ph[0]) + 0.05 * math.sin(5 * a + ph[1]))
                 pts.append((500 + rr * math.cos(a), 500 + rr * math.sin(a) * .92))
-            d = "M" + " L".join(f"{x:.0f},{y:.0f}" for x, y in pts) + "Z"
+            d = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in pts) + "Z"
             parts.append(f"<path d='{d}' fill='none' stroke='{accent if i % 3 == 0 else accent2 if i % 3 == 1 else line}' stroke-width='{7 if i % 3 == 0 else 4}' stroke-linejoin='round'/>")
     elif kind == "bouquet":   # a handful of stems with leaves and blooms
         for s_i, x0 in enumerate((260, 380, 500, 620, 740)):
-            top = 230 + abs(s_i - 2) * 90
-            parts.append(f"<path d='M{x0} 930 C{x0 + (s_i - 2) * -20} 700 {x0 + (s_i - 2) * 30} 520 {500 + (s_i - 2) * 90} {top}' stroke='{accent}' stroke-width='8' fill='none' stroke-linecap='round'/>")
-            bx, by = 500 + (s_i - 2) * 90, top
+            top = 220 + abs(s_i - 2) * 80
+            bx, by = 500 + (s_i - 2) * 100, top
+            c1, c2 = (x0 + (s_i - 2) * -20, 700), (x0 + (s_i - 2) * 30, 520)
+            parts.append(f"<path d='M{x0} 930 C{c1[0]} {c1[1]} {c2[0]} {c2[1]} {bx} {by}' stroke='{accent}' stroke-width='8' fill='none' stroke-linecap='round'/>")
+            for j, t in enumerate((0.2, 0.42, 0.64)):
+                u = 1 - t
+                lx = u ** 3 * x0 + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t ** 3 * bx
+                ly = u ** 3 * 930 + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t ** 3 * by
+                side = -1 if (j + s_i) % 2 else 1
+                cx, cy = lx + side * 44, ly - 16
+                parts.append(f"<ellipse cx='{cx:.0f}' cy='{cy:.0f}' rx='48' ry='17' fill='{accent if j % 2 else accent2}' transform='rotate({-side * 30} {cx:.0f} {cy:.0f})' opacity='0.92'/>")
             for k in range(7):
                 a = 2 * math.pi * k / 7
-                parts.append(f"<ellipse cx='{bx + 34 * math.cos(a):.0f}' cy='{by + 34 * math.sin(a):.0f}' rx='24' ry='14' fill='{[accent2, soft, accent2, line, soft][s_i % 5]}' transform='rotate({math.degrees(a):.0f} {bx + 34 * math.cos(a):.0f} {by + 34 * math.sin(a):.0f})'/>")
-            parts.append(f"<circle cx='{bx}' cy='{by}' r='18' fill='{accent}'/>")
-            for j in range(3):
-                ly = 860 - j * 110
-                side = -1 if (j + s_i) % 2 else 1
-                parts.append(f"<ellipse cx='{x0 + side * 38}' cy='{ly}' rx='46' ry='17' fill='{accent if j % 2 else accent2}' transform='rotate({-side * 38} {x0 + side * 38} {ly})' opacity='0.92'/>")
+                px, py = bx + 40 * math.cos(a), by + 40 * math.sin(a)
+                parts.append(f"<ellipse cx='{px:.0f}' cy='{py:.0f}' rx='28' ry='16' fill='{[accent2, soft, accent2, line, soft][s_i % 5]}' transform='rotate({math.degrees(a):.0f} {px:.0f} {py:.0f})'/>")
+            parts.append(f"<circle cx='{bx}' cy='{by}' r='20' fill='{accent}'/>")
     elif kind == "retro":   # 70s concentric bands from a corner
         for i, c in enumerate([accent, accent2, soft, line, accent, accent2][::-1]):
-            r = 980 - i * 150
-            parts.append(f"<path d='M0 1000 L0 {1000 - r} A{r} {r} 0 0 1 {r} 1000 Z' fill='{c}'/>")
-        parts.append(f"<circle cx='760' cy='260' r='110' fill='{accent2}'/><circle cx='760' cy='260' r='60' fill='{soft}'/>")
+            r = 880 - i * 140
+            parts.append(f"<path d='M60 940 L60 {940 - r} A{r} {r} 0 0 1 {60 + r} 940 Z' fill='{c}'/>")
+        parts.append(f"<circle cx='800' cy='200' r='100' fill='{accent2}'/><circle cx='800' cy='200' r='54' fill='{soft}'/>")
     else:  # sparkles
         for _ in range(16):
             x, y, s = rng.randint(80, 920), rng.randint(80, 920), rng.randint(24, 90)

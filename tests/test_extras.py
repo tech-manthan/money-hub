@@ -44,6 +44,12 @@ def test_motifs_are_valid_svg_for_every_palette_and_kind():
                 md.parseString(art.motif_svg(kind, p, 7, dark))
 
 
+def test_every_motif_draws_something_and_motifs_differ():
+    svgs = {k: art.motif_svg(k, PALETTES[0], 7) for k in art.MOTIFS}
+    assert all(len(v) > 300 and v.count("<") >= 5 for v in svgs.values())
+    assert len(set(svgs.values())) == len(art.MOTIFS)
+
+
 def test_art_providers_off_by_default_and_mocked_call(monkeypatch):
     assert art.generate_art("x", (512, 512)) is None
     buf = io.BytesIO()
