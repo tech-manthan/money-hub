@@ -233,7 +233,7 @@ def product(request: Request, pid: int):
         request, p=p, qa=json.loads(p["qa"] or "[]"), listing=listing, spec=spec, files=files, pages=pages,
         images=images, guides=guides, listings=st.listings(pid), size=pdfs[0]["rel"] if pdfs else "", editable=editable, brag=brag_files, brag_running=bool(running),
         exports=sorted(str(f.relative_to(folder)) for f in (folder / "exports").rglob("*") if f.is_file() and f.suffix in (".zip", ".pdf", ".md", ".json")) if (folder / "exports").exists() else [],
-        export_kinds=_export_kinds(p["product_type"])))
+        export_kinds=_export_kinds(p["product_type"]), platforms=[(k, v.label) for k, v in __import__("moneyhub.listing.platforms", fromlist=["PLATFORMS"]).PLATFORMS.items()]))
 
 
 @app.post("/product/{pid}/brag")
@@ -498,6 +498,55 @@ def job(jid: str):
 def niche_preview(q: str):
     n = resolve_niche(q)
     return {"key": n.key, "name": n.name, "audience": n.audience, "in_library": n.key in LIBRARY}
+
+
+@app.get("/api/product/{pid}/inspect")
+def inspect_file(pid: int, path: str):
+    """What the viewer needs to show a file in the page: its kind, and page count / zip contents / text."""
+    import zipfile
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    root = Path(p["folder"]).resolve()
+    f = (root / path).resolve()
+    if root not in f.parents or not f.is_file():
+        raise HTTPException(404)
+    ext, base = f.suffix.lower(), {"name": f.name, "size": f.stat().st_size, "url": f"/files/{pid}/{path}"}
+    if ext == ".pdf":
+        return {**base, "kind": "pdf", "pages": pdf_page_count(f)}
+    if ext in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"):
+        return {**base, "kind": "image"}
+    if ext in (".mp4", ".webm", ".mov"):
+        return {**base, "kind": "video"}
+    if ext == ".zip":
+        with zipfile.ZipFile(f) as z:
+            return {**base, "kind": "zip", "entries": [{"name": i.filename, "size": i.file_size} for i in z.infolist()[:300]]}
+    if ext in (".md", ".txt", ".json", ".csv"):
+        return {**base, "kind": "text", "text": f.read_text(errors="replace")[:30000]}
+    return {**base, "kind": "other"}
+
+
+@app.get("/api/product/{pid}/platform/{platform}")
+def platform_plan(pid: int, platform: str):
+    from ..listing import platforms
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    if platform not in platforms.PLATFORMS:
+        raise HTTPException(404, "unknown platform")
+    return platforms.plan(Path(p["folder"]), platform)
+
+
+@app.get("/product/{pid}/pack/{platform}.zip")
+def platform_pack(pid: int, platform: str):
+    from ..listing import platforms
+    p = _store().product(pid)
+    if not p:
+        raise HTTPException(404)
+    if platform not in platforms.PLATFORMS:
+        raise HTTPException(404, "unknown platform")
+    z = platforms.build_pack(Path(p["folder"]), platform)
+    return FileResponse(z, filename=z.name)
 
 
 @app.get("/files/{pid}/{path:path}")

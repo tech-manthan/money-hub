@@ -164,6 +164,23 @@ def export_kdp_cmd(product_id: int, trim: str = typer.Option("6x9", help="5.5x8.
     typer.echo(f"Folder: {load(product_id).folder / 'exports' / 'kdp'}")
 
 
+@export_app.command("pack")
+def export_pack_cmd(product_id: int, platform: str = typer.Argument(..., help="etsy, gumroad, payhip or kofi")):
+    """One zip for a marketplace: the buyer download (split to fit its limits), listing images, copy and guide."""
+    from .exports import load
+    from .listing import platforms
+    if platform not in platforms.PLATFORMS:
+        raise typer.BadParameter(f"choose one of: {', '.join(platforms.PLATFORMS)}", param_hint="platform")
+    folder = load(product_id).folder
+    p = platforms.plan(folder, platform)
+    z = platforms.build_pack(folder, platform)
+    typer.echo(f"{p['label']} pack: {z}")
+    for d in p["downloads"]:
+        typer.echo(f"  {'ok ' if d['ok'] else 'BIG'} {d['name']} ({d['size'] / 1e6:.1f} MB)")
+    for w in p["warnings"]:
+        typer.echo(f"  ! {w}")
+
+
 @export_app.command("notion")
 def export_notion_cmd(product_id: int):
     """Zip of Markdown pages and CSV databases to import into Notion."""

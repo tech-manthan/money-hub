@@ -16,6 +16,17 @@
   <form method="post" action="/product/{{ p.id }}/regenerate" style="margin-top:8px"><button class="ghost sm">Make a new variation of this</button> <span class="meta">same niche and type, new look and copy</span></form>
 </div>
 
+<div class="panel" style="margin-bottom:16px" id="sell-panel">
+  <h2 style="margin-top:0">Sell it on…</h2>
+  <p class="meta">Pick a marketplace to see exactly which files go there, whether they fit its limits, and download one zip with the buyer download, the listing images, the copy and the guide.</p>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <select id="sell-platform" aria-label="Marketplace">{% for k, label in platforms %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+    <a class="btn" id="sell-zip" href="#">Download pack (.zip)</a>
+  </div>
+  <p class="meta" id="sell-note"></p>
+  <div id="sell-body" role="status"></div>
+</div>
+
 {% if export_kinds %}
 <div class="panel" style="margin-bottom:16px" id="export-panel">
   <h2 style="margin-top:0">Sell it somewhere else</h2>
@@ -57,7 +68,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
 {% endif %}
 
 <h2>Preview</h2>
-<div class="pages">{% for pg in pages %}<a href="{{ pg.url }}" target="_blank"><img loading="lazy" src="{{ pg.url }}"></a>{% endfor %}</div>
+<div class="pages">{% for pg in pages %}<a href="{{ pg.url }}" data-view="pages" data-src="{{ pg.url }}" data-kind="image" data-name="Page {{ loop.index }}"><img loading="lazy" src="{{ pg.url }}"></a>{% endfor %}</div>
 {% if not pages %}<p class="meta">No page previews for this product - open the files from the list below.</p>{% endif %}
 
 <div class="two">
@@ -67,7 +78,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
   </div>
   <div>
     <h2>Files you will sell</h2>
-    <div class="panel"><table>{% for f in files %}<tr><td>{{ f.rel.split('/')[-1] }}</td><td class="meta">{{ '%.1f'|format(f.size/1e6) }} MB</td><td><a href="/files/{{ p.id }}/{{ f.rel }}?download=1">download</a></td></tr>{% endfor %}</table></div>
+    <div class="panel"><table>{% for f in files %}<tr><td><a href="/files/{{ p.id }}/{{ f.rel }}" data-view="files" data-path="{{ f.rel }}">{{ f.rel.split('/')[-1] }}</a></td><td class="meta">{{ '%.1f'|format(f.size/1e6) }} MB</td><td><a href="/files/{{ p.id }}/{{ f.rel }}" data-view="files" data-path="{{ f.rel }}">preview</a> · <a href="/files/{{ p.id }}/{{ f.rel }}?download=1">download</a></td></tr>{% endfor %}</table></div>
   </div>
 </div>
 
@@ -85,7 +96,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
 <h2>Images by marketplace</h2>
 <div class="tabs">{% for m, imgs in images.items() if imgs %}<button data-group="img" data-tab="img-{{ m }}" class="{{ 'on' if loop.first }}">{{ m }} ({{ imgs|length }})</button>{% endfor %}</div>
 {% for m, imgs in images.items() if imgs %}
-<div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}{% if i.endswith('.mp4') %}<div><video controls preload="metadata" style="width:100%;border-radius:8px" src="/files/{{ p.id }}/{{ i }}"></video><div class="meta">{{ i.split('/')[-1] }}</div></div>{% else %}<a href="/files/{{ p.id }}/{{ i }}?download=1"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endif %}{% endfor %}</div></div>
+<div class="tabpane {{ 'on' if loop.first }}" data-group="img" id="img-{{ m }}"><div class="gallery">{% for i in imgs %}{% if i.endswith('.mp4') %}<div><video controls preload="metadata" style="width:100%;border-radius:8px" src="/files/{{ p.id }}/{{ i }}"></video><div class="meta">{{ i.split('/')[-1] }}</div></div>{% else %}<a href="/files/{{ p.id }}/{{ i }}" data-view="img-{{ m }}" data-path="{{ i }}" title="Click to preview"><img loading="lazy" src="/files/{{ p.id }}/{{ i }}"></a>{% endif %}{% endfor %}</div></div>
 {% endfor %}
 
 <h2 id="brag">Launch video (brag)</h2>
@@ -109,7 +120,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
   <p class="meta" style="margin-top:0">Want to tweak a pin or the hero image by hand? Export layered SVGs (live text, separate image layers), edit them in <b>Penpot</b> (free, open source) or Inkscape, export PNG/JPG with the same file names, and upload them here. Originals are backed up. Steps: <code>docs/editing.md</code>.</p>
   <form method="post" action="/product/{{ p.id }}/editable" style="display:inline"><button class="ghost sm">{{ 'Re-export' if editable else 'Export editable files' }}</button></form>
   {% if editable %}<a class="btn ghost sm" href="/product/{{ p.id }}/editable.zip">Download editable.zip</a>
-  <div class="gallery" style="margin-top:12px">{% for f in editable %}{% if 'pins' in f or 'listing' in f or 'posters' in f %}<a href="/files/{{ p.id }}/{{ f }}" target="_blank"><img loading="lazy" src="/files/{{ p.id }}/{{ f }}"><div class="meta">{{ f.split('/')[-1] }}</div></a>{% endif %}{% endfor %}</div>{% endif %}
+  <div class="gallery" style="margin-top:12px">{% for f in editable %}{% if 'pins' in f or 'listing' in f or 'posters' in f %}<a href="/files/{{ p.id }}/{{ f }}" data-view="editable" data-path="{{ f }}"><img loading="lazy" src="/files/{{ p.id }}/{{ f }}"><div class="meta">{{ f.split('/')[-1] }}</div></a>{% endif %}{% endfor %}</div>{% endif %}
   <form method="post" action="/product/{{ p.id }}/edits" enctype="multipart/form-data" style="margin-top:12px">
     <label>Upload your edited exports (named like <code>pin-01.png</code>, <code>01-hero.jpg</code>, <code>gumroad-cover.png</code>)</label>
     <input type="file" name="files" multiple accept="image/*"> <button class="sm">Replace images</button>
@@ -145,4 +156,73 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
       <div><label>&nbsp;</label><button class="ghost">Add stats</button></div></form></div>
 </div>
 <form method="post" action="/product/{{ p.id }}/delete" onsubmit="return confirm('Delete this product and its files?')" style="margin-top:24px"><button class="danger sm">Delete product</button></form>
+
+<style>
+#viewer { position:fixed; inset:0; z-index:1000; background:rgba(10,12,16,.88); display:flex; flex-direction:column; }
+#viewer[hidden] { display:none; }
+#viewer .vbar { display:flex; gap:10px; align-items:center; padding:10px 16px; background:#161a22; color:#fff; flex-wrap:wrap; }
+#viewer .vbar .meta { color:#aab; }
+#viewer .vbody { flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; align-items:center; gap:14px; }
+#viewer .vbody img, #viewer .vbody video { max-width:min(100%,900px); background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,.5); }
+#viewer .vbody pre, #viewer .vbody table { background:#fff; color:#111; padding:14px; border-radius:6px; max-width:900px; width:100%; overflow:auto; }
+#viewer .vbody .cap { color:#aab; font-size:.8em; margin-top:-8px; }
+#viewer .nav { position:absolute; top:50%; transform:translateY(-50%); font-size:2em; background:rgba(255,255,255,.15); color:#fff; border:0; border-radius:8px; padding:6px 14px; cursor:pointer; }
+#viewer .nav:hover { background:rgba(255,255,255,.3); }
+#sell-body table { width:100%; margin-top:8px; } #sell-body .bad { color:#b3261e; } #sell-body .ok { color:#2e7d32; }
+</style>
+<div id="viewer" hidden role="dialog" aria-modal="true" aria-label="File preview">
+  <div class="vbar"><b id="v-name"></b><span class="meta" id="v-meta"></span><span style="flex:1"></span>
+    <a class="btn ghost sm" id="v-dl" href="#">Download</a><button class="sm ghost" id="v-close" type="button">Close ✕</button></div>
+  <div class="vbody" id="v-body"></div>
+  <button class="nav" id="v-prev" type="button" aria-label="Previous" style="left:12px">‹</button>
+  <button class="nav" id="v-next" type="button" aria-label="Next" style="right:12px">›</button>
+</div>
+<script>
+(() => {
+  const PID = {{ p.id }}, $ = s => document.querySelector(s), viewer = $('#viewer'), body = $('#v-body');
+  const mb = n => (n / 1e6).toFixed(1) + ' MB', esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  let group = [], idx = 0;
+  const download = (it) => it.path ? `/files/${PID}/${it.path}?download=1` : it.src;
+  async function show(i) {
+    idx = (i + group.length) % group.length; const it = group[idx];
+    $('#v-name').textContent = it.name; $('#v-meta').textContent = group.length > 1 ? `${idx + 1} / ${group.length}` : ''; $('#v-dl').href = download(it);
+    $('#v-prev').hidden = $('#v-next').hidden = group.length < 2; body.innerHTML = '<p class="meta" style="color:#aab">Loading…</p>';
+    let info = it.path ? await (await fetch(`/api/product/${PID}/inspect?path=${encodeURIComponent(it.path)}`)).json() : { kind: it.kind || 'image', url: it.src };
+    if (group[idx] !== it) return;
+    $('#v-meta').textContent += info.size ? ' · ' + mb(info.size) : '';
+    if (info.kind === 'pdf') body.innerHTML = Array.from({ length: Math.min(info.pages, 80) }, (_, n) => `<img loading="lazy" alt="Page ${n + 1}" src="/preview/${PID}/${it.path}/${n}.png" style="min-height:300px"><div class="cap">Page ${n + 1} of ${info.pages}</div>`).join('');
+    else if (info.kind === 'image') body.innerHTML = `<img alt="${esc(it.name)}" src="${info.url}">`;
+    else if (info.kind === 'video') body.innerHTML = `<video controls autoplay src="${info.url}"></video>`;
+    else if (info.kind === 'zip') body.innerHTML = `<table><tr><th align="left">Inside this zip</th><th align="right">Size</th></tr>${info.entries.map(e => `<tr><td>${esc(e.name)}</td><td align="right">${mb(e.size)}</td></tr>`).join('')}</table>`;
+    else if (info.kind === 'text') body.innerHTML = `<pre style="white-space:pre-wrap">${esc(info.text)}</pre>`;
+    else body.innerHTML = '<p style="color:#fff">This kind of file cannot be shown here (spreadsheets open in Excel, Numbers or Google Sheets). Use Download.</p>';
+  }
+  const open = a => {
+    const name = a.dataset.group || a.dataset.view;
+    group = [...document.querySelectorAll(`[data-view="${name}"]`)].filter((x, n, arr) => arr.findIndex(y => (y.dataset.path || y.dataset.src) === (x.dataset.path || x.dataset.src)) === n)
+      .map(x => ({ path: x.dataset.path, src: x.dataset.src, kind: x.dataset.kind, name: x.dataset.name || (x.dataset.path || x.dataset.src).split('/').pop() }));
+    viewer.hidden = false; document.body.style.overflow = 'hidden';
+    show(group.findIndex(g => (g.path || g.src) === (a.dataset.path || a.dataset.src)));
+  };
+  const close = () => { viewer.hidden = true; document.body.style.overflow = ''; body.innerHTML = ''; };
+  document.addEventListener('click', e => { const a = e.target.closest('[data-view]'); if (a) { e.preventDefault(); open(a); } });
+  $('#v-close').addEventListener('click', close); $('#v-prev').addEventListener('click', () => show(idx - 1)); $('#v-next').addEventListener('click', () => show(idx + 1));
+  viewer.addEventListener('click', e => { if (e.target === body || e.target === viewer) close(); });
+  document.addEventListener('keydown', e => { if (viewer.hidden) return; if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') show(idx - 1); else if (e.key === 'ArrowRight') show(idx + 1); });
+
+  // sell-on panel
+  const sel = $('#sell-platform'), out = $('#sell-body');
+  async function plan() {
+    const k = sel.value, j = await (await fetch(`/api/product/${PID}/platform/${k}`)).json();
+    $('#sell-zip').href = `/product/${PID}/pack/${k}.zip`; $('#sell-zip').textContent = `Download ${j.label} pack (.zip)`; $('#sell-note').textContent = j.note;
+    const have = new Set([...document.querySelectorAll('[data-view="files"]')].map(x => x.dataset.path.split('/').pop()));
+    out.innerHTML = `<table><tr><th align="left">Buyer download (${esc(j.strategy)})</th><th align="right">Size</th><th></th></tr>` + j.downloads.map(d =>
+      `<tr><td>${have.has(d.name) ? `<a href="#" data-view="files" data-path="product/${esc(d.name)}">${esc(d.name)}</a>` : esc(d.name) + (d.from.length > 1 ? ` <span class="meta">(${d.from.map(esc).join(', ')})</span>` : '')}</td>`
+      + `<td align="right">${mb(d.size)}</td><td class="${d.ok ? 'ok' : 'bad'}">${d.ok ? 'fits' : 'too big'}</td></tr>`).join('') + '</table>'
+      + `<p class="meta">${j.images.length} listing image${j.images.length === 1 ? '' : 's'} and ${j.text.length} text file${j.text.length === 1 ? '' : 's'} are included.</p>`
+      + (j.warnings.length ? '<ul class="bad">' + j.warnings.map(w => `<li>${esc(w)}</li>`).join('') + '</ul>' : '<p class="ok">Everything fits this platform.</p>');
+  }
+  sel.addEventListener('change', plan); plan();
+})();
+</script>
 {% endblock %}
