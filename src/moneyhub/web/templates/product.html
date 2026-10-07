@@ -158,7 +158,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
 <form method="post" action="/product/{{ p.id }}/delete" onsubmit="return confirm('Delete this product and its files?')" style="margin-top:24px"><button class="danger sm">Delete product</button></form>
 
 <style>
-#viewer { position:fixed; inset:0; z-index:1000; background:rgba(10,12,16,.88); display:flex; flex-direction:column; }
+#viewer { position:fixed; inset:0; z-index:1000; background:rgba(10,12,16,.96); display:flex; flex-direction:column; }
 #viewer[hidden] { display:none; }
 #viewer .vbar { display:flex; gap:10px; align-items:center; padding:10px 16px; background:#161a22; color:#fff; flex-wrap:wrap; }
 #viewer .vbar .meta { color:#aab; }
@@ -187,7 +187,11 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
     idx = (i + group.length) % group.length; const it = group[idx];
     $('#v-name').textContent = it.name; $('#v-meta').textContent = group.length > 1 ? `${idx + 1} / ${group.length}` : ''; $('#v-dl').href = download(it);
     $('#v-prev').hidden = $('#v-next').hidden = group.length < 2; body.innerHTML = '<p class="meta" style="color:#aab">Loading…</p>';
-    let info = it.path ? await (await fetch(`/api/product/${PID}/inspect?path=${encodeURIComponent(it.path)}`)).json() : { kind: it.kind || 'image', url: it.src };
+    const guess = f => /\.(png|jpe?g|webp|gif|svg)$/i.test(f) ? 'image' : /\.(mp4|webm|mov)$/i.test(f) ? 'video' : /\.pdf$/i.test(f) ? 'pdf' : 'other';
+    let info = null;   // if the server cannot inspect the file (for example an old server still running), fall back to the file name
+    if (it.path) { try { const r = await fetch(`/api/product/${PID}/inspect?path=${encodeURIComponent(it.path)}`); info = r.ok ? await r.json() : null; } catch (e) { info = null; } }
+    else info = { kind: it.kind || 'image', url: it.src };
+    if (!info) info = { kind: guess(it.path), url: `/files/${PID}/${it.path}`, pages: 1 };
     if (group[idx] !== it) return;
     $('#v-meta').textContent += info.size ? ' · ' + mb(info.size) : '';
     if (info.kind === 'pdf') body.innerHTML = Array.from({ length: Math.min(info.pages, 80) }, (_, n) => `<img loading="lazy" alt="Page ${n + 1}" src="/preview/${PID}/${it.path}/${n}.png" style="min-height:300px"><div class="cap">Page ${n + 1} of ${info.pages}</div>`).join('');
