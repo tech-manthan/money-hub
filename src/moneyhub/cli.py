@@ -152,10 +152,12 @@ app.add_typer(export_app, name="export")
 
 @export_app.command("kdp")
 def export_kdp_cmd(product_id: int, trim: str = typer.Option("6x9", help="5.5x8.5, 6x9, 7x10, 8x10 or 8.5x11 (inches)"),
-                   paper: str = typer.Option("white", help="white, cream or color")):
-    """Print-ready interior, cover template with spine width, and a KDP guide."""
+                   paper: str = typer.Option("white", help="white, cream or color"),
+                   cover_image: Path = typer.Option(None, exists=True, dir_okay=False, help="Your own front-cover artwork (JPG/PNG, ideally 300 dpi at the front size); the title is drawn over it"),
+                   cover_text: bool = typer.Option(True, "--cover-text/--no-cover-text", help="Draw the title over a cover image (turn off if your art already has the title)")):
+    """Print-ready interior, a finished full-wrap cover (plus a guide-line template), and a KDP guide."""
     from .exports import kdp, load
-    spec = kdp.export_kdp(load(product_id), trim, paper, progress=lambda m: typer.echo(f"  - {m}"))
+    spec = kdp.export_kdp(load(product_id), trim, paper, progress=lambda m: typer.echo(f"  - {m}"), cover_image=cover_image, cover_text=cover_text)
     typer.echo(f"\nKDP pack: {spec['pages']} pages, spine {spec['spine_in']} in, cover {spec['full_cover_in'][0]} x {spec['full_cover_in'][1]} in")
     for c in spec["checks"]:
         typer.echo(f"  {'ok ' if c['ok'] else 'FAIL'} {c['name']}: {c['detail']}")

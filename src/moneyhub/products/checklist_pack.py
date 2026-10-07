@@ -38,6 +38,12 @@ class ChecklistPack(ProductType[ChecklistContent]):
     content_model = ChecklistContent
     supported_sizes = ["letter", "a4", "eink"]
     price_range = (3.0, 9.0)
+    layouts = {"classic": "Classic: two columns of tick boxes and a notes box",
+               "compact": "Compact: three columns, small type, more on a page",
+               "spacious": "Spacious: one wide column, big circles, ruled notes",
+               "boxed": "Boxed: each group in its own box"}
+    auto_layout = True
+    layout_preview_page = 1
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> ChecklistContent:
         h = list(niche.habits)
@@ -74,17 +80,25 @@ class ChecklistPack(ProductType[ChecklistContent]):
     def build(self, ctx: BuildContext, content: ChecklistContent) -> BuildResult:
         slug = self.slug(content.title)
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "checklists.html.j2", jobs, extra_css=_DAILY_CSS + _CL_CSS, margin=3.0)
+        renderer, lmeta = self.render_layout(ctx, "checklists.html.j2", [(s, j[1]) for s, j in zip(ctx.sizes, jobs)], {"content": content}, _cl_css, margin=3.0)
         files, pages = [], 0
         for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2, 3]))
         features = [f"{len(content.checklists)} ready-to-print checklists", "Tick boxes and a notes area on every page",
                     f"Made for {ctx.niche.audience}", "Print as many copies as you need", "Letter and A4"]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta=lmeta)
 
 
 _CL_CSS = """
 .cl-item { font-size:1.08em; margin:.62em 0; align-items:center; }
 .cl-item .sq { width:1.05em; height:1.05em; margin:0 .7em 0 0; }
 """
+
+
+def _cl_css(spec, page) -> str:
+    size = {"compact": (".92em", ".38em"), "normal": ("1.08em", ".62em"), "large": ("1.28em", ".85em")}[spec.size]
+    css = _DAILY_CSS + f".cl-item {{ font-size:{size[0]}; margin:{size[1]} 0; align-items:center; }}\n.cl-item .sq {{ width:1.05em; height:1.05em; margin:0 .7em 0 0; }}\n"
+    if spec.mark == "circle":
+        css += ".cl-item .sq { border-radius:50%; }\n"
+    return css

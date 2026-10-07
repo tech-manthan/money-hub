@@ -1,6 +1,7 @@
 {% from '_macros.html.j2' import header, lines, box, footer, cover_page %}
 {{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.days|length ~ ' guided days', 'Weekly check-ins', 'Printable']) }}
 
+{% if spec.intro %}
 <section class="page">
   {{ header(style, 'Before you begin', content.title) }}
   <p style="font-size:1.05em;max-width:34em;">{{ content.welcome }}</p>
@@ -15,28 +16,49 @@
   <div class="fill" style="margin-top:.6em;">{{ box('How I feel starting today', 8, 'soft') }}</div>
   {{ footer(content.title) }}
 </section>
+{% endif %}
 
 {% for day in content.days %}
 <section class="page">
   {{ header(style, 'Day ' ~ loop.index, day.theme) }}
+  {% if spec.prompt == 'card' %}
   <div class="card soft" style="margin-bottom:.8em;">
     <div class="label">Today's prompt</div>
     <div class="h" style="font-size:1.35em;line-height:1.25;">{{ day.prompt }}</div>
     {% if day.nudge %}<div class="small muted" style="margin-top:.5em;">{{ day.nudge }}</div>{% endif %}
   </div>
-  <div class="card" style="flex:1;"><div class="label">Write here</div>{{ lines(14) }}</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7em;margin-top:.8em;height:6.5em;">
-    {{ box('Grateful for', 3) }}{{ box('One small step', 3) }}
-    <div class="card"><div class="label">Mood</div>
+  {% elif spec.prompt == 'plain' %}
+  <div style="margin-bottom:.9em;">
+    <div class="label">Today's prompt</div>
+    <div class="h" style="font-size:1.7em;line-height:1.22;margin-top:.15em;">{{ day.prompt }}</div>
+    {% if day.nudge %}<div class="small muted" style="margin-top:.4em;">{{ day.nudge }}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="margin-bottom:.8em;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);">
+    <div class="label" style="color:var(--accent-ink);opacity:.85;">Today's prompt</div>
+    <div class="h" style="font-size:1.35em;line-height:1.25;color:var(--accent-ink);">{{ day.prompt }}</div>
+    {% if day.nudge %}<div class="small" style="margin-top:.5em;opacity:.9;">{{ day.nudge }}</div>{% endif %}
+  </div>
+  {% endif %}
+  <div class="card jr-write" style="flex:1;"><div class="label">Write here</div>{{ lines(14) }}</div>
+  {% if spec.bottom %}
+  <div style="display:grid;grid-template-columns:repeat({{ spec.bottom|length }},1fr);gap:.7em;margin-top:.8em;height:6.5em;">
+    {% for b in spec.bottom %}
+    {% if b == 'gratitude' %}{{ box('Grateful for', 3) }}
+    {% elif b == 'step' %}{{ box('One small step', 3) }}
+    {% elif b == 'win' %}{{ box("Today's win", 3) }}
+    {% else %}<div class="card"><div class="label">Mood</div>
       <div style="display:flex;justify-content:space-between;margin-top:.5em;">{% for i in range(5) %}<span class="check" style="width:1.6em;height:1.6em;"></span>{% endfor %}</div>
       <div class="small muted" style="display:flex;justify-content:space-between;margin-top:.3em;"><span>low</span><span>great</span></div>
-    </div>
+    </div>{% endif %}
+    {% endfor %}
   </div>
+  {% endif %}
   {{ footer(content.title, false, content.affirmations[loop.index0 % content.affirmations|length]) }}
 </section>
-{% if loop.index % 7 == 0 %}
+{% if spec.checkin_every and loop.index % spec.checkin_every == 0 %}
 <section class="page">
-  {{ header(style, 'Week ' ~ (loop.index // 7) ~ ' check-in', 'Pause and look back') }}
+  {{ header(style, ('Week ' if spec.checkin_every == 7 else 'Check-in ') ~ (loop.index // spec.checkin_every) ~ (' check-in' if spec.checkin_every == 7 else ''), 'Pause and look back') }}
   <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:.8em;flex:1;min-height:0;">
     {{ box('What went well', 5) }}{{ box('What was hard', 5) }}{{ box('What I learned', 5) }}{{ box('What I will carry forward', 5) }}
   </div>

@@ -72,6 +72,7 @@ class ProductType(ABC, Generic[C]):
     layouts: ClassVar[dict[str, str]] = {}
     layout_marker: ClassVar[str] = ""   # text on the page that shows the layout best (used for the live thumbnail)
 
+    layout_preview_page: ClassVar[int] = 0   # PDF page (0-based) shown in the thumbnail when layout_marker is empty or not found
     auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option
 
     def layout_preview_image(self, ctx: "BuildContext", content):
@@ -134,6 +135,42 @@ class ProductType(ABC, Generic[C]):
         margin = ctx.options.get("margin_em", margin)
         html = render_html(template, ctx.style, page, extra_css=extra_css, margin=margin, **tctx)
         return render_pdf(html, out, page_css_size=page.css_size)
+
+    def render_fitted(self, ctx: "BuildContext", template: str, page: PageSize, out: Path, tctx: dict, css_for, fallback, margin: float = 3.4,
+                      expected: int | None = None) -> tuple[str, str]:
+        """Render a page layout spec (tctx["spec"]). If the PDF ends up with more pages than the template has sections, something
+        overflowed: re-render with the fallback spec. Returns (renderer, note); the spec actually used is left in tctx["spec"]."""
+        import re
+        from ..render.raster import pdf_page_count
+
+        def run():
+            return self.render_jobs(ctx, template, [(page, out, tctx)], extra_css=lambda pg: css_for(tctx["spec"], pg), margin=margin)
+
+        renderer = run()
+        html = render_html(template, ctx.style, page, extra_css=css_for(tctx["spec"], page), margin=ctx.options.get("margin_em", margin), **tctx)
+        want = expected if expected is not None else len(re.findall(r'<section class="page', html))
+        if pdf_page_count(out) <= want:
+            return renderer, ""
+        note = f"layout '{tctx['spec'].name}' did not fit on {page.label}; used {fallback.name}"
+        tctx["spec"] = fallback
+        return run(), note
+
+    def render_layout(self, ctx: "BuildContext", template: str, outs: list[tuple[str, Path]], tctx: dict, css_for, margin: float = 3.4,
+                      expected: int | None = None) -> tuple[str, dict]:
+        """Render this product's PDFs (one per (size, path)) in the chosen page layout. Returns (renderer, meta) where meta
+        names the layout actually used and any fallback notes. A layout that overflows a size falls back to the first preset."""
+        from .. import layouts as lay
+
+        base = lay.resolve(self.key, self.layout_of(ctx), ctx.options, ctx.seed)
+        fallback = next(iter(lay.PRESETS[self.key].values()))
+        renderer, notes, shown = "", [], base
+        for size, out in outs:
+            job = {**tctx, "spec": base}
+            renderer, note = self.render_fitted(ctx, template, ctx.page(size), out, job, css_for, fallback, margin, expected)
+            if note:
+                notes.append(note)
+            shown = job["spec"]
+        return renderer, {"layout": shown.name, "layout_spec": shown.model_dump(), "layout_notes": notes}
 
     def render_jobs(self, ctx: BuildContext, template: str, jobs: list[tuple[PageSize, Path, dict]],
                     extra_css=None, margin: float = 3.4) -> str:

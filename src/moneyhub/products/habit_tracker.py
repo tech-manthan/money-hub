@@ -34,6 +34,12 @@ class HabitTracker(ProductType[HabitContent]):
     default_sizes = ["letter", "a4"]
     price_range = (4.0, 10.0)
     typical_formats = "XLSX (Excel / Google Sheets) + PDF"
+    layouts = {"grid": "Grid: a row per habit, 31 day columns, reflection boxes below",
+               "circles": "Circles: round tick spots, shaded rows, room for long habit names",
+               "days": "Days down: a row per day, a column per habit",
+               "roomy": "Roomy: extra blank habit rows to write your own"}
+    auto_layout = True
+    layout_marker = "Goal:"
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> HabitContent:
         habits = list(dict.fromkeys(niche.habits))[:10]
@@ -64,7 +70,8 @@ class HabitTracker(ProductType[HabitContent]):
         files = [ProductFile(xlsx_path, "xlsx", "Excel / Google Sheets workbook (checkboxes, auto % & chart)", True)]
         renderer, pages = "", 0
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-printable-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "habit_tracker_print.html.j2", jobs, extra_css=_HT_CSS, margin=2.6)
+        renderer, lmeta = self.render_layout(ctx, "habit_tracker_print.html.j2", [(s, o) for s, o in zip(ctx.sizes, (j[1] for j in jobs))],
+                                             {"content": content}, _ht_css, margin=2.6, expected=2)
         for page, out, _ in jobs:
             _repeat_page(out, page_index=1, copies=11)  # one month page rendered once, cloned for 12 months
             pages = pdf_page_count(out)
@@ -78,7 +85,7 @@ class HabitTracker(ProductType[HabitContent]):
             "Works in Excel, Google Sheets and Numbers",
         ]
         return BuildResult(content.title, content.subtitle, files, features, pages, renderer,
-                           meta={"sheet_kind": "habit", "habits": content.habits})
+                           meta={"sheet_kind": "habit", "habits": content.habits, **lmeta})
 
 
 def _repeat_page(pdf, page_index: int, copies: int) -> None:
@@ -104,6 +111,19 @@ _HT_CSS = """
 .ht-cell { flex:1; display:flex; align-items:center; justify-content:center; border-right:1px solid var(--line); font-size:.55em; min-width:0; }
 .ht-cell .sq { width:.9em; height:.9em; }
 """
+
+
+def _ht_css(spec, page) -> str:
+    css = _HT_CSS + f".ht-name {{ width:{ {'narrow': '8em', 'normal': '11em', 'wide': '14em'}[spec.name_width] }; }}\n"
+    if spec.mark == "circle":
+        css += ".ht-cell .sq { border-radius:50%; }\n"
+    if spec.stripes:
+        css += ".ht-row:nth-child(even):not(.ht-head) { background:var(--soft); }\n"
+    if spec.view == "days_down":
+        css += (".ht-day { flex:none; width:2.6em; display:flex; align-items:center; justify-content:center; font-size:.6em; border-right:1px solid var(--line); font-weight:700; color:var(--accent); }\n"
+                ".ht-hcell { flex:1; min-width:0; font-size:.5em; line-height:1.15; padding:.3em .2em; text-align:center; display:flex; align-items:center; justify-content:center; border-right:1px solid var(--line); overflow:hidden; }\n"
+                ".ht-head.dd { height:4.6em; }\n.ht-row .ht-cell { font-size:.7em; }\n")
+    return css
 
 
 def _build_xlsx(path, content: HabitContent, ctx: BuildContext) -> None:

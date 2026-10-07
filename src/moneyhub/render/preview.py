@@ -61,7 +61,7 @@ def layout_preview_png(product_type: str, layout: str, palette: str = "", fonts:
         res = pt.build(ctx, content)
         pdf = next(f.path for f in res.files if f.kind == "pdf")
         doc = pdfium.PdfDocument(str(pdf))
-        index = 0
+        index = pt.layout_preview_page
         for i in range(len(doc)):
             if pt.layout_marker and pt.layout_marker in doc[i].get_textpage().get_text_range():
                 index = i

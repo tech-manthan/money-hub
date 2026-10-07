@@ -1,15 +1,18 @@
 {% from '_macros.html.j2' import header, footer, cover_page %}
 {{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.cards|length ~ ' cards', 'Cut & use', 'Print at home']) }}
-{% set per = 9 %}
+{% set per = spec.per_page %}
+{% set pad = '1.4em' if spec.size == 'mini' else '2.2em' %}
 {% for start in range(0, content.cards|length, per) %}
-<section class="page" style="padding:2.2em;">
+<section class="page" style="padding:{{ pad }};">
   <div class="cardsheet">
     {% for c in content.cards[start:start+per] %}
-    <div class="deckcard {{ ['a','b','c'][(start + loop.index0) % 3] }}">
+    {% set n = c.text|length %}
+    {% set fill = {'rotate': ['a','b','c'][(start + loop.index0) % 3], 'soft': 'a', 'plain': 'b', 'accent': 'c'}[spec.fill] %}
+    <div class="deckcard {{ fill }} bd-{{ spec.border }}">
       <div class="label dc-top">{{ c.category or content.subtitle }}</div>
-      <div class="dc-text h">{{ c.text }}</div>
+      <div class="dc-text h" style="font-size:{{ (1.9 if spec.text_size == 'big' else 1.55) * (1 if n <= 40 else 0.84 if n <= 80 else 0.7) }}em;">{{ c.text }}</div>
       {% if c.hint %}<div class="dc-hint script">{{ c.hint }}</div>{% endif %}
-      <div class="dc-num">{{ start + loop.index }}</div>
+      {% if spec.numbers %}<div class="dc-num">{{ start + loop.index }}</div>{% endif %}
     </div>
     {% endfor %}
   </div>

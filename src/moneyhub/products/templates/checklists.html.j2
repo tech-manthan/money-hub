@@ -4,15 +4,16 @@
 <section class="page">
   {{ header(style, cl.title, content.title) }}
   {% if cl.intro %}<p class="muted" style="margin:0 0 .8em;max-width:36em;">{{ cl.intro }}</p>{% endif %}
-  <div style="columns:2;column-gap:1.4em;flex:1;min-height:0;">
+  <div style="columns:{{ spec.columns }};column-gap:1.4em;flex:1;min-height:0;">
     {% for g in cl.groups %}
-    <div style="break-inside:avoid;margin-bottom:1em;">
+    {% if spec.groups == 'card' %}<div class="card" style="break-inside:avoid;margin-bottom:.8em;">{% else %}<div style="break-inside:avoid;margin-bottom:1em;">{% endif %}
       <div class="label" style="margin-bottom:.4em;">{{ g.name }}</div>
       {% for it in g['items'] %}<div class="cl-item"><span class="sq"></span><span>{{ it }}</span></div>{% endfor %}
     </div>
     {% endfor %}
   </div>
-  <div style="height:5.5em;margin-top:.6em;display:flex;flex-direction:column;">{{ box('Notes', 3, 'soft') }}</div>
-  {{ footer(content.title, false, 'Date: ____________') }}
+  {% if spec.notes == 'box' %}<div style="height:5.5em;margin-top:.6em;display:flex;flex-direction:column;">{{ box('Notes', 3, 'soft') }}</div>
+  {% elif spec.notes == 'lines' %}<div style="height:6.5em;margin-top:.6em;display:flex;flex-direction:column;"><div class="label">Notes</div>{{ lines(3) }}</div>{% endif %}
+  {{ footer(content.title, false, 'Date: ____________' if spec.date_line else '') }}
 </section>
 {% endfor %}

@@ -114,6 +114,12 @@ def _reflective(topic: str, niche: NicheProfile, rng: random.Random) -> Sheet:
 @register
 class WorksheetPack(ProductType[WorksheetContent]):
     key = "worksheet_pack"
+    layouts = {"classic": "Classic: numbered boxes, directions card, two answer lines",
+               "two_column": "Two columns: more questions side by side",
+               "clean": "Clean: no boxes, plain numbers and generous answer lines",
+               "roomy": "Roomy: four answer lines and one choice per line"}
+    auto_layout = True
+    layout_preview_page = 1
     label = "Worksheet pack"
     description = "Printable worksheets with directions and an answer key (classroom/homeschool or self-guided exercises)."
     content_model = WorksheetContent
@@ -144,10 +150,18 @@ class WorksheetPack(ProductType[WorksheetContent]):
         slug = self.slug(content.title)
         files, renderer, pages = [], "", 0
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "worksheets.html.j2", jobs, margin=3.0)
+        renderer, lmeta = self.render_layout(ctx, "worksheets.html.j2", [(s, j[1]) for s, j in zip(ctx.sizes, jobs)], {"content": content}, _ws_css, margin=3.0)
         for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 2, len(content.sheets) + 1]))
         features = [f"{len(content.sheets)} ready-to-print worksheets", "Complete answer key", f"Level: {content.level}",
                     "Print as many copies as you need", f"Created for {ctx.niche.audience}"]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta=lmeta)
+
+
+def _ws_css(spec, page) -> str:
+    q = 2.2 + spec.answer_lines * 1.9
+    css = f".ws-q {{ min-height:{q:.1f}em; }}\n.ws-q.plain {{ border-bottom:1px solid var(--line); padding:.3em 0; }}\n"
+    if spec.columns == 2:
+        css += ".ws-grid { display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:.55em .9em; }\n"
+    return css

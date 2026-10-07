@@ -34,6 +34,12 @@ class BudgetContent(BaseModel):
 @register
 class BudgetTracker(ProductType[BudgetContent]):
     key = "budget_tracker"
+    layouts = {"classic": "Classic: income and savings left, expenses right, plus bills, savings, debt and year pages",
+               "stacked": "Stacked: income and savings across the top, expenses in columns below",
+               "essentials": "Essentials: three monthly pages and a big bill tracker, nothing else",
+               "savers": "Savers: one monthly page, savings progress bars, short bill list"}
+    auto_layout = True
+    layout_marker = "Pay period"
     label = "Budget tracker"
     description = "Spreadsheet with transactions, monthly budget vs actual, savings goals, debt payoff and dashboard + printable budget pages."
     content_model = BudgetContent
@@ -78,7 +84,7 @@ class BudgetTracker(ProductType[BudgetContent]):
         files = [ProductFile(xlsx_path, "xlsx", "Excel / Google Sheets workbook (formulas, dashboard, charts)", True)]
         renderer, pages = "", 0
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-printable-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "budget_print.html.j2", jobs, extra_css=_BUDGET_CSS, margin=2.8)
+        renderer, lmeta = self.render_layout(ctx, "budget_print.html.j2", [(s, j[1]) for s, j in zip(ctx.sizes, jobs)], {"content": content}, lambda spec, page: _BUDGET_CSS, margin=2.8)
         for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 1, 3, 5]))
@@ -92,7 +98,7 @@ class BudgetTracker(ProductType[BudgetContent]):
             f"Categories tailored for {ctx.niche.audience}",
         ]
         return BuildResult(content.title, content.subtitle, files, features, pages, renderer,
-                           meta={"sheet_kind": "budget", "groups": [(g.name, len(g.categories)) for g in content.expense_groups]})
+                           meta={"sheet_kind": "budget", "groups": [(g.name, len(g.categories)) for g in content.expense_groups], **lmeta})
 
 
 _BUDGET_CSS = """

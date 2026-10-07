@@ -33,6 +33,12 @@ class GuideContent(BaseModel):
 @register
 class EbookGuide(ProductType[GuideContent]):
     key = "ebook_guide"
+    layouts = {"classic": "Classic: key points as bullets, then action steps and notes",
+               "split": "Split: numbered key points on the left, action steps on the right",
+               "cards": "Cards: key points as small cards, contents as tiles",
+               "airy": "Airy: takeaway first, numbered points, lots of notes space"}
+    auto_layout = True
+    layout_preview_page = 2
     label = "Short guide"
     description = "Printable beginner guide with chapters, key points and action steps (LLM-written; review facts before selling)."
     content_model = GuideContent
@@ -65,11 +71,16 @@ class EbookGuide(ProductType[GuideContent]):
     def build(self, ctx: BuildContext, content: GuideContent) -> BuildResult:
         slug = self.slug(content.title)
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "guide.html.j2", jobs, extra_css=_DAILY_CSS, margin=3.2)
+        renderer, lmeta = self.render_layout(ctx, "guide.html.j2", [(s, j[1]) for s, j in zip(ctx.sizes, jobs)], {"content": content}, _guide_css, margin=3.2)
         files, pages = [], 0
         for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable / read on screen", True, preview_pages=[0, 1, 2, 3]))
         features = [f"{len(content.chapters)} chapters", "Key points and a takeaway in every chapter", "Action steps with tick boxes and notes",
                     f"Written for {ctx.niche.audience}", "Read on screen or print"]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta=lmeta)
+
+
+def _guide_css(spec, page) -> str:
+    return _DAILY_CSS + (".gd-split { display:flex; gap:1em; flex:1; min-height:0; }\n.gd-split > div { flex:1; min-width:0; display:flex; flex-direction:column; }\n"
+                         ".gd-cards { display:grid; grid-template-columns:1fr 1fr; gap:.5em; }\n.gd-toc-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6em; }\n")

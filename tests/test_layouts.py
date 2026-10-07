@@ -15,7 +15,7 @@ WITH_LAYOUTS = {k: t for k, t in all_product_types().items() if t.layouts}
 def test_planners_offer_several_layouts_and_the_first_is_the_default():
     assert {"weekly_planner", "daily_planner"} <= set(WITH_LAYOUTS)
     for t in WITH_LAYOUTS.values():
-        assert len(t.layouts) >= 3 and (t.layout_marker or type(t).layout_preview_image is not ProductType.layout_preview_image)
+        assert len(t.layouts) >= 3 and (t.layout_marker or t.layout_preview_page or type(t).layout_preview_image is not ProductType.layout_preview_image)
 
 
 @pytest.mark.parametrize("key", sorted(WITH_LAYOUTS))
@@ -33,7 +33,8 @@ def test_a_chosen_layout_is_used_and_an_unknown_one_is_refused():
                          options={"page_layout": "bogus", "no_research": True}))
 
 
-def test_cli_and_api_validate_the_layout():
+def test_cli_and_api_validate_the_layout(monkeypatch):
+    monkeypatch.setattr(get_product_type("card_deck"), "layouts", {})   # every shipped type has layouts now: stand in for a fixed-layout one
     bad = CliRunner().invoke(cli, ["make", "nurse", "weekly_planner", "--page-layout", "bogus", "--llm", "builtin"])
     assert bad.exit_code != 0 and "grid" in bad.output
     none = CliRunner().invoke(cli, ["make", "nurse", "card_deck", "--page-layout", "grid", "--llm", "builtin"])
@@ -113,6 +114,7 @@ def test_generated_layouts_fit_on_every_page_size(ptype, size):
 
 
 def test_api_designs_a_layout_and_rejects_a_bad_one(monkeypatch):
+    monkeypatch.delitem(lay.SPEC_MODELS, "card_deck")   # stand-in for a product with no generated layouts
     class NoAI:
         def complete_json(self, *a, **k):
             return None
@@ -161,3 +163,44 @@ def test_wall_art_described_and_generated_layouts_build():
     for opts in ({"layout_spec": spec.model_dump()}, {"page_layout": "auto:5"}, {"page_layout": "mixed"}):
         res = generate(Request("nurse", "wall_art", providers=["builtin"], seed=3, sizes=["4x5"], with_images=False, with_video=False, options=opts))
         assert res.qa_status in ("pass", "warn")
+
+
+# ---------------------------------------------------------------- layouts for every other product type
+SPEC_PRODUCTS = ["habit_tracker", "guided_journal", "checklist_pack", "worksheet_pack", "card_deck", "ebook_guide", "budget_tracker"]
+
+
+def test_every_product_with_a_spec_is_registered_for_layouts():
+    assert set(SPEC_PRODUCTS) <= set(WITH_LAYOUTS) and all(WITH_LAYOUTS[k].auto_layout for k in SPEC_PRODUCTS)
+    for k in SPEC_PRODUCTS:   # the first preset is the default, and every preset is a valid, already-normalised spec
+        assert all(s == s.normalised() for s in lay.PRESETS[k].values())
+
+
+@pytest.mark.parametrize("key", SPEC_PRODUCTS)
+def test_generated_specs_are_consistent_and_vary(key):
+    specs = [lay.RANDOM[key](seed) for seed in range(1, 150)]
+    assert all(s == s.normalised() for s in specs)
+    assert len({s.model_dump_json(exclude={"name"}) for s in specs}) > 10
+    spec, how = lay.spec_from_text(key, "something simple", None)
+    assert how == "random" and spec == spec.normalised()
+
+
+@pytest.mark.parametrize("key", SPEC_PRODUCTS)
+def test_each_product_builds_in_a_preset_a_generated_and_a_described_layout(key):
+    pt = get_product_type(key)
+    spec, _ = lay.spec_from_text(key, "my own layout", None)
+    for opts in ({"page_layout": list(pt.layouts)[-1]}, {"page_layout": "auto:7"}, {"layout_spec": spec.model_dump()}):
+        r = generate(Request("nurse", key, providers=["builtin"], seed=4, sizes=[pt.default_sizes[0]], with_images=False, with_video=False,
+                             options={**opts, "no_research": True, "weeks": 4}))
+        assert r.qa_status in ("pass", "warn")
+
+
+def test_a_layout_that_overflows_falls_back_to_the_first_preset():
+    pt = get_product_type("checklist_pack")
+    niche = resolve_niche("nurse")
+    with tempfile.TemporaryDirectory() as tmp:
+        ctx = BuildContext(niche=niche, style=choose_style(seed=3), out_dir=Path(tmp), sizes=["letter"], seed=3, providers=["builtin"], options={})
+        content = pt.builtin_content(niche, _random.Random(3), {})
+        tctx = {"content": content, "spec": lay.CHECKLIST_PRESETS["spacious"]}
+        note = pt.render_fitted(ctx, "checklists.html.j2", ctx.page("letter"), Path(tmp) / "x.pdf", tctx,
+                                lambda spec, page: ".cl-item { font-size:9em; }", lay.CHECKLIST_PRESETS["classic"])[1]
+    assert "did not fit" in note and tctx["spec"].name == "classic"

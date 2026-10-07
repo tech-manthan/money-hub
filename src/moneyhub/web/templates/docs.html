@@ -81,11 +81,11 @@ moneyhub make "nurse" daily_planner --layout-prompt "no schedule, long to-do lis
 <h2 id="export">Sell it somewhere else: KDP, Notion, Canva</h2>
 <p>On a product's page, <b>Sell it somewhere else</b> makes a ready-to-use pack, each with a step-by-step guide.</p>
 <ul>
-  <li><b>Amazon KDP paperback.</b> A print-ready interior at an exact book size (6 x 9 in and others), margins that meet KDP's rules for the page count, a cover template with the spine width worked out, and a KDP guide. Always confirm the spine width with KDP's own cover generator.</li>
+  <li><b>Amazon KDP paperback.</b> A print-ready interior at an exact book size (6 x 9 in and others), margins that meet KDP's rules for the page count, a finished full-wrap cover with the spine width worked out (you can add your own cover picture), a guide-line cover template, and a KDP guide. Always confirm the spine width with KDP's own cover generator.</li>
   <li><b>Notion.</b> A zip of pages and databases that Notion imports. After importing, switch columns to Checkbox or Date as you like. Notion cannot import formulas.</li>
   <li><b>Canva.</b> The pages as a PDF and images for Canva's import, a brand kit (colours and fonts), a "your template link" page for buyers, and a how-to. Canva does not accept template files from outside, so you finish the template inside Canva and paste its link into the buyer page.</li>
 </ul>
-<pre class="copybox">moneyhub export kdp 4 --trim 6x9 --paper white
+<pre class="copybox">moneyhub export kdp 4 --trim 6x9 --paper white --cover-image my-cover.jpg   # picture optional
 moneyhub export notion 4
 moneyhub export canva 4 --link "https://www.canva.com/design/..."</pre>
 <p class="meta">Check each platform's current rules before selling: KDP content guidelines, Notion's and Canva's template-selling terms.</p>
@@ -134,7 +134,7 @@ moneyhub ui --port 8766                            # this web app</pre>
   <tr><td><code>--grid</code></td><td>{{ grids|join(', ') }}</td></tr>
   <tr><td><code>--motif</code></td><td>Wall art only: {{ motifs|join(', ') }}</td></tr>
   <tr><td><code>--brand</code>, <code>--eink</code></td><td>Your hex colour; e-ink black-and-white version</td></tr>
-  <tr><td><code>--page-layout</code>, <code>--layout-prompt</code></td><td>Weekly/daily planner and wall art layouts: a preset, <code>auto:NUMBER</code>, or a description in words</td></tr>
+  <tr><td><code>--page-layout</code>, <code>--layout-prompt</code></td><td>Layouts for planners, wall art, habit tracker, journal, checklists, worksheets, card deck, guide and budget pages: a preset, <code>auto:NUMBER</code>, or a description in words</td></tr>
   <tr><td><code>--seed</code></td><td>Any number. Repeats a look.</td></tr>
   <tr><td><code>--llm</code></td><td>e.g. <code>builtin</code> (offline) or <code>claude_cli,builtin</code></td></tr>
   <tr><td><code>--ai-art</code>, <code>--art-provider</code></td><td>AI poster backgrounds (wall art, needs a key)</td></tr>

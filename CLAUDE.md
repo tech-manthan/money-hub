@@ -24,6 +24,7 @@ moneyhub ui
 - No PRs or pushes unless the owner asks.
 
 ## More things to know
+- **WeasyPrint + CSS grid**: a `display:grid` page containing nested flex tables can intermittently take ~15 minutes to lay out (same input, random run). The budget pages use flex rows for that reason; prefer flex for anything that holds `.tbl` tables. After code changes, restart `moneyhub ui` (a running UI keeps old Python but reads new templates, which gives 500 errors).
 - **Guided UI**: `/` landing, `/make` 3-step wizard (`web/templates/start.html`, `web/static/start.js`), `/docs` user guide, `/settings` keys. Everything in the UI is also a CLI flag; keep them in step (`moneyhub styles` lists the options).
 - **Page layouts**: `layouts.py` holds layout specs (weekly, daily). Presets + `auto:N` generated + AI "described" layouts. To give another product type layouts: add a spec model/presets/random generator there, read `spec` in its template, set `layouts`, `auto_layout`, `layout_marker` on the class, and add a fit check like `weekly_planner.py`.
 - **Keys**: `keystore.py` writes a git-ignored `.env` (0600); never put keys in yaml or code. Settings endpoints are local-only (Host/Origin checked).
@@ -39,9 +40,9 @@ Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `cla
 Do these in order; commit each with tests; no pushes unless the owner asks (3+ commits are local and unpushed at the time of writing).
 1. ~~Wall-art motifs~~ done (scallop/topo/bouquet/retro redrawn; test covers every motif).
 2. ~~Wall-art page layouts~~ done: `WallArtSpec` in `layouts.py` (presets stacked/headline/framed/poster/divided + `mixed`, `auto:N`, described); `art_boxes()` is the one geometry source for the page template and the editable SVG; `--layout 0-4` is a hidden alias for the first five presets. Default is now `stacked` (was mixed).
-3. **Layouts for the other product types** (habit tracker print pages, journal, checklist pack, worksheet pack, card deck, ebook guide, budget print pages): spec model + presets + generator + fit check each, following `weekly_planner.py`.
-4. **KDP export for more products** (checklists/worksheets already supported; add card deck as a printed deck is not a KDP product, so skip; consider journal/guide cover polish and a real cover image option).
-5. **Verify on real platforms** (needs the owner): import the Notion zip into Notion, the Canva PDF into Canva, the KDP interior/cover in KDP's previewer, the e-ink PDFs on a device, GoodNotes links, xlsx in Excel/Numbers. Fix what breaks and add tests.
+3. ~~Layouts for the other product types~~ done: habit tracker, guided journal, checklist pack, worksheet pack, card deck, ebook guide, budget tracker each have a spec + presets + `random_*_spec` in `layouts.py`; templates read `spec`, CSS comes from a `_css(spec, page)` helper, and `ProductType.render_layout()`/`render_fitted()` re-render with the first preset when a layout overflows (page-count check). Card deck layouts change card size/fill/border (mini 12, poker 9, large 4 per sheet).
+4. ~~KDP export~~ done: card deck skipped on purpose; export now also makes a finished full-wrap cover PDF (`-cover-<trim>.pdf`, designed from the palette) plus the guide-line template, accepts `--cover-image` / `--no-cover-text` (CLI) and a file box on the product page, and checks cover size and image sharpness. Journal, guide and habit tracker were already in `kdp.SUPPORTED`.
+5. **Verify on real platforms** (needs the owner; step-by-step in `docs/owner-verification.md`): import the Notion zip into Notion, the Canva PDF into Canva, the KDP interior/cover in KDP's previewer, the e-ink PDFs on a device, GoodNotes links, xlsx in Excel/Numbers. Fix what breaks and add tests.
 6. **CI**: push the branch (owner's call) and fix whatever the GitHub macOS/Linux matrix reports.
 7. **Image-AI providers** (Hugging Face / Together / OpenAI) are untested: needs a key from the owner; test via Settings > Test, then a wall-art build with `--art-provider huggingface`.
 8. **Penpot**: try importing an `editable/*.svg` into a real Penpot and fix import problems.

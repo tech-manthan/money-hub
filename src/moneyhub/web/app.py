@@ -1,6 +1,7 @@
 """Local web UI: create products, review them, copy listing text, track listings and sales."""
 from __future__ import annotations
 
+import io
 import json
 import queue
 import threading
@@ -9,7 +10,7 @@ import traceback
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -318,7 +319,8 @@ def _export_kinds(ptype: str) -> list[str]:
 
 
 @app.post("/product/{pid}/export")
-def export_product(pid: int, kind: str = Form(...), trim: str = Form("6x9"), paper: str = Form("white"), link: str = Form("")):
+def export_product(pid: int, kind: str = Form(...), trim: str = Form("6x9"), paper: str = Form("white"), link: str = Form(""),
+                   cover_text: str = Form("1"), cover_image: UploadFile | None = File(None)):
     """Build a KDP / Notion / Canva pack in the background."""
     from ..exports import canva, kdp, load, notion
     if kind not in ("kdp", "notion", "canva"):
@@ -328,12 +330,27 @@ def export_product(pid: int, kind: str = Form(...), trim: str = Form("6x9"), pap
     st = _store()
     if not st.product(pid):
         raise HTTPException(404)
+    art_bytes = b""
+    if kind == "kdp" and cover_image is not None and getattr(cover_image, "filename", ""):
+        art_bytes = cover_image.file.read(25_000_001)
+        if len(art_bytes) > 25_000_000:
+            raise HTTPException(422, "The cover image is bigger than 25 MB")
+        try:
+            from PIL import Image
+            Image.open(io.BytesIO(art_bytes)).verify()
+        except Exception:  # noqa: BLE001
+            raise HTTPException(422, "That file is not a picture I can read (use JPG or PNG)")
 
     def run(job):
         l = load(pid, st)
         before = {f for f in (l.folder / "exports").rglob("*")} if (l.folder / "exports").exists() else set()
         if kind == "kdp":
-            kdp.export_kdp(l, trim, paper, progress=lambda m: job["log"].append(m))
+            art = None
+            if art_bytes:
+                art = l.folder / "exports" / "cover-upload.img"
+                art.parent.mkdir(exist_ok=True)
+                art.write_bytes(art_bytes)
+            kdp.export_kdp(l, trim, paper, progress=lambda m: job["log"].append(m), cover_image=art, cover_text=cover_text == "1")
         elif kind == "notion":
             notion.export_notion(l)
         else:

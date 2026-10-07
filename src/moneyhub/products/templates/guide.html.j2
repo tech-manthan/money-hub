@@ -4,26 +4,52 @@
 <section class="page">
   {{ header(style, 'Contents', content.title) }}
   <p style="font-size:1.05em;max-width:34em;">{{ content.intro }}</p>
+  {% if spec.toc == 'grid' %}
+  <div class="gd-toc-grid" style="margin-top:1em;">
+    {% for ch in content.chapters %}
+    <div class="card soft" style="flex-direction:row;align-items:center;"><b class="h" style="font-size:1.6em;color:var(--accent);width:1.4em;">{{ loop.index }}</b><span>{{ ch.title }}</span></div>
+    {% endfor %}
+  </div>
+  {% else %}
   <div style="margin-top:1em;">
     {% for ch in content.chapters %}
     <div style="display:flex;align-items:baseline;border-bottom:1px solid var(--line);padding:.55em 0;">
       <b class="h" style="font-size:1.4em;color:var(--accent);width:1.6em;">{{ loop.index }}</b><span style="font-size:1.05em;">{{ ch.title }}</span></div>
     {% endfor %}
   </div>
+  {% endif %}
   {% if content.disclaimer %}<div class="card soft" style="margin-top:auto;font-size:.8em;"><div class="label">Please note</div>{{ content.disclaimer }}</div>{% endif %}
   {{ footer(content.title) }}
 </section>
+
+{% macro tips(ch) %}
+  <div class="label" style="margin:.6em 0 .4em;">What to know</div>
+  {% if spec.tips == 'cards' %}<div class="gd-cards">{% for t in ch.tips %}<div class="card soft" style="font-size:.92em;">{{ t }}</div>{% endfor %}</div>
+  {% else %}{% for t in ch.tips %}<div style="display:flex;margin-bottom:.55em;">
+    {% if spec.tips == 'numbered' %}<span style="color:var(--accent);font-weight:700;width:1.6em;flex:none;">{{ loop.index }}.</span>{% else %}<span style="color:var(--accent);font-weight:700;width:1.4em;flex:none;">&bull;</span>{% endif %}<span>{{ t }}</span></div>{% endfor %}{% endif %}
+{% endmacro %}
+{% macro callout(ch) %}{% if ch.callout and spec.callout != 'none' %}<div class="card soft" style="margin-top:.6em;"><div class="label">Remember</div>{{ ch.callout }}</div>{% endif %}{% endmacro %}
+{% macro actions(ch) %}
+  <div class="card" style="margin-top:.9em;flex:1;min-height:0;"><div class="label">Your action steps</div>
+    {% for a in ch.action_steps %}<div class="cl-item"><span class="sq"></span><span>{{ a }}</span></div>{% endfor %}
+    {% if spec.notes_lines %}<div class="label" style="margin-top:.8em;">Notes</div>{{ lines(spec.notes_lines) }}{% endif %}</div>
+{% endmacro %}
 
 {% for ch in content.chapters %}
 <section class="page">
   {{ header(style, 'Chapter ' ~ loop.index, ch.title) }}
   <p style="font-size:1.05em;max-width:36em;">{{ ch.intro }}</p>
-  <div class="label" style="margin:.6em 0 .4em;">What to know</div>
-  {% for t in ch.tips %}<div style="display:flex;margin-bottom:.55em;"><span style="color:var(--accent);font-weight:700;width:1.4em;flex:none;">&bull;</span><span>{{ t }}</span></div>{% endfor %}
-  {% if ch.callout %}<div class="card soft" style="margin-top:.6em;"><div class="label">Remember</div>{{ ch.callout }}</div>{% endif %}
-  <div class="card" style="margin-top:.9em;flex:1;min-height:0;"><div class="label">Your action steps</div>
-    {% for a in ch.action_steps %}<div class="cl-item"><span class="sq"></span><span>{{ a }}</span></div>{% endfor %}
-    <div class="label" style="margin-top:.8em;">Notes</div>{{ lines(4) }}</div>
+  {% if spec.body == 'split' %}
+  <div class="gd-split">
+    <div>{{ tips(ch) }}{% if spec.callout != 'none' %}{{ callout(ch) }}{% endif %}</div>
+    <div>{{ actions(ch) }}</div>
+  </div>
+  {% else %}
+  {% if spec.callout == 'before' %}{{ callout(ch) }}{% endif %}
+  {{ tips(ch) }}
+  {% if spec.callout == 'after' %}{{ callout(ch) }}{% endif %}
+  {{ actions(ch) }}
+  {% endif %}
   {{ footer(content.title) }}
 </section>
 {% endfor %}

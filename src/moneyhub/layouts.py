@@ -200,10 +200,233 @@ def random_art_spec(seed: int) -> WallArtSpec:
                        small_line=rng.random() < 0.7, margin=rng.choice(["airy", "normal", "tight"])).normalised()
 
 
+# --------------------------------------------------------------------------- habit tracker (printable month page)
+class HabitSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    view: Literal["grid", "days_down"] = Field(default="grid", description="grid: one row per habit, 31 day columns. days_down: one row per day, one column per habit")
+    mark: Literal["square", "circle"] = Field(default="square", description="Shape of the tick spot")
+    blanks: int = Field(default=3, ge=0, le=5, description="Empty habit slots to write in")
+    reflection: Literal["bottom", "none"] = Field(default="bottom", description="Three reflection boxes under the grid")
+    stripes: bool = Field(default=False, description="Shade every other row")
+    name_width: Literal["narrow", "normal", "wide"] = "normal"
+
+    def normalised(self) -> "HabitSpec":
+        s = self.model_copy(deep=True)
+        if s.view == "days_down":
+            s.blanks, s.name_width = min(s.blanks, 2), "normal"
+        return s
+
+
+HABIT_PRESETS: dict[str, HabitSpec] = {
+    "grid": HabitSpec(name="grid"),
+    "circles": HabitSpec(name="circles", mark="circle", stripes=True, name_width="wide"),
+    "days": HabitSpec(name="days", view="days_down", reflection="none", blanks=1),
+    "roomy": HabitSpec(name="roomy", blanks=5, reflection="none", name_width="wide"),
+}
+
+
+def random_habit_spec(seed: int) -> HabitSpec:
+    rng = random.Random(seed)
+    return HabitSpec(name=f"auto {seed}", view=rng.choices(["grid", "days_down"], [3, 1])[0], mark=rng.choice(["square", "circle"]), blanks=rng.randint(0, 5),
+                     reflection=rng.choice(["bottom", "bottom", "none"]), stripes=rng.random() < 0.5, name_width=rng.choice(["narrow", "normal", "wide"])).normalised()
+
+
+# --------------------------------------------------------------------------- journal
+class JournalSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    prompt: Literal["card", "plain", "banner"] = Field(default="card", description="How the day's prompt is shown: in a soft card, as plain large text, or in a coloured banner")
+    writing: Literal["lines", "dotted", "grid", "blank"] = Field(default="lines", description="The writing area background")
+    bottom: list[Literal["gratitude", "step", "mood", "win"]] = Field(default_factory=lambda: ["gratitude", "step", "mood"], max_length=3, description="Small boxes under the writing area")
+    checkin_every: Literal[0, 5, 7, 10] = Field(default=7, description="A reflection page after this many days; 0 for none")
+    intro: bool = Field(default=True, description="A 'before you begin' page")
+
+    def normalised(self) -> "JournalSpec":
+        s = self.model_copy(deep=True)
+        s.bottom = list(dict.fromkeys(s.bottom))[:3]
+        return s
+
+
+JOURNAL_PRESETS: dict[str, JournalSpec] = {
+    "classic": JournalSpec(name="classic"),
+    "dotted": JournalSpec(name="dotted", writing="dotted", prompt="plain", bottom=["gratitude", "win"]),
+    "banner": JournalSpec(name="banner", prompt="banner", writing="lines", bottom=["step", "mood"], checkin_every=10),
+    "open": JournalSpec(name="open", writing="blank", prompt="plain", bottom=[], checkin_every=0, intro=False),
+}
+
+
+def random_journal_spec(seed: int) -> JournalSpec:
+    rng = random.Random(seed)
+    return JournalSpec(name=f"auto {seed}", prompt=rng.choice(["card", "plain", "banner"]), writing=rng.choice(["lines", "dotted", "grid", "blank"]),
+                       bottom=rng.sample(["gratitude", "step", "mood", "win"], rng.randint(0, 3)), checkin_every=rng.choice([0, 5, 7, 7, 10]),
+                       intro=rng.random() < 0.8).normalised()
+
+
+# --------------------------------------------------------------------------- checklist pack
+class ChecklistSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    columns: Literal[1, 2, 3] = Field(default=2, description="Columns of items")
+    size: Literal["compact", "normal", "large"] = "normal"
+    mark: Literal["square", "circle"] = "square"
+    groups: Literal["label", "card"] = Field(default="label", description="Group names as small headings, or each group in a box")
+    notes: Literal["box", "lines", "none"] = "box"
+    date_line: bool = Field(default=True, description="A date line in the footer")
+
+    def normalised(self) -> "ChecklistSpec":
+        s = self.model_copy(deep=True)
+        if s.columns == 3 and s.size == "large":
+            s.size = "normal"
+        if s.columns == 1 and s.size == "compact":
+            s.size = "normal"
+        return s
+
+
+CHECKLIST_PRESETS: dict[str, ChecklistSpec] = {
+    "classic": ChecklistSpec(name="classic"),
+    "compact": ChecklistSpec(name="compact", columns=3, size="compact", notes="none"),
+    "spacious": ChecklistSpec(name="spacious", columns=1, size="large", mark="circle", notes="lines"),
+    "boxed": ChecklistSpec(name="boxed", groups="card", notes="none"),
+}
+
+
+def random_checklist_spec(seed: int) -> ChecklistSpec:
+    rng = random.Random(seed)
+    return ChecklistSpec(name=f"auto {seed}", columns=rng.choice([1, 2, 2, 3]), size=rng.choice(["compact", "normal", "normal", "large"]), mark=rng.choice(["square", "circle"]),
+                         groups=rng.choice(["label", "card"]), notes=rng.choice(["box", "lines", "none"]), date_line=rng.random() < 0.7).normalised()
+
+
+# --------------------------------------------------------------------------- worksheet pack
+class WorksheetSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    columns: Literal[1, 2] = Field(default=1, description="Columns of questions")
+    cards: bool = Field(default=True, description="Each question in its own bordered box")
+    numbering: Literal["circle", "plain"] = "circle"
+    directions: Literal["card", "inline"] = Field(default="card", description="Directions in a shaded box or as a plain line")
+    answer_lines: int = Field(default=2, ge=1, le=4, description="Writing lines under a written-answer question")
+    choices: Literal["inline", "stacked"] = Field(default="inline", description="Multiple choice options side by side or one per line")
+    name_line: bool = Field(default=True, description="Name and date line at the top")
+
+    def normalised(self) -> "WorksheetSpec":
+        s = self.model_copy(deep=True)
+        if s.columns == 2:
+            s.answer_lines = min(s.answer_lines, 3)
+            s.choices = "stacked"
+        return s
+
+
+WORKSHEET_PRESETS: dict[str, WorksheetSpec] = {
+    "classic": WorksheetSpec(name="classic"),
+    "two_column": WorksheetSpec(name="two column", columns=2, answer_lines=2, choices="stacked"),
+    "clean": WorksheetSpec(name="clean", cards=False, numbering="plain", directions="inline", answer_lines=3),
+    "roomy": WorksheetSpec(name="roomy", answer_lines=4, choices="stacked"),
+}
+
+
+def random_worksheet_spec(seed: int) -> WorksheetSpec:
+    rng = random.Random(seed)
+    return WorksheetSpec(name=f"auto {seed}", columns=rng.choice([1, 1, 2]), cards=rng.random() < 0.6, numbering=rng.choice(["circle", "plain"]),
+                         directions=rng.choice(["card", "inline"]), answer_lines=rng.randint(1, 4), choices=rng.choice(["inline", "stacked"]),
+                         name_line=rng.random() < 0.8).normalised()
+
+
+# --------------------------------------------------------------------------- card deck
+class CardSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    size: Literal["mini", "poker", "large"] = Field(default="poker", description="mini 1.9x2.8 in (12 per sheet), poker 2.5x3.5 in (9 per sheet), large 3.5x5 in (4 per sheet)")
+    fill: Literal["rotate", "soft", "plain", "accent"] = Field(default="rotate", description="Card colour: rotating three colours, all soft, all white, or all accent")
+    border: Literal["inset", "double", "none"] = "inset"
+    numbers: bool = Field(default=True, description="Card number at the bottom")
+    text_size: Literal["normal", "big"] = "normal"
+
+    def normalised(self) -> "CardSpec":
+        s = self.model_copy(deep=True)
+        if s.size == "mini" and s.text_size == "big":
+            s.text_size = "normal"
+        return s
+
+    @property
+    def per_page(self) -> int:
+        return {"mini": 12, "poker": 9, "large": 4}[self.size]
+
+
+CARD_PRESETS: dict[str, CardSpec] = {
+    "classic": CardSpec(name="classic"),
+    "soft": CardSpec(name="soft", fill="soft", border="double"),
+    "mini": CardSpec(name="mini", size="mini", fill="plain", numbers=False),
+    "large": CardSpec(name="large", size="large", text_size="big", fill="rotate"),
+}
+
+
+def random_card_spec(seed: int) -> CardSpec:
+    rng = random.Random(seed)
+    return CardSpec(name=f"auto {seed}", size=rng.choice(["mini", "poker", "poker", "large"]), fill=rng.choice(["rotate", "soft", "plain", "accent"]),
+                    border=rng.choice(["inset", "double", "none"]), numbers=rng.random() < 0.7, text_size=rng.choice(["normal", "big"])).normalised()
+
+
+# --------------------------------------------------------------------------- ebook guide
+class GuideSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    toc: Literal["list", "grid"] = Field(default="list", description="Contents as a list or a grid of numbered tiles")
+    tips: Literal["bullets", "numbered", "cards"] = Field(default="bullets", description="How the key points are shown")
+    body: Literal["stacked", "split"] = Field(default="stacked", description="stacked: key points then action steps. split: key points on the left, action steps on the right")
+    callout: Literal["after", "before", "none"] = Field(default="after", description="Where the 'Remember' takeaway box goes")
+    notes_lines: int = Field(default=4, ge=0, le=8, description="Notes lines under the action steps")
+
+    def normalised(self) -> "GuideSpec":
+        s = self.model_copy(deep=True)
+        if s.body == "split":
+            s.tips = "bullets" if s.tips == "cards" else s.tips
+            s.notes_lines = min(s.notes_lines, 4)
+        return s
+
+
+GUIDE_PRESETS: dict[str, GuideSpec] = {
+    "classic": GuideSpec(name="classic"),
+    "split": GuideSpec(name="split", body="split", tips="numbered"),
+    "cards": GuideSpec(name="cards", tips="cards", toc="grid", notes_lines=2),
+    "airy": GuideSpec(name="airy", tips="numbered", callout="before", notes_lines=6),
+}
+
+
+def random_guide_spec(seed: int) -> GuideSpec:
+    rng = random.Random(seed)
+    return GuideSpec(name=f"auto {seed}", toc=rng.choice(["list", "grid"]), tips=rng.choice(["bullets", "numbered", "cards"]), body=rng.choice(["stacked", "stacked", "split"]),
+                     callout=rng.choice(["after", "before", "none"]), notes_lines=rng.randint(0, 6)).normalised()
+
+
+# --------------------------------------------------------------------------- budget print pages
+class BudgetSpec(BaseModel):
+    name: str = Field(default="custom", description="Short name, 1-3 words")
+    monthly: Literal["split", "stacked"] = Field(default="split", description="split: income and savings on the left, expenses on the right. stacked: income and savings across the top, expenses in columns below")
+    monthly_pages: int = Field(default=2, ge=1, le=3, description="Monthly budget pages")
+    savings: Literal["circles", "bars", "none"] = Field(default="circles", description="Savings tracker page style, or none")
+    bills: bool = Field(default=True, description="Bill tracker page")
+    debt: bool = Field(default=True, description="Debt payoff page")
+    year: bool = Field(default=True, description="Year-at-a-glance page")
+    bill_rows: Literal[12, 18, 24] = 18
+    totals: bool = Field(default=True, description="A 'total income / total spent / left over' strip at the bottom of each monthly page")
+
+    def normalised(self) -> "BudgetSpec":
+        return self.model_copy(deep=True)
+
+
+BUDGET_PRESETS: dict[str, BudgetSpec] = {
+    "classic": BudgetSpec(name="classic"),
+    "stacked": BudgetSpec(name="stacked", monthly="stacked", monthly_pages=2),
+    "essentials": BudgetSpec(name="essentials", monthly_pages=3, savings="none", debt=False, year=False, bill_rows=24, totals=False),
+    "savers": BudgetSpec(name="savers", monthly="stacked", monthly_pages=1, savings="bars", bill_rows=12, totals=False),
+}
+
+
+def random_budget_spec(seed: int) -> BudgetSpec:
+    rng = random.Random(seed)
+    return BudgetSpec(name=f"auto {seed}", monthly=rng.choice(["split", "stacked"]), monthly_pages=rng.randint(1, 3), savings=rng.choice(["circles", "bars", "none"]),
+                      bills=rng.random() < 0.85, debt=rng.random() < 0.6, year=rng.random() < 0.6, bill_rows=rng.choice([12, 18, 24]), totals=rng.random() < 0.7).normalised()
+
+
 # --------------------------------------------------------------------------- shared plumbing
-SPEC_MODELS = {"weekly_planner": WeeklySpec, "daily_planner": DailySpec, "wall_art": WallArtSpec}
-PRESETS = {"weekly_planner": WEEKLY_PRESETS, "daily_planner": DAILY_PRESETS, "wall_art": ART_PRESETS}
-RANDOM = {"weekly_planner": random_weekly_spec, "daily_planner": random_daily_spec, "wall_art": random_art_spec}
+SPEC_MODELS = {"weekly_planner": WeeklySpec, "daily_planner": DailySpec, "wall_art": WallArtSpec, "habit_tracker": HabitSpec, "guided_journal": JournalSpec, "checklist_pack": ChecklistSpec, "worksheet_pack": WorksheetSpec, "card_deck": CardSpec, "ebook_guide": GuideSpec, "budget_tracker": BudgetSpec}
+PRESETS = {"weekly_planner": WEEKLY_PRESETS, "daily_planner": DAILY_PRESETS, "wall_art": ART_PRESETS, "habit_tracker": HABIT_PRESETS, "guided_journal": JOURNAL_PRESETS, "checklist_pack": CHECKLIST_PRESETS, "worksheet_pack": WORKSHEET_PRESETS, "card_deck": CARD_PRESETS, "ebook_guide": GUIDE_PRESETS, "budget_tracker": BUDGET_PRESETS}
+RANDOM = {"weekly_planner": random_weekly_spec, "daily_planner": random_daily_spec, "wall_art": random_art_spec, "habit_tracker": random_habit_spec, "guided_journal": random_journal_spec, "checklist_pack": random_checklist_spec, "worksheet_pack": random_worksheet_spec, "card_deck": random_card_spec, "ebook_guide": random_guide_spec, "budget_tracker": random_budget_spec}
 
 
 def seed_of(key: str, default: int = 1) -> int:

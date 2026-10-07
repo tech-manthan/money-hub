@@ -59,6 +59,12 @@ class GuidedJournal(ProductType[JournalContent]):
     supported_sizes = ["letter", "a4", "eink"]
     price_range = (5.0, 12.0)
     typical_formats = "PDF (printable, also fillable on a tablet)"
+    layouts = {"classic": "Classic: prompt card, ruled lines, three small boxes",
+               "dotted": "Dotted: big plain prompt and a dotted page for writing or sketching",
+               "banner": "Banner: prompt in a coloured band, check-in every ten days",
+               "open": "Open: just the prompt and a blank page"}
+    auto_layout = True
+    layout_marker = "Day 1"
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> JournalContent:
         specific = [(p, "") for p in niche.prompts]
@@ -102,15 +108,32 @@ class GuidedJournal(ProductType[JournalContent]):
         slug = self.slug(content.title)
         files, renderer, pages = [], "", 0
         jobs = [(ctx.page(s), ctx.out_dir / f"{slug}-{s}.pdf", {"content": content}) for s in ctx.sizes]
-        renderer = self.render_jobs(ctx, "journal.html.j2", jobs, margin=3.0)
+        renderer, lmeta = self.render_layout(ctx, "journal.html.j2", [(s, j[1]) for s, j in zip(ctx.sizes, jobs)], {"content": content}, lambda spec, page: _jr_css(spec, page, ctx.style), margin=3.0)
+        every = lmeta["layout_spec"]["checkin_every"]
         for page, out, _ in jobs:
             pages = pdf_page_count(out)
             files.append(ProductFile(out, "pdf", f"{page.label} - printable", True, preview_pages=[0, 2, 3, 10]))
         features = [
             f"{len(content.days)} guided daily pages",
-            "Gratitude, small-step and mood boxes on every page",
-            f"{len(content.days) // 7} weekly check-in pages",
+            "Gratitude, small-step and mood boxes on every page" if lmeta["layout_spec"]["bottom"] else "Open writing space on every page",
+            *([f"{len(content.days) // every} reflection check-in pages"] if every else []),
             "Print at home or fill in on an iPad",
             f"Prompts written for {ctx.niche.audience}",
         ]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer)
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta=lmeta)
+
+
+def _jr_css(spec, page, style) -> str:
+    """Writing-area background as an SVG tile (WeasyPrint does not draw the gradient version)."""
+    col = style.palette.line.replace("#", "%23")
+    px = round(1.5 * page.base_pt * 96 / 72, 2)
+    if spec.writing == "dotted":
+        body = f"<circle cx='{px / 2}' cy='{px / 2}' r='1.3' fill='{col}'/>"
+    elif spec.writing == "grid":
+        body = f"<path d='M0 0H{px}M0 0V{px}' stroke='{col}' stroke-width='1' fill='none'/>"
+    elif spec.writing == "blank":
+        return ".jr-write .lines { background-image:none; }\n"
+    else:
+        return ""
+    svg = f"<svg xmlns='http://www.w3.org/2000/svg' width='{px}' height='{px}' viewBox='0 0 {px} {px}'>{body}</svg>"
+    return f".jr-write .lines {{ background-image:url(\"data:image/svg+xml;utf8,{svg}\"); background-size:{px}px {px}px; background-repeat:repeat; background-position:0 0; }}\n"

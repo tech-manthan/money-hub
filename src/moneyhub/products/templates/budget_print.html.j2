@@ -8,45 +8,77 @@
 </div>
 {% endmacro %}
 
-{% for m in range(2) %}
+{% for m in range(spec.monthly_pages) %}
 <section class="page">
   {{ header(style, 'Monthly budget', 'Month: ______________    Pay period: ______________') }}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.9em;flex:1;min-height:0;">
-    <div style="display:flex;flex-direction:column;min-height:0;">
+  {% if spec.monthly == 'split' %}
+  <div style="display:flex;gap:.9em;flex:1;min-height:0;">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;">
       <div class="label" style="margin-bottom:.4em;">Income</div>
       {{ table(['Source', 'Expected', 'Actual'], content.income[:4] + ['', ''], [3, 1.3, 1.3]) }}
       <div class="label" style="margin:.9em 0 .4em;">Savings & goals</div>
       {{ table(['Goal', 'Planned', 'Saved'], content.savings_goals[:5] + [''], [3, 1.3, 1.3]) }}
       <div style="flex:1;margin-top:.9em;display:flex;flex-direction:column;">{{ box('Notes & wins', 4, 'soft') }}</div>
     </div>
-    <div style="display:flex;flex-direction:column;min-height:0;">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;">
       {% for g in content.expense_groups %}
       <div class="label" style="margin:{{ '0' if loop.first else '.7em' }} 0 .35em;">{{ g.name }}</div>
       {{ table(['Category', 'Planned', 'Actual'], g.categories[:5], [3, 1.3, 1.3]) }}
       {% endfor %}
     </div>
   </div>
+  {% else %}
+  <div style="display:flex;flex-direction:column;gap:.8em;flex:1;min-height:0;">
+    <div style="display:flex;gap:.9em;">
+      <div style="flex:1;min-width:0;"><div class="label" style="margin-bottom:.4em;">Income</div>{{ table(['Source', 'Expected', 'Actual'], content.income[:4] + [''], [3, 1.3, 1.3]) }}</div>
+      <div style="flex:1;min-width:0;"><div class="label" style="margin-bottom:.4em;">Savings & goals</div>{{ table(['Goal', 'Planned', 'Saved'], content.savings_goals[:4] + [''], [3, 1.3, 1.3]) }}</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:.7em;flex:1;min-height:0;align-content:flex-start;">
+      {% for g in content.expense_groups %}
+      <div style="width:32%;"><div class="label" style="margin:0 0 .35em;">{{ g.name }}</div>{{ table(['Category', 'Planned', 'Actual'], g.categories[:5], [2.2, 1.2, 1.2]) }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% if spec.totals %}
   <div class="card soft" style="margin-top:.8em;flex-direction:row;justify-content:space-around;font-size:.85em;">
     <span><b>Total income</b> $________</span><span><b>Total spent</b> $________</span><span><b>Left over</b> $________</span>
   </div>
+  {% endif %}
   {{ footer(content.title) }}
 </section>
 {% endfor %}
 
+{% if spec.bills %}
 <section class="page">
   {{ header(style, 'Bill tracker', 'Never miss a due date') }}
   <div class="tbl" style="flex:1;">
     <div class="tr th"><div class="td" style="flex:3">Bill</div><div class="td" style="flex:1">Due</div><div class="td" style="flex:1.2">Amount</div><div class="td" style="flex:1">Paid</div><div class="td" style="flex:2">Notes</div></div>
-    {% for i in range(18) %}<div class="tr"><div class="td" style="flex:3">{% if i < content.bills|length %}{{ content.bills[i] }}{% endif %}</div><div class="td" style="flex:1"></div><div class="td" style="flex:1.2"></div><div class="td" style="flex:1"><i class="sq"></i></div><div class="td" style="flex:2"></div></div>{% endfor %}
+    {% for i in range(spec.bill_rows) %}<div class="tr"><div class="td" style="flex:3">{% if i < content.bills|length %}{{ content.bills[i] }}{% endif %}</div><div class="td" style="flex:1"></div><div class="td" style="flex:1.2"></div><div class="td" style="flex:1"><i class="sq"></i></div><div class="td" style="flex:2"></div></div>{% endfor %}
   </div>
   {{ footer(content.title) }}
 </section>
 
+{% endif %}
+
+{% if spec.savings == 'bars' %}
+<section class="page">
+  {{ header(style, 'Savings tracker', 'Shade the bar as you save') }}
+  <div style="display:flex;flex-direction:column;gap:.7em;flex:1;min-height:0;">
+    {% for g in (content.savings_goals + ['My goal', 'My goal'])[:6] %}
+    <div class="card" style="flex:1;"><div style="display:flex;justify-content:space-between;"><div class="label">{{ g }}</div><div class="small muted">Target $______ &nbsp; Date ________</div></div>
+      <div style="display:flex;gap:.25em;margin-top:.7em;flex:1;max-height:3em;">{% for i in range(10) %}<span style="flex:1;border:1.2px solid var(--accent);border-radius:3px;"></span>{% endfor %}</div>
+      <div class="small muted" style="display:flex;justify-content:space-between;margin-top:.3em;"><span>0%</span><span>50%</span><span>100%</span></div></div>
+    {% endfor %}
+  </div>
+  {{ footer(content.title) }}
+</section>
+{% elif spec.savings == 'circles' %}
 <section class="page">
   {{ header(style, 'Savings tracker', 'Colour one circle for every step') }}
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;flex:1;min-height:0;grid-auto-rows:1fr;">
+  <div style="display:flex;flex-wrap:wrap;gap:.8em;flex:1;min-height:0;align-content:stretch;">
     {% for g in (content.savings_goals + ['My goal', 'My goal'])[:6] %}
-    <div class="card"><div class="label">{{ g }}</div><div class="small muted">Target $______ &nbsp; Date ________</div>
+    <div class="card" style="width:calc(50% - .4em);min-height:11em;flex:none;"><div class="label">{{ g }}</div><div class="small muted">Target $______ &nbsp; Date ________</div>
       <div style="display:flex;flex-wrap:wrap;gap:.35em;margin-top:.6em;">{% for i in range(20) %}<span class="check" style="width:1.35em;height:1.35em;margin:0;"></span>{% endfor %}</div>
       <div style="margin-top:auto;" class="small muted">Each circle = 5%</div></div>
     {% endfor %}
@@ -54,16 +86,22 @@
   {{ footer(content.title) }}
 </section>
 
+{% endif %}
+
+{% if spec.debt %}
 <section class="page">
   {{ header(style, 'Debt payoff', 'List smallest to largest, then attack one at a time') }}
   <div class="tbl" style="flex:1;">
     <div class="tr th"><div class="td" style="flex:2.5">Debt</div><div class="td" style="flex:1.3">Balance</div><div class="td" style="flex:1">APR</div><div class="td" style="flex:1.3">Min. payment</div><div class="td" style="flex:1.3">Payoff date</div><div class="td" style="flex:.8">Done</div></div>
     {% for i in range(12) %}<div class="tr"><div class="td" style="flex:2.5"></div><div class="td" style="flex:1.3"></div><div class="td" style="flex:1"></div><div class="td" style="flex:1.3"></div><div class="td" style="flex:1.3"></div><div class="td" style="flex:.8"><i class="sq"></i></div></div>{% endfor %}
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8em;margin-top:.8em;height:7em;">{{ box('My why', 3, 'soft') }}{{ box('How I will celebrate', 3) }}</div>
+  <div style="display:flex;gap:.8em;margin-top:.8em;height:7em;"><div style="flex:1;display:flex;flex-direction:column;">{{ box('My why', 3, 'soft') }}</div><div style="flex:1;display:flex;flex-direction:column;">{{ box('How I will celebrate', 3) }}</div></div>
   {{ footer(content.title) }}
 </section>
 
+{% endif %}
+
+{% if spec.year %}
 <section class="page">
   {{ header(style, 'Year at a glance', 'Income, spending and savings by month') }}
   <div class="tbl" style="flex:1;">
@@ -73,3 +111,4 @@
   </div>
   {{ footer(content.title) }}
 </section>
+{% endif %}
