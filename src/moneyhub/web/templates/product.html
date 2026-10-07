@@ -22,9 +22,11 @@
   <p class="meta">Make a ready-to-use pack for another platform. Each pack includes a step-by-step guide.</p>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
   {% if 'kdp' in export_kinds %}<form class="exp" data-kind="kdp"><b>📚 Amazon KDP paperback</b>
-    <p class="meta">Print-ready interior, cover template with spine width, and a KDP guide.</p>
+    <p class="meta">Print-ready interior, a finished full-wrap cover with the right spine width, and a KDP guide.</p>
     <div style="display:flex;gap:6px"><select name="trim" aria-label="Book size"><option value="6x9">6 x 9 in</option><option value="5.5x8.5">5.5 x 8.5 in</option><option value="7x10">7 x 10 in</option><option value="8x10">8 x 10 in</option><option value="8.5x11">8.5 x 11 in</option></select>
     <select name="paper" aria-label="Paper"><option value="white">White paper</option><option value="cream">Cream paper</option><option value="color">Colour</option></select></div>
+    <label class="meta" style="display:block;margin-top:6px">Your own cover picture (optional)<input type="file" name="cover_image" accept="image/png,image/jpeg"></label>
+    <label class="meta" style="display:block"><input type="checkbox" name="cover_text" value="1" checked> Put the title over my picture</label>
     <button class="sm" style="margin-top:6px">Make KDP pack</button></form>{% endif %}
   {% if 'notion' in export_kinds %}<form class="exp" data-kind="notion"><b>🗂️ Notion</b>
     <p class="meta">Pages and databases that import straight into Notion.</p><button class="sm">Make Notion pack</button></form>{% endif %}
@@ -39,7 +41,7 @@
 <script>
 document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', async e => {
   e.preventDefault(); const st = document.getElementById('exp-status'); st.textContent = 'Working…';
-  const body = new URLSearchParams(new FormData(f)); body.set('kind', f.dataset.kind);
+  const body = new FormData(f); body.set('kind', f.dataset.kind); if (f.dataset.kind === 'kdp' && !f.querySelector('[name=cover_text]').checked) body.set('cover_text', '0');
   const r = await fetch('/product/{{ p.id }}/export', { method: 'POST', body });
   if (!r.ok) { st.textContent = (await r.json()).detail || 'That did not work.'; return; }
   const { job } = await r.json();

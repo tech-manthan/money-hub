@@ -1,0 +1,39 @@
+{# Finished full-wrap KDP cover: back, spine, front. No guide lines; the barcode area stays empty (KDP prints its own). #}
+{% set pal = style.palette %}
+{% set fw = tw + bleed %}
+{% set fs = 34 if title|length <= 24 else 28 if title|length <= 40 else 24 %}
+<style>
+.cv { position:relative; width:{{ w }}in; height:{{ h }}in; overflow:hidden; font-family:var(--font-b); }
+.cv .p { position:absolute; box-sizing:border-box; }
+</style>
+<div class="cv">
+  <div class="p" style="left:0;top:0;width:{{ bleed + tw }}in;height:{{ h }}in;background:{{ pal.soft }};"></div>
+  <div class="p" style="left:{{ bleed + tw }}in;top:0;width:{{ spine }}in;height:{{ h }}in;background:{{ pal.ink }};"></div>
+  <div class="p" style="left:{{ bleed + tw + spine }}in;top:0;width:{{ fw }}in;height:{{ h }}in;background:{{ pal.accent }};"></div>
+
+  {# front #}
+  {% if image %}
+  <img class="p" src="{{ image }}" style="left:{{ bleed + tw + spine }}in;top:0;width:{{ fw }}in;height:{{ h }}in;object-fit:cover;">
+  {% else %}
+  <div class="p" style="left:{{ bleed + tw + spine + tw * 0.35 }}in;top:{{ -th * 0.12 }}in;width:{{ tw * 0.95 }}in;height:{{ tw * 0.95 }}in;border-radius:50%;background:{{ pal.accent2 }};opacity:.35;"></div>
+  <div class="p" style="left:{{ bleed + tw + spine - tw * 0.2 }}in;top:{{ h - th * 0.3 }}in;width:{{ tw * 0.8 }}in;height:{{ tw * 0.8 }}in;border-radius:50%;background:{{ pal.soft }};opacity:.25;"></div>
+  <div class="p" style="left:{{ bleed + tw + spine + 0.55 }}in;top:{{ th * 0.2 }}in;width:{{ tw - 1.1 }}in;height:0;border-top:3px solid {{ pal.accent_ink }};opacity:.7;"></div>
+  {% endif %}
+  {% if text %}
+  <div class="p" style="left:{{ bleed + tw + spine + 0.45 }}in;top:{{ bleed + th * 0.27 }}in;width:{{ tw - 0.9 }}in;padding:{{ 0.3 if image else 0 }}in;{% if image %}background:{{ pal.paper }};opacity:.94;border-radius:var(--radius);{% endif %}text-align:center;">
+    <div style="color:{{ pal.ink if image else pal.accent_ink }};font-family:var(--font-h);font-weight:700;font-size:{{ fs }}pt;line-height:1.12;">{{ title }}</div>
+    {% if subtitle %}<div style="margin-top:.5em;color:{{ pal.accent if image else pal.accent_ink }};font-family:var(--font-s);font-size:17pt;line-height:1.2;">{{ subtitle }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  {# spine #}
+  {% if spine >= 0.25 %}<div class="p" style="left:{{ bleed + tw }}in;top:{{ bleed }}in;width:{{ spine }}in;height:{{ th }}in;display:flex;align-items:center;justify-content:center;"><div style="transform:rotate(90deg);white-space:nowrap;font-size:{{ 11 if spine >= 0.4 else 9 }}pt;font-weight:700;color:{{ pal.paper }};letter-spacing:.04em;">{{ title }}</div></div>{% endif %}
+
+  {# back #}
+  <div class="p" style="left:{{ bleed + 0.55 }}in;top:{{ bleed + 0.7 }}in;width:{{ tw - 1.1 }}in;">
+    <div style="font-family:var(--font-h);font-weight:700;font-size:17pt;color:{{ pal.accent }};line-height:1.2;">{{ title }}</div>
+    <div style="margin-top:.7em;width:1.2in;border-top:3px solid {{ pal.accent2 }};"></div>
+    <div style="margin-top:.9em;font-size:{{ 11 if blurb|length <= 380 else 10 }}pt;line-height:1.5;color:{{ pal.ink }};">{{ blurb }}</div>
+    {% for b in bullets %}<div style="margin-top:.45em;font-size:10pt;color:{{ pal.ink }};display:flex;"><span style="color:{{ pal.accent }};width:1.1em;flex:none;">&bull;</span><span>{{ b }}</span></div>{% endfor %}
+  </div>
+</div>

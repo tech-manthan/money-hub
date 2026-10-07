@@ -59,6 +59,33 @@ def test_kdp_pack_has_exact_trim_even_pages_and_cover_template(planner):
     assert json.loads((d / "cover-spec.json").read_text())["spine_in"] == spec["spine_in"]
 
 
+def test_kdp_makes_a_finished_cover_and_can_use_your_own_image(planner, tmp_path):
+    from PIL import Image
+    spec = kdp.export_kdp(planner, "6x9", "white", progress=lambda m: None)
+    d = planner.folder / "exports" / "kdp"
+    cover = d / spec["cover_pdf"]
+    cw, ch = spec["full_cover_in"]
+    w, h = (float(x) / 72 for x in PdfReader(str(cover)).pages[0].mediabox[2:])
+    assert abs(w - cw) < 0.02 and abs(h - ch) < 0.02 and spec["cover_image"] is None
+    art = tmp_path / "art.png"
+    Image.new("RGB", (600, 900), "teal").save(art)
+    spec = kdp.export_kdp(planner, "6x9", "white", progress=lambda m: None, cover_image=art, cover_text=False)
+    sharp = next(c for c in spec["checks"] if c["name"] == "Cover image sharpness")
+    assert not sharp["ok"] and spec["cover_image"]["effective_dpi"] < 250   # a small picture is flagged, not silently used
+    bad = tmp_path / "x.png"
+    bad.write_text("not a picture")
+    with pytest.raises(ValueError, match="cannot read the cover image"):
+        kdp.export_kdp(planner, "6x9", "white", progress=lambda m: None, cover_image=bad)
+
+
+def test_kdp_cover_upload_through_the_web_form():
+    from fastapi.testclient import TestClient
+    from moneyhub.web.app import app
+    res = generate(Request("nurse", "checklist_pack", providers=["builtin"], seed=2, sizes=["letter"], with_images=False, with_video=False, options={"no_research": True}))
+    r = TestClient(app).post(f"/product/{res.product_id}/export", data={"kind": "kdp"}, files={"cover_image": ("x.png", b"not a picture", "image/png")})
+    assert r.status_code == 422
+
+
 def test_kdp_rejects_unsupported_products():
     class L:  # only the type is looked at before refusing
         ptype = "wall_art"

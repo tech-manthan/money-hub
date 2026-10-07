@@ -73,7 +73,33 @@ def _notes_pdf(l: Loaded, trim: str, count: int, margin_in: float, dst: Path) ->
     render_pdf(html, dst, page_css_size=page.css_size)
 
 
-def export_kdp(l: Loaded, trim: str = "6x9", paper: str = "white", progress=print) -> dict:
+def _blurb(l: Loaded, listing: dict) -> tuple[str, list[str]]:
+    """Back-cover text: the first paragraph of the listing description (or the tagline) and up to three selling points."""
+    copy = listing.get("copy_") or listing.get("copy") or {}
+    text = re.sub(r"\s+", " ", str(copy.get("description", "")).split("\n\n")[0]).strip() or l.content.get("tagline", "")
+    if len(text) > 420:
+        text = text[:420].rsplit(" ", 1)[0].rstrip(",;:") + "..."
+    feats = [str(x) for x in (listing.get("features") or copy.get("features") or [])][:3]
+    return text, feats
+
+
+def _prepare_cover_image(src: Path, dst: Path, tw: float, th: float, h: float) -> dict:
+    """Copy the buyer's cover art in as a JPEG and report how sharp it will be on the front cover (needs ~300 dpi)."""
+    from PIL import Image
+
+    try:
+        im = Image.open(src)
+        im.load()
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"cannot read the cover image: {e}") from e
+    im = im.convert("RGB")
+    need_w = tw + BLEED   # the art runs from the spine to the right edge, including bleed
+    dpi = min(im.width / need_w, im.height / h)
+    im.save(dst, "JPEG", quality=95, dpi=(300, 300))
+    return {"px": [im.width, im.height], "effective_dpi": round(dpi), "needs_px": [round(need_w * 300), round(h * 300)]}
+
+
+def export_kdp(l: Loaded, trim: str = "6x9", paper: str = "white", progress=print, cover_image: Path | None = None, cover_text: bool = True) -> dict:
     if l.ptype not in SUPPORTED:
         raise ValueError(f"{l.ptype} cannot be a KDP paperback. Supported: {', '.join(SUPPORTED)}")
     if trim not in KDP_TRIMS:
@@ -116,17 +142,35 @@ def export_kdp(l: Loaded, trim: str = "6x9", paper: str = "white", progress=prin
     html = render_html("kdp_cover.html.j2", style, cover_page, margin=0, w=cw, h=ch, bleed=BLEED, tw=KDP_TRIMS[trim][0], th=KDP_TRIMS[trim][1],
                        spine=cs["spine_in"], title=l.title, subtitle=l.content.get("tagline", ""))
     render_pdf(html, d / f"{base}-cover-template-{trim}.pdf", page_css_size=cover_page.css_size)
+    listing = {}
+    lj = l.folder / "listing" / "listing.json"
+    if lj.exists():
+        listing = json.loads(lj.read_text())
+    image_info, image_uri = None, ""
+    if cover_image:
+        progress("Placing your cover image on the front")
+        art = d / "cover-art.jpg"
+        image_info = _prepare_cover_image(Path(cover_image), art, KDP_TRIMS[trim][0], KDP_TRIMS[trim][1], ch)
+        image_uri = art.as_uri()
+    blurb, bullets = _blurb(l, listing)
+    progress("Designing the finished full-wrap cover")
+    final = render_html("kdp_cover_final.html.j2", style, cover_page, margin=0, w=cw, h=ch, bleed=BLEED, tw=KDP_TRIMS[trim][0], th=KDP_TRIMS[trim][1],
+                        spine=cs["spine_in"], title=l.title, subtitle=l.content.get("tagline", ""), image=image_uri, text=cover_text or not cover_image,
+                        blurb=blurb, bullets=bullets)
+    cover_pdf = d / f"{base}-cover-{trim}.pdf"
+    render_pdf(final, cover_pdf, page_css_size=cover_page.css_size)
     total, emb = _pdf_fonts_embedded(interior)
     pw, ph = (float(x) / 72 for x in PdfReader(str(interior)).pages[0].mediabox[2:])
     checks = [("Page count", MIN_PAGES <= target <= MAX_PAGES and target % 2 == 0, f"{target} pages"),
               ("Page size matches trim", abs(pw - KDP_TRIMS[trim][0]) < 0.02 and abs(ph - KDP_TRIMS[trim][1]) < 0.02, f"{pw:.3f} x {ph:.3f} in"),
               ("Fonts embedded", total == emb, f"{emb}/{total}"),
               ("Inside margin", margin >= gutter_in(target), f"{margin} in (needs {gutter_in(target)} in)")]
-    listing = {}
-    lj = l.folder / "listing" / "listing.json"
-    if lj.exists():
-        listing = json.loads(lj.read_text())
-    spec = {"title": l.title, "trim": trim, "paper": paper, "pages": target, "interior_margin_in": margin, **cs,
+    cw_pt, ch_pt = (float(x) / 72 for x in PdfReader(str(cover_pdf)).pages[0].mediabox[2:])
+    checks.append(("Cover size matches spine and page count", abs(cw_pt - cw) < 0.02 and abs(ch_pt - ch) < 0.02, f"{cw_pt:.3f} x {ch_pt:.3f} in (needs {cw} x {ch})"))
+    if image_info:
+        checks.append(("Cover image sharpness", image_info["effective_dpi"] >= 250,
+                       f"{image_info['px'][0]} x {image_info['px'][1]} px = about {image_info['effective_dpi']} dpi (aim for {image_info['needs_px'][0]} x {image_info['needs_px'][1]})"))
+    spec = {"title": l.title, "trim": trim, "paper": paper, "pages": target, "interior_margin_in": margin, **cs, "cover_pdf": cover_pdf.name, "cover_image": image_info,
             "checks": [{"name": n, "ok": ok, "detail": dt} for n, ok, dt in checks]}
     (d / "cover-spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
     (d / "KDP-GUIDE.md").write_text(_guide(l, spec, listing, base), encoding="utf-8")
@@ -137,13 +181,14 @@ def _guide(l: Loaded, s: dict, listing: dict, base: str) -> str:
     tags = (listing.get("copy_") or listing.get("copy") or {}).get("tags", [])[:7]
     return f"""# KDP paperback: {l.title}
 
-Files: `{base}-interior-{s['trim']}.pdf` ({s['pages']} pages), `{base}-cover-template-{s['trim']}.pdf`, `cover-spec.json`.
+Files: `{base}-interior-{s['trim']}.pdf` ({s['pages']} pages), `{base}-cover-{s['trim']}.pdf` (finished full-wrap cover), `{base}-cover-template-{s['trim']}.pdf` (guide lines), `cover-spec.json`.
 
 ## Cover
 - Full cover (back + spine + front, with {s['bleed_in']} in bleed): **{s['full_cover_in'][0]} x {s['full_cover_in'][1]} in** = {s['full_cover_px_300dpi'][0]} x {s['full_cover_px_300dpi'][1]} px at 300 dpi.
 - Spine width: **{s['spine_in']} in** ({s['pages']} pages, {s['paper']} paper). {'Spine text needs at least 79 pages.' if s['pages'] < 79 else 'Spine text is allowed.'}
 - Keep text inside the dotted safe lines. Leave the 2 x 1.2 in barcode area empty on the back cover.
-- Design the cover in Canva, Photoshop or similar at that exact size, then export a PDF. Use the template PDF as a guide layer.
+- The finished cover PDF is ready to upload as it is. To use your own artwork instead, run the export again with a cover image (CLI `--cover-image`, or the picture box on the product page), or design one in Canva or Photoshop at that exact size and use the template PDF as a guide layer.
+- KDP puts the barcode on the back cover itself, so the lower right of the back is kept free of text.
 - **Always** confirm the spine width with KDP's own cover template generator (it asks for trim size, paper and page count).
 
 ## Interior
