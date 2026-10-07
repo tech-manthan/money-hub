@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from PIL import Image
 from pydantic import BaseModel, Field
 
 from .. import layouts as lay
@@ -34,12 +35,19 @@ class WallArtContent(BaseModel):
 
 # name -> (inches wide, inches tall, pixel width, pixel height, sizes included)
 RATIOS = {
-    "2x3": (12, 18, 3600, 5400, "4x6, 8x12, 10x15, 12x18, 16x24, 20x30, 24x36 in"),
-    "3x4": (12, 16, 3600, 4800, "6x8, 9x12, 12x16, 15x20, 18x24 in"),
-    "4x5": (8, 10, 3200, 4000, "4x5, 8x10, 16x20 in"),
-    "5x7": (10, 14, 3000, 4200, "5x7, 10x14, 15x21 in"),
-    "ISO-A": (8.268, 11.693, 3508, 4961, "A5, A4, A3, A2, A1 (also 50x70 cm)"),
+    "2x3": (12, 18, 3600, 5400, "4x6, 8x12, 10x15, 12x18, 16x24, 20x30, 24x36 in (20x30, 40x60 cm)"),
+    "3x4": (12, 16, 3600, 4800, "6x8, 9x12, 12x16, 15x20, 18x24 in (30x40 cm)"),
+    "4x5": (8, 10, 3200, 4000, "4x5, 8x10, 16x20 in (40x50 cm)"),
+    "5x7": (10, 14, 3000, 4200, "5x7, 10x14, 15x21 in (50x70 cm)"),
+    "ISO-A": (8.268, 11.693, 3508, 4961, "A5, A4, A3, A2, A1 (21x30 cm and up)"),
+    # extra formats buyers search for; not in the default set, pick them with --sizes
+    "1x1": (12, 12, 3600, 3600, "square 6x6, 8x8, 12x12, 16x16, 20x20 in (20x20, 30x30, 50x50 cm), for gallery walls"),
+    "phone": (4.3, 9.32, 1290, 2796, "phone wallpaper, 1290 x 2796 px (iPhone and most Android phones)"),
+    "frame_tv": (12.8, 7.2, 3840, 2160, "Samsung The Frame TV art, exactly 3840 x 2160 px (16:9), artwork only"),
 }
+DEFAULT_RATIOS = ["2x3", "3x4", "4x5", "5x7", "ISO-A"]   # five files: Etsy allows 5 downloads per listing
+PRINT_RATIOS = ("2x3", "3x4", "4x5", "5x7", "ISO-A")
+JPEG_BUDGET = 19_000_000   # bytes per pack zip: under Etsy's 20 MB per-file limit
 
 
 @register
@@ -48,7 +56,7 @@ class WallArt(ProductType[WallArtContent]):
     label = "Wall art set"
     description = "Set of typographic wall art prints with procedural artwork (optional AI backgrounds), as high-res JPG packs in 5 print ratios."
     content_model = WallArtContent
-    default_sizes = list(RATIOS)
+    default_sizes = list(DEFAULT_RATIOS)
     supported_sizes = list(RATIOS)
     price_range = (4.0, 12.0)
     typical_formats = "High-resolution JPG (5 ratio packs, 300 DPI at A4)"
@@ -108,17 +116,19 @@ class WallArt(ProductType[WallArtContent]):
             page = PageSize(ratio, ratio, w_in, h_in, 10.0 * w_in / 8.5)
             pdf = ctx.out_dir.parent / "art" / f"{slug}-{ratio}.pdf"
             pdf.parent.mkdir(exist_ok=True)
-            renderer = self.render_jobs(ctx, "wall_art.html.j2", [(page, pdf, {"designs": designs})], extra_css=_css(), margin=0)
+            fitted = _for_ratio(designs, ratio, h_in / w_in)
+            renderer = self.render_jobs(ctx, "wall_art.html.j2", [(page, pdf, {"designs": fitted})], extra_css=_css(), margin=0)
             scale = px_w / (w_in * 72)
-            imgs = render_pages(pdf, list(range(len(designs))), scale=scale)
+            imgs = [im.resize((px_w, px_h), Image.LANCZOS) if im.size != (px_w, px_h) else im for im in render_pages(pdf, list(range(len(designs))), scale=scale)]
             zpath = ctx.out_dir / f"{slug}-{ratio}.zip"
             with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+                budget = min(3_400_000, JPEG_BUDGET // max(len(imgs), 1))
                 for i, im in enumerate(imgs):
                     quality = 92
                     while True:
                         buf = io.BytesIO()
-                        im.save(buf, "JPEG", quality=quality, dpi=(300, 300), optimize=True)
-                        if buf.tell() < 3_400_000 or quality <= 70:
+                        im.save(buf, "JPEG", quality=quality, dpi=(300, 300), optimize=True, icc_profile=srgb_profile())
+                        if buf.tell() < budget or quality <= 60:
                             break
                         quality -= 6
                     z.writestr(f"{slug}-{ratio}-{i + 1:02d}.jpg", buf.getvalue())
@@ -127,15 +137,45 @@ class WallArt(ProductType[WallArtContent]):
                         im.resize((1200, round(1200 * im.height / im.width))).save(pv)
                         previews.append(pv)
                 z.writestr("READ-ME.txt",
-                           f"{content.title}\nRatio {ratio.replace('x', ':')}: print at {RATIOS[ratio][4]}.\n"
-                           "High-resolution JPG files, for personal use only. Colours vary by screen and printer.\n")
+                           f"{content.title}\nFormat {ratio.replace('x', ':')}: {RATIOS[ratio][4]}.\n"
+                           "High-resolution JPG files with an sRGB colour profile, for personal use only. "
+                           "Colours vary by screen and printer. Print shops convert to their own profile.\n"
+                           + ("Samsung Frame TV: copy the file to your phone, open SmartThings > Art Mode > My Pictures > Add, and choose No Mat.\n" if ratio == "frame_tv" else ""))
             files.append(ProductFile(zpath, "zip", f"{ratio.replace('x', ':')} ratio pack - {RATIOS[ratio][4]}", True))
         features = [
-            f"{len(designs)} typographic art prints", "5 print ratios in one purchase", "Sizes: " + ", ".join(RATIOS[r][4].split(" in")[0] for r in list(RATIOS)[:2]) + " and more",
-            "High-resolution JPG files (300 DPI at A4)", f"Made for {ctx.niche.audience}", "Instant download - no physical item shipped",
+            f"{len(designs)} {'typographic art prints' if any(r in PRINT_RATIOS for r in ctx.sizes) else 'artworks'}",
+            f"{len(ctx.sizes)} formats in one purchase" if len(ctx.sizes) > 1 else "One ready-to-use format",
+            "Sizes: " + ", ".join(RATIOS[r][4].split(" in")[0] for r in ctx.sizes[:2] if r in RATIOS) + " and more",
+            "High-resolution JPG files (300 DPI), sRGB colour profile", f"Made for {ctx.niche.audience}", "Instant download - no physical item shipped",
         ]
         return BuildResult(content.title, content.subtitle, files, features, len(designs), renderer,
                            meta={"art_previews": previews, "ai_provider": ai_used if use_ai else ""})
+
+
+_SRGB: bytes | None = None
+
+
+def srgb_profile() -> bytes:
+    """The standard sRGB colour profile, embedded in every JPG so screens and print shops read the colours the same way."""
+    global _SRGB
+    if _SRGB is None:
+        from PIL import ImageCms
+        _SRGB = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    return _SRGB
+
+
+def _for_ratio(designs: list[dict], ratio: str, aspect: float) -> list[dict]:
+    """Designs sized for one output format. Portrait print ratios share one text fit (so the set looks the same in every ratio);
+    square and wide formats are fitted to their own shape, and Frame TV art has no text (it is shown as art)."""
+    out = []
+    for d in designs:
+        if ratio == "frame_tv":
+            out.append({**d, "text": "", "small": "", "b": {**d["b"], "frame": False, "rule": None, "small": None, "align": "center",
+                                                             "motif": dict(l=20, w=60, t=5, h=90), "text": dict(t0=40, t1=60, anchor="middle")}, "text_top": 50.0})
+            continue
+        fs, top = fit_text(d["text"], d["b"], aspect if aspect < MIN_ASPECT else MIN_ASPECT)
+        out.append({**d, "fs": fs, "text_top": top})
+    return out
 
 
 def style_audience(style) -> str:
@@ -190,7 +230,7 @@ PAGE_EM_W = 61.2   # page width in em: the page's base font is 10 * width_in / 8
 MIN_ASPECT = 1.25   # the squattest print ratio (4:5); text that fits there fits on every taller one
 
 
-def fit_text(text: str, boxes: dict) -> tuple[float, float]:
+def fit_text(text: str, boxes: dict, aspect: float = MIN_ASPECT) -> tuple[float, float]:
     """Font size (em) and top (percent of page height) that keep the text inside its region on every print ratio."""
     n, region = len(text), boxes["text"]
     big = boxes["align"] == "left" and region["anchor"] == "bottom"
@@ -199,7 +239,7 @@ def fit_text(text: str, boxes: dict) -> tuple[float, float]:
     room = region["t1"] - region["t0"]
     while True:
         lines = math.ceil(n * fs * 0.55 * 1.1 / width_em)
-        height = lines * fs * 1.14 / (PAGE_EM_W * MIN_ASPECT) * 100
+        height = lines * fs * 1.14 / (PAGE_EM_W * aspect) * 100
         if height <= room or fs <= 2.4:
             break
         fs = round(fs - 0.2, 1)

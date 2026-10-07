@@ -161,3 +161,18 @@ def test_every_product_type_has_listing_keywords():
     from moneyhub.listing.kit import _TYPE_WORDS
     from moneyhub.products import all_product_types
     assert set(all_product_types()) <= set(_TYPE_WORDS)
+
+
+def test_wall_art_extra_formats_have_exact_sizes_srgb_and_fit_etsy():
+    import zipfile
+    from PIL import Image
+    want = {"1x1": (3600, 3600), "phone": (1290, 2796), "frame_tv": (3840, 2160)}
+    res = generate(Request("nurse", "wall_art", sizes=list(want), providers=["builtin"], seed=5, with_images=False, with_video=False, options={"no_research": True}))
+    for z in (res.folder / "product").glob("*.zip"):
+        ratio = next(k for k in want if z.stem.endswith(k))
+        zf = zipfile.ZipFile(z)
+        jpgs = [i for i in zf.infolist() if i.filename.endswith(".jpg")]
+        im = Image.open(zf.open(jpgs[0]))
+        assert im.size == want[ratio] and im.info.get("icc_profile") and z.stat().st_size < 20_000_000
+    from moneyhub.products import get_product_type
+    assert get_product_type("wall_art").default_sizes == ["2x3", "3x4", "4x5", "5x7", "ISO-A"]
