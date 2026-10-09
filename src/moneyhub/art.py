@@ -25,8 +25,46 @@ def _cols(p: Palette) -> list[str]:
     return [p.accent, p.accent2, p.soft, p.line]
 
 
+WINDOW_SYMBOLS = ["sun", "moon", "star", "eye", "lotus", "mountain", "wave", "flame", "tree", "feather", "heart", "butterfly", "sprout", "rainbow", "compass", "lantern",
+                  "key", "chalice", "crown", "door", "wheel", "world"]
+NURSERY = ["cat", "fish", "butterfly", "turtle", "owl", "snail", "ladybug", "whale", "octopus", "rocket", "dino", "flower", "house", "icecream", "frog", "bunny", "bear",
+           "penguin", "duck", "elephant", "giraffe", "lion", "bee", "crab", "shark", "airplane", "sailboat", "cupcake", "mushroom", "unicorn", "balloons", "planet"]
+PATTERN_PANELS = ["ditsy", "rainbows", "celestial", "hearts", "stars", "paisley", "hexagons", "blobs", "memphis", "plaid"]
+# every background style a wall-art poster can use with no AI key: the 13 drawn motifs, arched-window symbols, nursery figures (colour filled) and pattern panels
+WALL_MOTIFS = [*MOTIFS, *(f"window-{s}" for s in WINDOW_SYMBOLS), *(f"nursery-{k}" for k in NURSERY), *(f"pattern-{k}" for k in PATTERN_PANELS)]
+
+
+def _extra_motif(kind: str, p: Palette, seed: int, on_dark: bool) -> str | None:
+    """SVG for the window-*, nursery-* and pattern-* motif families (None if `kind` is not one of them)."""
+    family, _, name = kind.partition("-")
+    if family == "window" and name in WINDOW_SYMBOLS:
+        from .oracle_art import card_art
+        pal = p if not on_dark else dataclasses_replace(p)
+        inner = card_art(name, pal, seed).replace("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 760'>", "").rsplit("</svg>", 1)[0]
+        return f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'><g transform='translate(105 40) scale(1.26)'>{inner}</g></svg>"
+    if family == "nursery" and name in NURSERY:
+        from . import kidsart, stickers
+        body = stickers.recolor(kidsart.figure(name, seed, 12, False), p, seed)
+        return f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'>{body}</svg>"
+    if family == "pattern" and name in PATTERN_PANELS:
+        from .patterns import pattern_tile
+        tile = pattern_tile(name, p, seed, 0 if on_dark else 1)   # a tinted panel (soft, or paper on an accent page), so it reads against the poster
+        return (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'><clipPath id='pp'><rect x='90' y='90' width='820' height='820' rx='46'/></clipPath>"
+                f"<g clip-path='url(#pp)'><g transform='translate(-250 -250) scale(1.5)'>{tile}</g></g></svg>")
+    return None
+
+
+def dataclasses_replace(p: Palette) -> Palette:
+    """A palette whose accent colours are the light tones, for drawing over an accent-coloured page."""
+    import dataclasses
+    return dataclasses.replace(p, accent=p.paper, accent2=p.soft, soft=p.accent2)
+
+
 def motif_svg(kind: str, p: Palette, seed: int, on_dark: bool = False) -> str:
     """Return an <svg> string (viewBox 0 0 1000 1000, transparent background)."""
+    extra = _extra_motif(kind, p, seed, on_dark)
+    if extra is not None:
+        return extra
     rng = random.Random(seed)
     accent, accent2, soft, line = p.accent, p.accent2, p.soft, p.line
     if on_dark:  # drawn over an accent-coloured page: use light tones

@@ -277,3 +277,27 @@ def test_digital_paper_packs_use_a_seeded_selection_and_coloring_books_walk_thro
     assert kinds_seen == {"mandala", "pattern", "motif"}
     order = lambda s: sorted(coloring.PATTERN_KINDS, key=lambda k: random.Random(f"{s}-{k}").random())   # noqa: E731
     assert order(7) != order(8) and len(coloring.PATTERN_KINDS) == 20
+
+
+# ------------------------------------------------------------------ bigger libraries: kids figures and wall-art backgrounds
+def test_every_kids_figure_theme_and_wall_background_draws():
+    from moneyhub import art, kidsart
+    assert len(kidsart.KINDS) == 38 and set(kidsart.KINDS) == set(kidsart._FIGURES) == set(kidsart.NAMES)
+    for theme, (_, pool) in kidsart.THEMES.items():
+        assert pool and all(k in kidsart._FIGURES for k in pool), theme
+    pal = PALETTES[4]
+    assert len(art.WALL_MOTIFS) > 60 and art.WALL_MOTIFS[:13] == art.MOTIFS
+    for kind in art.WALL_MOTIFS:
+        for dark in (False, True):
+            svg = art.motif_svg(kind, pal, 3, on_dark=dark)
+            assert svg.startswith("<svg") and "NaN" not in svg and len(svg) > 300, kind
+
+
+def test_wall_art_accepts_the_new_backgrounds_and_rejects_unknown_ones():
+    res = generate(Request("x", "wall_art", providers=["builtin"], seed=2, with_video=False, with_images=False, options={"no_research": True, "motif": "nursery-bear"}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    from typer.testing import CliRunner
+
+    from moneyhub.cli import app
+    r = CliRunner().invoke(app, ["make", "x", "wall_art", "--motif", "nursery-nope", "--llm", "builtin"])
+    assert r.exit_code != 0

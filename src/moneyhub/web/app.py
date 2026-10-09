@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from ..config import get_config
-from ..art import MOTIFS, art_status
+from ..art import MOTIFS, WALL_MOTIFS, art_status
 from ..design import FONT_PAIRS, GRIDS, HEADERS, PALETTES, RADII
 from ..llm import get_router
 from ..niches import LIBRARY, resolve_niche
@@ -94,7 +94,7 @@ def _catalogue() -> list[dict]:
 
 
 def _look_ctx() -> dict:
-    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=MOTIFS, plain=guide, kids_themes=__import__("moneyhub.kidsart", fromlist=["THEMES"]).THEMES)
+    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=WALL_MOTIFS, plain=guide, kids_themes=__import__("moneyhub.kidsart", fromlist=["THEMES"]).THEMES)
 
 
 MEDIA = HERE / "static" / "media"
@@ -458,7 +458,7 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
                layout_spec: str = Form(""), theme: str = Form(""), age: str = Form(""), pages: str = Form(""), stickers: str = Form(""),
                deck: str = Form(""), card_size: str = Form(""), cards: str = Form("")):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
-                                        (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
+                                        (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, WALL_MOTIFS, "motif")) if v and v not in ok]
     if bad:
         raise HTTPException(422, f"Unknown {bad[0][2]}: {bad[0][0]}")
     from ..design import is_hex_colour

@@ -7,10 +7,15 @@ import math
 import random
 
 INK = "#222222"
-KINDS = ["cat", "fish", "butterfly", "turtle", "owl", "snail", "ladybug", "whale", "octopus", "rocket", "car", "robot", "dino", "flower", "house", "icecream"]
+KINDS = ["cat", "fish", "butterfly", "turtle", "owl", "snail", "ladybug", "whale", "octopus", "rocket", "car", "robot", "dino", "flower", "house", "icecream",
+         "frog", "bunny", "bear", "penguin", "duck", "elephant", "giraffe", "lion", "bee", "crab", "shark", "airplane", "sailboat", "train", "cupcake",
+         "mushroom", "unicorn", "pizza", "apple", "ufo", "planet", "balloons"]
 NAMES = {"cat": "cat", "fish": "fish", "butterfly": "butterfly", "turtle": "turtle", "owl": "owl", "snail": "snail", "ladybug": "ladybug", "whale": "whale",
-         "octopus": "octopus", "rocket": "rocket", "car": "car", "robot": "robot", "dino": "dinosaur", "flower": "flower", "house": "house", "icecream": "ice cream"}
-PLURALS = {"butterfly": "butterflies", "fish": "fish", "icecream": "ice creams", "dino": "dinosaurs", "ladybug": "ladybugs", "octopus": "octopuses"}
+         "octopus": "octopus", "rocket": "rocket", "car": "car", "robot": "robot", "dino": "dinosaur", "flower": "flower", "house": "house", "icecream": "ice cream",
+         "frog": "frog", "bunny": "bunny", "bear": "bear", "penguin": "penguin", "duck": "duck", "elephant": "elephant", "giraffe": "giraffe", "lion": "lion",
+         "bee": "bee", "crab": "crab", "shark": "shark", "airplane": "airplane", "sailboat": "sailboat", "train": "train", "cupcake": "cupcake",
+         "mushroom": "mushroom", "unicorn": "unicorn", "pizza": "pizza", "apple": "apple", "ufo": "flying saucer", "planet": "planet", "balloons": "balloons"}
+PLURALS = {"bunny": "bunnies", "balloons": "balloons", "ufo": "flying saucers", "butterfly": "butterflies", "fish": "fish", "icecream": "ice creams", "dino": "dinosaurs", "ladybug": "ladybugs", "octopus": "octopuses"}
 THEMES = {
     "mixed": ("Animal & Friends", KINDS),
     "animals": ("Cute Animal", ["cat", "owl", "butterfly", "turtle", "snail", "ladybug", "dino", "fish"]),
@@ -18,7 +23,13 @@ THEMES = {
     "garden": ("Garden Bugs & Flowers", ["butterfly", "ladybug", "snail", "flower", "house", "owl"]),
     "vehicles": ("Rockets, Cars & Robots", ["rocket", "car", "robot", "rocket", "car", "robot"]),
     "dinosaurs": ("Friendly Dinosaur", ["dino", "dino", "turtle", "flower", "dino", "butterfly"]),
-    "treats": ("Sweet Treats & Fun", ["icecream", "flower", "cat", "house", "icecream", "butterfly"]),
+    "treats": ("Sweet Treats & Fun", ["icecream", "cupcake", "apple", "pizza", "balloons", "butterfly"]),
+    "farm": ("Farm Friends", ["duck", "bunny", "house", "flower", "bee", "snail", "mushroom"]),
+    "jungle": ("Jungle Safari", ["lion", "elephant", "giraffe", "frog", "butterfly", "turtle"]),
+    "space": ("Space Adventure", ["rocket", "ufo", "planet", "robot", "rocket", "ufo"]),
+    "arctic": ("Arctic Friends", ["penguin", "bear", "shark", "whale", "octopus", "fish"]),
+    "transport": ("Things That Go", ["airplane", "sailboat", "train", "car", "rocket", "airplane"]),
+    "fairytale": ("Fairytale Magic", ["unicorn", "butterfly", "house", "flower", "mushroom", "dino"]),
 }
 AGES = {"toddler": 15, "kids": 10}   # stroke width: toddlers get thicker, simpler lines
 SHAPES = ["circle", "square", "triangle", "star", "heart", "oval", "diamond", "hexagon"]
@@ -44,8 +55,8 @@ class Pen:
     def path(self, d, fill="#ffffff"):
         self.parts.append(f"<path d='{d}' {self._attrs(fill)}/>")
 
-    def line(self, d):
-        self.parts.append(f"<path d='{d}' fill='none' stroke='{INK}' stroke-width='{self.w}' stroke-linecap='round' stroke-linejoin='round'/>")
+    def line(self, d, w=None):
+        self.parts.append(f"<path d='{d}' fill='none' stroke='{INK}' stroke-width='{w or self.w}' stroke-linecap='round' stroke-linejoin='round'/>")
 
     def dot(self, cx, cy, r=None):
         self.parts.append(f"<circle cx='{cx:.1f}' cy='{cy:.1f}' r='{r or self.w * 1.6:.1f}' fill='{INK}'/>")
@@ -423,8 +434,389 @@ def icecream(p: Pen) -> str:
     return p.svg()
 
 
+def frog(p: Pen) -> str:
+    r = p.rng
+    p.e(250, 800, 90, 45, -10)
+    p.e(750, 800, 90, 45, 10)
+    p.e(500, 650, 270, 200)
+    p.e(260, 640, 70, 120, 24)
+    p.e(740, 640, 70, 120, -24)
+    p.e(500, 450, 240, 165)
+    for x in (360, 640):
+        p.e(x, 290, 75)
+        p.e(x, 290, 36)
+        p.dot(x + 4, 292, 17)
+    p.dot(450, 410, 10)
+    p.dot(550, 410, 10)
+    p.line("M330 500 Q500 640 670 500")
+    if not p.simple:
+        p.spots((380, 580, 640, 760), r.randint(2, 4), 18, 32)
+    return p.svg()
+
+
+def bunny(p: Pen) -> str:
+    r = p.rng
+    tilt = r.choice([-10, 0, 12])
+    p.e(385, 215, 62, 175, -8 + tilt)
+    p.e(615, 215, 62, 175, 8 + tilt)
+    p.e(385, 225, 28, 125, -8 + tilt)
+    p.e(615, 225, 28, 125, 8 + tilt)
+    p.e(500, 770, 220, 190)
+    p.e(380, 905, 85, 38)
+    p.e(620, 905, 85, 38)
+    p.e(500, 470, 190, 165)
+    p.eyes(425, 575, 440, 20)
+    p.poly([(478, 500), (522, 500), (500, 530)])
+    p.line("M500 530 L500 560")
+    p.line("M500 560 Q470 595 440 570")
+    p.line("M500 560 Q530 595 560 570")
+    p.line("M330 520 L240 505")
+    p.line("M670 520 L760 505")
+    if r.random() < .6:
+        _bow(p, 500, 650, .7)
+    if not p.simple:
+        p.e(500, 790, 105, 100)
+    return p.svg()
+
+
+def bear(p: Pen) -> str:
+    r = p.rng
+    for x in (320, 680):
+        p.e(x, 270, 75)
+        p.e(x, 275, 36)
+    p.e(500, 760, 230, 190)
+    if not p.simple:
+        p.e(500, 790, 130, 120)
+    p.e(300, 900, 70, 45)
+    p.e(700, 900, 70, 45)
+    p.e(500, 440, 205)
+    p.e(500, 510, 95, 72)
+    p.eyes(415, 585, 410, 20)
+    p.e(500, 480, 30, 22, 0)
+    p.line("M500 502 L500 540")
+    p.line("M500 540 Q470 575 440 548")
+    p.line("M500 540 Q530 575 560 548")
+    if r.random() < .5:
+        p.poly(_star_pts(500, 770, 55, .5))
+    return p.svg()
+
+
+def penguin(p: Pen) -> str:
+    r = p.rng
+    p.e(380, 905, 70, 32)
+    p.e(620, 905, 70, 32)
+    p.e(500, 560, 235, 340)
+    p.e(500, 650, 150, 245)
+    p.e(255, 600, 60, 170, 12)
+    p.e(745, 600, 60, 170, -12)
+    p.eyes(415, 585, 330, 22)
+    p.poly([(455, 400), (545, 400), (500, 470)])
+    p.line("M360 280 Q500 215 640 280")
+    if r.random() < .6:
+        p.line("M300 480 Q500 540 700 480", 22)
+        p.line("M300 480 Q500 540 700 480")
+    if not p.simple:
+        for k in range(3):
+            p.line(f"M{440 + k * 60} 610 q10 14 20 0")
+    return p.svg()
+
+
+def duck(p: Pen) -> str:
+    r = p.rng
+    p.line("M80 860 Q200 820 320 860 T560 860 T800 860 T940 840")
+    p.poly([(215, 600), (80, 520), (210, 700)])
+    p.e(470, 660, 285, 185)
+    p.e(700, 380, 125)
+    p.e(830, 420, 80, 34, 10)
+    p.dot(715, 345, 18)
+    p.e(420, 650, 130, 85, -20)
+    p.line("M410 830 L410 880")
+    p.line("M560 830 L560 880")
+    if r.random() < .5:
+        p.poly(_star_pts(700, 255, 36, .5))
+    return p.svg()
+
+
+def elephant(p: Pen) -> str:
+    r = p.rng
+    p.rect(250, 700, 100, 200, 30)
+    p.rect(520, 700, 100, 200, 30)
+    p.e(450, 590, 290, 210)
+    p.line("M180 540 Q110 600 140 700")
+    p.rect(380, 760, 100, 150, 30)
+    p.rect(630, 740, 100, 160, 30)
+    p.band("M780 480 C860 560 880 700 830 790", 80)
+    p.e(700, 410, 175, 170)
+    p.e(570, 420, 115, 175, 12)
+    p.dot(760, 370, 20)
+    if not p.simple:
+        p.line("M650 490 Q720 520 760 500")
+    return p.svg()
+
+
+def giraffe(p: Pen) -> str:
+    r = p.rng
+    for x in (260, 340, 560, 640):
+        p.rect(x, 700, 56, 230, 18)
+    p.line("M180 590 Q130 650 150 730")
+    p.band("M520 600 C560 450 600 320 640 200", 130)
+    p.e(450, 640, 270, 150)
+    p.e(690, 160, 120, 78, 18)
+    p.e(790, 195, 40, 28, 18)
+    p.line("M640 95 L630 40")
+    p.line("M690 85 L705 30")
+    p.e(626, 36, 12)
+    p.e(706, 28, 12)
+    p.e(590, 150, 32, 55, -30)
+    p.dot(715, 140, 14)
+    p.spots((300, 540, 600, 740), 4 if not p.simple else 2, 28, 46)
+    if not p.simple:
+        p.spots((560, 250, 640, 560), 3, 18, 28)
+    return p.svg()
+
+
+def lion(p: Pen) -> str:
+    r = p.rng
+    p.e(500, 820, 190, 130)
+    p.e(380, 920, 70, 38)
+    p.e(620, 920, 70, 38)
+    for k in range(14):
+        a = math.radians(k * 360 / 14)
+        p.e(500 + 245 * math.cos(a), 450 + 245 * math.sin(a), 70)
+    p.e(500, 450, 185)
+    for x in (360, 640):
+        p.e(x, 300, 42)
+    p.e(500, 520, 80, 60)
+    p.eyes(425, 575, 410, 20)
+    p.poly([(475, 470), (525, 470), (500, 500)])
+    p.line("M500 500 L500 540")
+    p.line("M500 540 Q470 575 440 548")
+    p.line("M500 540 Q530 575 560 548")
+    return p.svg()
+
+
+def bee(p: Pen) -> str:
+    r = p.rng
+    p.e(410, 330, 90, 150, -24)
+    p.e(590, 330, 90, 150, 24)
+    p.poly([(770, 580), (900, 560), (780, 630)])
+    p.e(500, 590, 260, 170)
+    for x in (430, 530, 630):
+        h = 170 * math.sqrt(max(0, 1 - ((x - 500) / 260) ** 2))
+        p.line(f"M{x} {590 - h + 6:.0f} L{x} {590 + h - 6:.0f}", p.w * 2.2)
+    p.e(255, 600, 105)
+    p.eyes(220, 295, 585, 16)
+    p.smile(255, 630, 36)
+    p.line("M225 505 Q190 430 140 420")
+    p.line("M290 505 Q310 430 350 410")
+    p.e(133, 420, 16)
+    p.e(356, 408, 16)
+    p.line("M120 900 q60 -40 120 0 t120 0")
+    return p.svg()
+
+
+def crab(p: Pen) -> str:
+    r = p.rng
+    for s in (-1, 1):
+        for k in range(3):
+            p.line(f"M{500 + s * 190} {600 + k * 55} L{500 + s * (300 + k * 25)} {680 + k * 70} L{500 + s * (330 + k * 25)} {760 + k * 60}")
+        p.line(f"M{500 + s * 200} 520 Q{500 + s * 330} 450 {500 + s * 360} 340")
+        p.e(500 + s * 360, 280, 95, 80, s * 20)
+        p.poly([(500 + s * 330, 220), (500 + s * 360, 280), (500 + s * 410, 215)])
+    p.e(500, 600, 275, 170)
+    for x in (410, 590):
+        p.line(f"M{x} 450 L{x} 380")
+        p.e(x, 360, 36)
+        p.dot(x, 362, 15)
+    p.smile(500, 610, 85)
+    if not p.simple:
+        p.spots((330, 520, 670, 620), 2, 14, 22)
+    return p.svg()
+
+
+def shark(p: Pen) -> str:
+    r = p.rng
+    p.line("M60 860 Q180 820 300 860 T540 860 T780 860 T950 845")
+    p.poly([(790, 560), (940, 400), (930, 700)])
+    p.poly([(440, 450), (540, 230), (640, 450)])
+    p.poly([(360, 700), (420, 800), (520, 690)])
+    p.e(480, 570, 360, 175)
+    p.e(330, 520, 24)
+    p.dot(334, 522, 14)
+    p.line("M150 640 L210 610 L250 650 L310 615 L360 655 L410 620")
+    for k in range(3):
+        p.line(f"M{560 + k * 28} 500 q-14 40 0 80")
+    return p.svg()
+
+
+def airplane(p: Pen) -> str:
+    r = p.rng
+    for cx, cy, s in ((180, 190, 1.0), (840, 790, .9)):
+        p.path(f"M{cx - 110 * s} {cy + 30 * s} a50 50 0 0 1 20 -85 a70 70 0 0 1 130 -20 a55 55 0 0 1 90 45 a38 38 0 0 1 0 60 Z")
+    p.poly([(250, 560), (120, 380), (200, 380), (400, 560)])
+    p.poly([(420, 520), (560, 250), (680, 250), (640, 520)])
+    p.poly([(420, 640), (560, 880), (680, 880), (640, 640)])
+    p.e(500, 570, 380, 90, -6)
+    p.poly([(790, 520), (910, 540), (800, 600)])
+    for k in range(5):
+        p.e(330 + k * 75, 560 - k * 8, 22)
+    p.e(790, 530, 36, 30, -10)
+    return p.svg()
+
+
+def sailboat(p: Pen) -> str:
+    r = p.rng
+    p.poly(_star_pts(800, 170, 70, .45, 6))
+    p.line("M500 160 L500 640", 14)
+    p.poly([(500, 190), (500, 600), (230, 600)])
+    p.poly([(530, 280), (530, 600), (730, 600)])
+    p.poly([(500, 160), (590, 195), (500, 230)])
+    p.path("M150 640 L850 640 Q780 800 640 800 L360 800 Q220 800 150 640 Z")
+    p.line("M250 700 L750 700")
+    for k, y in enumerate((850, 910)):
+        p.line(f"M{50 + k * 60} {y} q60 -50 120 0 t120 0 t120 0 t120 0 t120 0 t120 0")
+    return p.svg()
+
+
+def train(p: Pen) -> str:
+    r = p.rng
+    for k, cx in enumerate((690, 800, 880)):
+        p.e(cx, 170 - k * 50, 50 + k * 15)
+    p.rect(120, 460, 230, 220, 14)
+    p.rect(150, 490, 70, 80, 10)
+    p.rect(380, 380, 270, 300, 18)
+    p.rect(410, 410, 90, 90, 10)
+    p.rect(530, 410, 90, 90, 10)
+    p.rect(660, 440, 130, 240, 20)
+    p.rect(700, 280, 90, 110, 12)
+    p.rect(680, 240, 130, 50, 12)
+    p.rect(60, 680, 800, 40, 8)
+    for cx in (200, 380, 540, 740):
+        p.e(cx, 740, 66)
+        p.e(cx, 740, 24)
+    p.line("M40 830 L900 830")
+    for k in range(10):
+        p.line(f"M{70 + k * 90} 800 L{70 + k * 90} 860")
+    return p.svg()
+
+
+def cupcake(p: Pen) -> str:
+    r = p.rng
+    p.poly([(250, 590), (750, 590), (670, 900), (330, 900)])
+    for x in (330, 410, 500, 590, 670):
+        p.line(f"M{x} 590 L{250 + (x - 250) * .8 + 40:.0f} 900")
+    p.e(500, 560, 290, 85)
+    p.e(500, 440, 230, 90)
+    p.e(500, 330, 160, 80)
+    p.e(500, 190, 34)
+    p.line("M500 160 Q540 100 600 90")
+    if not p.simple:
+        for _ in range(8):
+            x, y, a = r.uniform(360, 640), r.uniform(310, 520), r.uniform(0, math.pi)
+            p.line(f"M{x:.0f} {y:.0f} l{26 * math.cos(a):.0f} {26 * math.sin(a):.0f}", p.w * 1.4)
+    return p.svg()
+
+
+def mushroom(p: Pen) -> str:
+    r = p.rng
+    p.line("M120 880 L880 880")
+    p.line("M180 880 l-20 -50 M820 880 l20 -50 M240 880 l10 -35")
+    p.path("M380 520 Q360 800 400 880 L600 880 Q640 800 620 520 Z")
+    p.path("M110 520 C110 200 890 200 890 520 Z")
+    p.line("M110 520 L890 520")
+    p.spots((200, 310, 800, 480), 3 if p.simple else r.randint(4, 6), 40, 70)
+    p.eyes(450, 550, 640, 14)
+    p.smile(500, 680, 40)
+    return p.svg()
+
+
+def unicorn(p: Pen) -> str:
+    r = p.rng
+    p.band("M250 580 C140 600 90 700 130 800", 70)
+    for x in (300, 380, 590, 670):
+        p.rect(x, 700, 54, 210, 18)
+    p.e(480, 640, 260, 160)
+    p.band("M620 560 C650 450 680 370 700 300", 120)
+    p.e(730, 250, 120, 85, 28)
+    p.poly([(720, 180), (770, 30), (810, 170)])
+    p.poly([(655, 190), (630, 120), (700, 160)])
+    p.dot(760, 240, 15)
+    for k in range(5):
+        p.e(610 - k * 10 + (k % 2) * 25, 200 + k * 80, 36)
+    p.line("M770 300 q-25 20 -45 4")
+    if r.random() < .6:
+        p.poly(_star_pts(480, 640, 44, .5))
+    return p.svg()
+
+
+def pizza(p: Pen) -> str:
+    r = p.rng
+    p.path("M500 900 L110 240 Q500 100 890 240 Z")
+    p.path("M110 240 Q500 100 890 240 L860 190 Q500 40 140 190 Z")
+    for x, y, rr in ((500, 330, 62), (380, 470, 55), (620, 480, 55), (500, 640, 50), (450, 230, 24), (620, 270, 28)):
+        p.e(x, y, rr)
+        if not p.simple and rr > 40:
+            p.dot(x, y, 10)
+    return p.svg()
+
+
+def apple(p: Pen) -> str:
+    r = p.rng
+    p.line("M500 280 Q490 190 540 120", 18)
+    p.e(640, 190, 100, 44, -28)
+    p.path("M500 300 C380 220 160 270 170 540 C175 760 340 900 440 880 Q500 860 560 880 C660 900 825 760 830 540 C840 270 620 220 500 300 Z")
+    p.eyes(410, 590, 560, 20)
+    p.smile(500, 640, 70)
+    p.e(320, 450, 40, 70, 24)
+    return p.svg()
+
+
+def ufo(p: Pen) -> str:
+    r = p.rng
+    p.poly([(400, 640), (330, 880), (670, 880), (600, 640)])
+    p.path("M340 400 C340 180 660 180 660 400 Z")
+    p.e(500, 460, 400, 110)
+    for k in range(5):
+        p.e(200 + k * 150, 470, 24)
+    p.e(500, 320, 80, 55)
+    p.dot(500, 330, 14)
+    for x, y in ((140, 180), (860, 230), (120, 700), (880, 660)):
+        p.poly(_star_pts(x, y, 46, .45))
+    return p.svg()
+
+
+def planet(p: Pen) -> str:
+    p.e(500, 500, 400, 105, -22)   # the ring, behind the planet
+    p.e(500, 500, 230)
+    p.line("M120 590 A400 105 -22 0 0 880 410")   # the front half of the ring
+    if not p.simple:
+        p.spots((380, 330, 620, 450), 3, 20, 36)
+    p.eyes(440, 560, 520, 15)
+    p.smile(500, 560, 40)
+    for x, y in ((150, 160), (860, 190), (200, 860), (840, 820)):
+        p.poly(_star_pts(x, y, 44, .45))
+    return p.svg()
+
+
+def balloons(p: Pen) -> str:
+    r = p.rng
+    pts = [(300, 330, 150), (500, 250, 165), (700, 340, 150)]
+    for i, (x, y, rr) in enumerate(pts):
+        p.line(f"M{x} {y + rr * 1.15:.0f} Q{500 + (x - 500) * .3:.0f} 760 500 900", p.w * .7)
+    for x, y, rr in pts:
+        p.e(x, y, rr * .85, rr * 1.05)
+        p.poly([(x - 20, y + rr * 1.05), (x + 20, y + rr * 1.05), (x, y + rr * 1.05 + 30)])
+        p.e(x - rr * .3, y - rr * .35, 22, 34, 30)
+    if not p.simple:
+        p.poly(_star_pts(500, 920, 40, .5))
+    return p.svg()
+
+
 _FIGURES = {"cat": cat, "fish": fish, "butterfly": butterfly, "turtle": turtle, "owl": owl, "snail": snail, "ladybug": ladybug, "whale": whale,
-            "octopus": octopus, "rocket": rocket, "car": car, "robot": robot, "dino": dino, "flower": flower, "house": house, "icecream": icecream}
+            "octopus": octopus, "rocket": rocket, "car": car, "robot": robot, "dino": dino, "flower": flower, "house": house, "icecream": icecream,
+            "frog": frog, "bunny": bunny, "bear": bear, "penguin": penguin, "duck": duck, "elephant": elephant, "giraffe": giraffe, "lion": lion, "bee": bee,
+            "crab": crab, "shark": shark, "airplane": airplane, "sailboat": sailboat, "train": train, "cupcake": cupcake, "mushroom": mushroom,
+            "unicorn": unicorn, "pizza": pizza, "apple": apple, "ufo": ufo, "planet": planet, "balloons": balloons}
 
 
 def figure(kind: str, seed: int, width: float = 10, simple: bool = False) -> str:

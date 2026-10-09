@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from .. import layouts as lay
 from ..config import get_config
-from ..art import MOTIFS, SVG_PROVIDERS, generate_art, motif_svg
+from ..art import MOTIFS, SVG_PROVIDERS, WALL_MOTIFS, generate_art, motif_svg
 from ..niches import NicheProfile
 from ..render.html import PageSize
 from ..render.raster import render_pages
@@ -205,7 +205,7 @@ def make_designs(content: "WallArtContent", style, seed: int, use_ai: bool = Fal
     image_chain = [n for n in chain if n != "claude_svg"]
     for i, q in enumerate(content.quotes):
         bg, fg, dark = schemes[i % len(schemes)]
-        kind = motif or MOTIFS[(seed + i) % len(MOTIFS)]
+        kind = motif if motif in WALL_MOTIFS else MOTIFS[(seed + i) % len(MOTIFS)]
         spec = fixed or presets[(i + seed) % len(presets)]
         boxes = lay.art_boxes(spec)
         fs, text_top = fit_text(q.text, boxes)

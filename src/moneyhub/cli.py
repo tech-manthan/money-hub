@@ -71,7 +71,7 @@ def make(
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
 ):
     """Generate one product with its images, listing copy and upload guides."""
-    from .art import MOTIFS
+    from .art import WALL_MOTIFS as MOTIFS
     from .design import is_hex_colour
     if brand and not is_hex_colour(brand):
         raise typer.BadParameter("use a hex colour like '#2F6B57'", param_hint="--brand")
@@ -133,7 +133,7 @@ def make(
 @app.command()
 def styles():
     """List every look option `make` accepts: palettes, fonts, headers, radii, grids, motifs, layouts, AI art providers."""
-    from .art import MOTIFS, art_status
+    from .art import WALL_MOTIFS as MOTIFS, art_status
     typer.echo("Palettes (--palette):")
     for p in PALETTES:
         typer.echo(f"  {p.key:<11} accent {p.accent}  accent2 {p.accent2}  soft {p.soft}  mood: {', '.join(p.mood)}")
