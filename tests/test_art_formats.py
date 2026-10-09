@@ -199,3 +199,35 @@ def test_sticker_sheets_product_has_sheets_png_zip_and_passes_qa():
     assert pdf_page_count(next((res.folder / "product").glob("*-letter.pdf"))) == 2   # 14 stickers: 12 + 2
     z = zipfile.ZipFile(next((res.folder / "product").glob("*PNG-stickers.zip")))
     assert len([n for n in z.namelist() if n.endswith(".png")]) == 14
+
+
+# ------------------------------------------------------------------ oracle / tarot decks
+def test_every_oracle_symbol_draws_and_card_art_differs_by_seed():
+    from moneyhub import oracle_art
+    pal = PALETTES[0]
+    for kind in oracle_art.SYMBOLS:
+        svg = oracle_art.card_art(kind, pal, 1)
+        assert svg.startswith("<svg") and "NaN" not in svg and len(svg) > 800, kind
+    assert oracle_art.card_art("sun", pal, 1) != oracle_art.card_art("sun", pal, 2)   # a different sky
+    back = oracle_art.card_back(pal, 1, 1.8)
+    assert "viewBox='0 0 600 1080'" in back
+
+
+def test_built_in_decks_are_complete_and_never_predict():
+    from moneyhub import oracle_art
+    from moneyhub.products import oracle_deck as od
+    assert len(od.TAROT) == 22 and len(od.ORACLE) == 36 and len(od.ROMAN) == 22
+    for deck in (od.TAROT, od.ORACLE):
+        assert len({c[0] for c in deck}) == len(deck)               # unique names
+        assert all(c[3] in oracle_art.SYMBOLS and len(c[2]) <= 110 for c in deck)
+        assert not [c for c in deck if any(w in c[2].lower() for w in ("will die", "you will", "guarantee", "cure", "invest"))]
+
+
+@pytest.mark.parametrize("deck,n", [("tarot", 22), ("oracle", 24)])
+def test_oracle_deck_product_pages_and_listing_disclaimer(deck, n):
+    res = generate(Request("x", "oracle_deck", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "deck": deck, "cards": n}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    pdf = next((res.folder / "product").glob("*-letter.pdf"))
+    assert pdf_page_count(pdf) == 2 + -(-n // 6) + 1   # cover + guide + card sheets (6 per sheet) + backs
+    assert "not predictions" in (res.folder / "listing" / "etsy-description.txt").read_text().lower()

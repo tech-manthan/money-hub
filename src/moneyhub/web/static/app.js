@@ -30,6 +30,7 @@ if (form) {
       sizeBox.appendChild(l);
     });
     weeks.style.display = type.value === 'weekly_planner' ? '' : 'none';
+    document.getElementById('oracle-wrap').hidden = type.value !== 'oracle_deck';
     document.getElementById('kids-wrap').hidden = !['kids_coloring', 'sticker_sheets'].includes(type.value);
     document.getElementById('type-desc').textContent = opt.dataset.desc || '';
   }

@@ -61,6 +61,9 @@ def make(
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     pages: int = typer.Option(None, help="Coloring books: number of pages (10-40)"),
+    deck: str = typer.Option(None, help="Oracle deck: 'oracle' (gentle message cards, default) or 'tarot' (22 archetype cards)"),
+    card_size: str = typer.Option(None, help="Oracle deck: 'tall' (2.5 x 4.5 in, default) or 'poker' (2.5 x 3.5 in)"),
+    cards: int = typer.Option(None, help="Oracle deck: number of oracle cards (12-36)"),
     stickers: int = typer.Option(None, help="Sticker sheets: number of stickers (12-48)"),
     theme: str = typer.Option(None, help="Kids coloring book and sticker sheets: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
     age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
@@ -76,6 +79,7 @@ def make(
         brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
     from . import kidsart
+    _check(deck, ["oracle", "tarot"], "--deck"), _check(card_size, ["tall", "poker"], "--card-size")
     _check(theme, list(kidsart.THEMES), "--theme"), _check(age, list(kidsart.AGES), "--age")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
@@ -110,7 +114,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "deck": deck, "card_size": card_size, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,

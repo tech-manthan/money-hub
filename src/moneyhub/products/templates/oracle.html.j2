@@ -1,0 +1,45 @@
+{% from '_macros.html.j2' import header, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [content.cards|length ~ ' cards', 'Cut & use', 'Print at home']) }}
+<section class="page" style="padding:2.6em 2.8em;">
+  {{ header(style, 'How to use this deck', 'Slow down, breathe and pull a card') }}
+  <div style="margin-top:1.2em;">
+    <div class="card"><div class="label">One card</div><p>Take a breath, think of a gentle question or simply ask "What do I need to remember today?", then draw one card. Read the name, the keyword and the message, and notice what it stirs in you.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Three cards</div><p>Draw three and lay them left to right: <b>Where I am</b>, <b>What helps</b>, <b>My next small step</b>. Read them as a short story and write down what stands out.</p></div>
+  </div>
+  <div class="card" style="margin-top:1.2em;"><div class="label">Daily ritual</div><p>Pull one card each morning. Keep it nearby, and in the evening write one line about how its message showed up. Cards are best used as a prompt for your own thinking.</p></div>
+  <div class="card" style="margin-top:1.2em;"><div class="label">Printing and cutting</div><p>Print the card pages on cardstock at Actual size (not "fit to page"). Print the card-back page on the reverse side, or on a second sheet to glue behind. Cut along the dashed guides. Rounded corners with a corner punch finish them nicely.</p></div>
+  <div class="card" style="margin-top:1.2em;"><div class="label">Good to know</div><p>These cards are for reflection, inspiration and entertainment. They do not predict the future and are not medical, legal or financial advice. For personal use only.</p></div>
+  {{ footer(content.title, false, 'Guide') }}
+</section>
+{% for start in range(0, content.cards|length, per) %}
+<section class="page" style="padding:.25in 0;">
+  <div class="ocards">
+    {% for c in content.cards[start:start+per] %}
+    <div class="ocard">
+      <div class="onum">{{ numerals[start + loop.index0] }}</div>
+      <div class="oart">{{ arts[start + loop.index0]|safe }}</div>
+      <div class="oname h">{{ c.name }}</div>
+      <div class="okey label">{{ c.keyword }}</div>
+      <div class="omsg">{{ c.message }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<section class="page" style="padding:.25in 0;">
+  <div class="ocards">
+    {% for k in range(per) %}<div class="ocard oback">{{ back|safe }}</div>{% endfor %}
+  </div>
+</section>
+<style>
+.ocards { display:grid; justify-content:center; align-content:center; flex:1; grid-template-columns:repeat({{ cols }}, {{ cw }}in); grid-template-rows:repeat({{ rows }}, {{ ch }}in); }
+.ocard { width:{{ cw }}in; height:{{ ch }}in; box-sizing:border-box; border:1px dashed var(--muted); background:var(--paper); display:flex; flex-direction:column; align-items:center; padding:.1in .1in .08in; font-size:{{ pt }}pt; overflow:hidden; position:relative; }
+.ocard.oback { padding:0; border:1px dashed var(--muted); }
+.ocard.oback svg { width:100%; height:100%; display:block; }
+.onum { height:1.5em; line-height:1.5em; font-size:1.1em; letter-spacing:.2em; color:var(--accent); font-weight:700; }
+.oart { flex:1; min-height:0; width:100%; position:relative; }
+.oart svg { position:absolute; left:0; top:0; width:100%; height:100%; }
+.oname { font-size:1.75em; line-height:1.1; margin-top:.35em; text-align:center; }
+.okey { margin:.15em 0 .3em; font-size:.95em; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+.omsg { text-align:center; line-height:1.25; font-size:1em; padding:0 .25em; color:var(--ink); }
+</style>

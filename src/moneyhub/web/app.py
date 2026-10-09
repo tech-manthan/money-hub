@@ -153,6 +153,8 @@ def layout_preview(product_type: str, layout: str, palette: str = "", fonts: str
     from .. import layouts as lay
     from ..design import is_hex_colour
     from ..render.preview import layout_preview_png
+    if (deck and deck not in ("oracle", "tarot")) or (card_size and card_size not in ("tall", "poker")):
+        raise HTTPException(422, f"Unknown deck or card size: {deck or card_size}")
     pt = all_product_types().get(product_type)
     if not pt or not pt.has_layout(layout):
         raise HTTPException(404, "unknown product type or layout")
@@ -454,7 +456,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
                ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
                radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
                brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[]), page_layout: str = Form(""),
-               layout_spec: str = Form(""), theme: str = Form(""), age: str = Form(""), pages: str = Form(""), stickers: str = Form("")):
+               layout_spec: str = Form(""), theme: str = Form(""), age: str = Form(""), pages: str = Form(""), stickers: str = Form(""),
+               deck: str = Form(""), card_size: str = Form(""), cards: str = Form("")):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
                                         (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
     if bad:
@@ -481,7 +484,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
             providers=[x.strip() for x in llm.split(",") if x.strip()] or None,
             seed=int(seed) if seed.strip().isdigit() else None,
             options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look,
-                     **({"theme": theme} if theme else {}), **({"age": age} if age else {}), **({"pages": int(pages)} if pages.strip().isdigit() else {}), **({"stickers": int(stickers)} if stickers.strip().isdigit() else {})},
+                     **({"theme": theme} if theme else {}), **({"age": age} if age else {}), **({"pages": int(pages)} if pages.strip().isdigit() else {}), **({"stickers": int(stickers)} if stickers.strip().isdigit() else {}),
+                     **({"deck": deck} if deck else {}), **({"card_size": card_size} if card_size else {}), **({"cards": int(cards)} if cards.strip().isdigit() else {})},
             with_video=not no_video,
         )
         if marketplaces:

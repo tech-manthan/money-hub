@@ -26,6 +26,7 @@ PRODUCT_PLAIN = {
     "wall_art": "A set of printable quote posters in several print sizes (JPG).",
     "clipart_pack": "Abstract boho clipart: transparent PNGs, SVG vectors and a commercial licence.",
     "cut_files": "Clean cut-file shapes for Cricut and Silhouette: SVG, DXF, EPS and PNG, with a commercial licence.",
+    "oracle_deck": "Illustrated tarot-style or oracle card deck with gentle messages, cut guides, a how-to page and card backs (PDF).",
     "sticker_sheets": "Colourful stickers with a die-cut border: printable sheets plus transparent PNGs for digital planners.",
     "kids_coloring": "Children's coloring pages: friendly animals, vehicles and treats plus shape, counting and tracing pages (PDF). New figures every time.",
     "coloring_pages": "Printable mandala and pattern coloring pages as clean line art (PDF).",
