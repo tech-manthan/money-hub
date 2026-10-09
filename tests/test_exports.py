@@ -100,3 +100,15 @@ def test_canva_pack_has_pages_brand_kit_and_link_page(planner):
     link_pdf = next(d.glob("*canva-template-link.pdf"))
     uris = [a.get_object()["/A"]["/URI"] for p in PdfReader(str(link_pdf)).pages for a in (p.get("/Annots") or []) if "/A" in a.get_object()]
     assert "https://www.canva.com/design/example/view" in uris
+
+
+def test_each_platform_export_ends_with_one_pack_zip_containing_its_guide(planner):
+    import zipfile
+    export_canva(planner)
+    kdp.export_kdp(planner, "6x9", "white", progress=lambda m: None)
+    notion.export_notion(planner)
+    for kind, guide in (("canva", "HOW-TO-CANVA.md"), ("kdp", "KDP-GUIDE.md"), ("notion", "-notion-guide.md")):
+        z = next((planner.folder / "exports").glob(f"*-{kind}-pack.zip"))
+        names = zipfile.ZipFile(z).namelist()
+        assert any(n.endswith(guide) for n in names), (kind, names)
+        assert not any(n.endswith("-pack.zip") for n in names)   # never nests itself

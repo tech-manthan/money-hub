@@ -355,7 +355,8 @@ def export_product(pid: int, kind: str = Form(...), trim: str = Form("6x9"), pap
             notion.export_notion(l)
         else:
             canva.export_canva(l, link or None)
-        made = sorted(str(f.relative_to(l.folder)) for f in (l.folder / "exports").rglob("*") if f.is_file() and f.suffix in (".zip", ".pdf", ".md", ".json"))
+        made = sorted((str(f.relative_to(l.folder)) for f in (l.folder / "exports").rglob("*") if f.is_file() and f.suffix in (".zip", ".pdf", ".md", ".json")),
+                      key=lambda n: (not n.endswith(f"-{kind}-pack.zip"), n))   # the one-zip pack first
         return {"files": made, "product_id": pid, "qa": "pass"}
     return {"job": _submit(f"{kind} export for #{pid}", run)}
 

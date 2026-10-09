@@ -61,7 +61,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
     st.textContent = j.log[j.log.length - 1] || 'Working…';
     if (j.status === 'error') { clearInterval(t); st.textContent = j.error; }
     if (j.status === 'done') { clearInterval(t); st.textContent = 'Done. Files are listed below.';
-      document.getElementById('exp-files').innerHTML = j.files.map(x => `<li><a href="/files/{{ p.id }}/${x}?download=1">${x}</a></li>`).join(''); }
+      document.getElementById('exp-files').innerHTML = j.files.map(x => `<li><a href="/files/{{ p.id }}/${x}?download=1">${/-pack\.zip$/.test(x) ? '⬇ Download everything in one zip: ' : ''}${x}</a></li>`).join(''); }
   }, 1200);
 }));
 </script>

@@ -11,7 +11,7 @@ from ..design import style_from_dict
 from ..render.html import PAGE_SIZES, render_html
 from ..render.pdf import render_pdf
 from ..render.raster import pdf_page_count, render_pages
-from . import Loaded, out_dir
+from . import Loaded, out_dir, pack_zip
 
 # Canva's font library includes these Google Fonts families.
 CANVA_FONTS = {"PlayfairDisplay": "Playfair Display", "DMSans": "DM Sans", "Inter": "Inter", "Nunito": "Nunito", "Lora": "Lora",
@@ -68,4 +68,5 @@ def export_canva(l: Loaded, link: str | None = None) -> Path:
     (d / "HOW-TO-CANVA.md").write_text(GUIDE.format(
         title=l.title, pdf=f"{base}-for-canva.pdf", fonts=", ".join(sorted(fonts)), link_pdf=link_pdf,
         colours=", ".join(f"{k} {v}" for k, v in colours.items() if k in ("accent", "accent2", "soft", "ink"))), encoding="utf-8")
+    pack_zip(l, "canva")
     return d

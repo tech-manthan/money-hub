@@ -119,5 +119,9 @@ def export_notion(l: Loaded) -> Path:
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, text in files.items():
             zf.writestr(f"{_safe(l.title)}/{name}", text)
-    (d / f"{base}-notion-guide.md").write_text(GUIDE.format(zip=z.name), encoding="utf-8")
+    guide = d / f"{base}-notion-guide.md"
+    guide.write_text(GUIDE.format(zip=z.name), encoding="utf-8")
+    with zipfile.ZipFile(d / f"{base}-notion-pack.zip", "w", zipfile.ZIP_DEFLATED) as zf:   # one download: the import zip plus the guide
+        zf.write(z, z.name)
+        zf.write(guide, guide.name)
     return z

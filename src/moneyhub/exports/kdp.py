@@ -21,7 +21,7 @@ from ..products.base import BuildContext
 from ..qa import _pdf_fonts_embedded
 from ..render.html import KDP_TRIMS, PAGE_SIZES, PageSize, render_html
 from ..render.pdf import render_pdf
-from . import Loaded, out_dir
+from . import Loaded, out_dir, pack_zip
 
 SUPPORTED = ("weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "coloring_pages", "kids_coloring")
 PAPER = {"white": 0.002252, "cream": 0.0025, "color": 0.0032}   # inches per page (KDP)
@@ -174,6 +174,7 @@ def export_kdp(l: Loaded, trim: str = "6x9", paper: str = "white", progress=prin
             "checks": [{"name": n, "ok": ok, "detail": dt} for n, ok, dt in checks]}
     (d / "cover-spec.json").write_text(json.dumps(spec, indent=2), encoding="utf-8")
     (d / "KDP-GUIDE.md").write_text(_guide(l, spec, listing, base), encoding="utf-8")
+    pack_zip(l, "kdp")
     return spec
 
 
