@@ -81,6 +81,7 @@ _TYPE_WORDS = {
     "digital_paper": ["digital paper", "seamless pattern", "scrapbook paper", "digital paper pack", "seamless digital paper", "patterns jpg"],
     "cut_files": ["svg cut files", "cricut svg", "silhouette cut files", "svg bundle", "boho svg", "dxf cut files"],
     "coloring_pages": ["coloring pages", "mandala coloring", "printable coloring", "adult coloring pages", "coloring sheets", "coloring book pdf"],
+    "sticker_sheets": ["sticker sheets", "printable stickers", "goodnotes stickers", "digital stickers", "planner stickers", "cute stickers"],
     "kids_coloring": ["kids coloring pages", "coloring book for kids", "printable coloring", "toddler coloring pages", "preschool printables", "animal coloring pages"],
     "clipart_pack": ["clipart bundle", "boho clipart", "commercial use clipart", "png clipart", "svg clipart", "abstract shapes clipart"],
     "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],

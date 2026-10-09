@@ -61,7 +61,8 @@ def make(
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     pages: int = typer.Option(None, help="Coloring books: number of pages (10-40)"),
-    theme: str = typer.Option(None, help="Kids coloring book: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
+    stickers: int = typer.Option(None, help="Sticker sheets: number of stickers (12-48)"),
+    theme: str = typer.Option(None, help="Kids coloring book and sticker sheets: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
     age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
@@ -109,7 +110,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,

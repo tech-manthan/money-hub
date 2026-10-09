@@ -74,7 +74,7 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     for f in pdfs:
         n = pdf_page_count(f.path)
         size_mb = f.path.stat().st_size / 1e6
-        min_pages = 1 if ("Start-Here" in f.path.name or "License" in f.path.name) else 3
+        min_pages = 1 if ("Start-Here" in f.path.name or "License" in f.path.name) else build.meta.get("min_pages", 3)
         checks.append(Check(f"{f.path.name}: pages", "pass" if n >= min_pages else "fail", f"{n} pages"))
         checks.append(Check(f"{f.path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)"))
         total, emb = _pdf_fonts_embedded(f.path)
@@ -87,7 +87,7 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     for f in [x for x in build.files if x.kind == "xlsx"]:
         checks += _xlsx_checks(f.path)
     for f in [x for x in build.files if x.kind == "zip"]:
-        checks += _zip_checks(f.path)
+        checks += _zip_checks(f.path, build.meta.get("min_px", 2000))
     if "cut_min_gap_mm" in build.meta:   # cut files: the thinnest bridge between two cuts must survive a real cutting mat
         g = build.meta["cut_min_gap_mm"]
         checks.append(Check("Cut-ready", "pass" if g >= 1.5 else "fail", f"thinnest gap between cuts {g} mm (1.5 mm or more holds on a mat)"))
@@ -100,7 +100,7 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     return checks
 
 
-def _zip_checks(path: Path) -> list[Check]:
+def _zip_checks(path: Path, min_px: int = 2000) -> list[Check]:
     import zipfile
 
     from PIL import Image
@@ -114,7 +114,7 @@ def _zip_checks(path: Path) -> list[Check]:
         if jpgs:
             with z.open(jpgs[0]) as fh:
                 im = Image.open(fh)
-                out.append(Check(f"{path.name}: resolution", "pass" if min(im.size) >= 2000 else "warn", f"{im.size[0]}x{im.size[1]} px"))
+                out.append(Check(f"{path.name}: resolution", "pass" if min(im.size) >= min_px else "warn", f"{im.size[0]}x{im.size[1]} px"))
                 if jpgs[0].lower().endswith(".png"):
                     out.append(Check(f"{path.name}: transparency", "pass" if im.mode == "RGBA" and im.getchannel("A").getextrema()[0] == 0 else "fail",
                                      "transparent background" if im.mode == "RGBA" else "no alpha channel"))

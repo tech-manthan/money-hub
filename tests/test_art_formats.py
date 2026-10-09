@@ -173,3 +173,29 @@ def test_every_product_family_gets_in_use_mockups(ptype, opts, expect):
     from PIL import Image
     for n in names:
         assert Image.open(res.folder / "images" / "etsy" / n).size == (2700, 2025)
+
+
+# ------------------------------------------------------------------ sticker sheets
+def test_stickers_are_coloured_with_a_white_die_cut_border():
+    from PIL import Image
+
+    from moneyhub import stickers
+    pal = PALETTES[0]
+    name, svg = stickers.sticker_svg(0, 3, "animals", pal)
+    assert "#ffffff" not in svg and pal.ink in svg and name
+    im = Image.new("RGBA", (300, 300), (0, 0, 0, 0))
+    im.paste(Image.new("RGBA", (100, 100), (200, 30, 30, 255)), (100, 100))
+    cut = stickers.die_cut(im)
+    assert cut.width > 100 + 2 * round(stickers.BORDER_IN * 300) - 4   # grew by the border on every side
+    assert cut.getpixel((3, 3))[3] == 0 and cut.getpixel((cut.width // 2, cut.height // 2))[:3] == (200, 30, 30)
+    assert cut.getpixel((cut.width // 2, 8))[:3] == (255, 255, 255) and cut.getpixel((cut.width // 2, 8))[3] == 255   # white margin
+
+
+def test_sticker_sheets_product_has_sheets_png_zip_and_passes_qa():
+    res = generate(Request("x", "sticker_sheets", providers=["builtin"], seed=3, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "stickers": 14, "theme": "ocean"}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    assert res.title == "Under the Sea Sticker Sheets"
+    assert pdf_page_count(next((res.folder / "product").glob("*-letter.pdf"))) == 2   # 14 stickers: 12 + 2
+    z = zipfile.ZipFile(next((res.folder / "product").glob("*PNG-stickers.zip")))
+    assert len([n for n in z.namelist() if n.endswith(".png")]) == 14
