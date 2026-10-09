@@ -25,6 +25,7 @@ PRODUCT_PLAIN = {
     "ebook_guide": "A short beginner guide with chapters and action steps. Review the text before selling.",
     "wall_art": "A set of printable quote posters in several print sizes (JPG).",
     "clipart_pack": "Abstract boho clipart: transparent PNGs, SVG vectors and a commercial licence.",
+    "digital_paper": "Seamless 12 x 12 in patterns as JPG papers, with a commercial licence.",
 }
 
 FONT_PLAIN = {

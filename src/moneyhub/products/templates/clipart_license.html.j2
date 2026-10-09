@@ -1,16 +1,18 @@
 {% from '_macros.html.j2' import header, footer %}
+{% set noun = noun|default('clipart designs') %}
+{% set uses = uses|default('finished designs and products you sell: printables, planners, stickers, cards, invitations, social media posts, websites, packaging and physical goods') %}
 <section class="page">
   {{ header(style, 'Commercial licence', title) }}
-  <p style="max-width:40em;">Thank you for your purchase. This page explains what you may do with the {{ count }} clipart designs you bought. It is a plain-language summary, not legal advice.</p>
+  <p style="max-width:40em;">Thank you for your purchase. This page explains what you may do with the {{ count }} {{ noun }} you bought. It is a plain-language summary, not legal advice.</p>
   <div class="label" style="margin:1em 0 .4em;">You may</div>
   <ul style="max-width:42em;line-height:1.55;">
     <li>Use the clipart in your own personal and commercial projects, as many times as you like.</li>
-    <li>Use it in finished designs and products you sell: printables, planners, stickers, cards, invitations, social media posts, websites, packaging and physical goods.</li>
+    <li>Use it in {{ uses }}.</li>
     <li>Change the colours, resize, rotate and combine it with your own work. No credit or link back is needed.</li>
   </ul>
   <div class="label" style="margin:1em 0 .4em;">You may not</div>
   <ul style="max-width:42em;line-height:1.55;">
-    <li>Resell, share, give away or upload the original files (or edited versions of them) as clipart, graphics, templates or stock.</li>
+    <li>Resell, share, give away or upload the original files (or edited versions of them) as {{ 'clipart, graphics, templates or stock' if noun.startswith('clipart') else 'digital paper, backgrounds, textures, patterns, templates or stock' }}.</li>
     <li>Include the files in another clipart pack, bundle, font or design kit, or in a template where buyers can pull the artwork out.</li>
     <li>Say you drew the original artwork, or register it as your own copyright or trademark.</li>
     <li>Use the files to train or fine-tune AI models, or add them to AI datasets.</li>

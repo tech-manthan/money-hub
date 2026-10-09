@@ -78,13 +78,41 @@ _TYPE_WORDS = {
     "wall_art": ["printable wall art", "digital wall art", "wall art set", "poster print", "affirmation print", "downloadable art"],
     "daily_planner": ["daily planner", "daily planner printable", "to do list", "day planner pdf", "daily schedule", "productivity planner"],
     "checklist_pack": ["printable checklists", "checklist bundle", "to do checklist", "organizer printable", "checklist pdf", "planner inserts"],
+    "digital_paper": ["digital paper", "seamless pattern", "scrapbook paper", "digital paper pack", "seamless digital paper", "patterns jpg"],
     "clipart_pack": ["clipart bundle", "boho clipart", "commercial use clipart", "png clipart", "svg clipart", "abstract shapes clipart"],
     "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],
 }
 
 
+def _generic_copy(ptype: ProductType, build: BuildResult, words: list[str]) -> ListingCopy:
+    """Listing copy for products that are not about one niche: named after the design, aimed at the people who use such files."""
+    nm = build.title[: -len(ptype.title_suffix)].strip() if ptype.title_suffix and build.title.endswith(ptype.title_suffix) else build.title
+    aud = ptype.copy_audience or "creators and small shops"
+    parts = [f"{nm} {ptype.label}", *[w.title() for w in words[1:3]], "Instant Download", "Digital Download"]
+    title = ", ".join(dict.fromkeys(p for p in parts if p))
+    tags: list[str] = []
+    for kw in [*words, "instant download", "digital download", "commercial use", f"{nm.lower()} {ptype.label.lower()}", "digital art", "craft supplies", "design resources", "small business"]:
+        kw = kw.lower().strip()
+        if 3 <= len(kw) <= ETSY_TAG_MAX_LEN and kw not in tags:
+            tags.append(kw)
+    feats = ", ".join(build.features[:3]).lower()
+    return ListingCopy(
+        title=title, short_title=f"{nm} {ptype.label}", tags=tags[:ETSY_TAG_COUNT + 4],
+        intro=f"{build.title}: original artwork for {aud}. Download it instantly and start creating today.",
+        faq=["Q: How do I receive the files? A: Instantly after purchase - you get a download link by email and on your purchases page.",
+             ptype.license_faq or "Q: Can I resell or share the files? A: No - personal use only. Please do not redistribute or resell.",
+             "Q: Which apps can I use? A: Any app that opens PNG, JPG or SVG files: Canva, Procreate, Photoshop, Affinity, Cricut Design Space and more."],
+        pin_titles=[f"{nm} {ptype.label}: {words[0]}", f"{words[1 % len(words)].title()} - {nm}", f"{nm} {words[0]} (instant download)",
+                    f"{words[2 % len(words)].title()} for {aud}"[:100], f"New: {nm} {words[0]}", f"Best {words[0]} for your next project"],
+        pin_headlines=[nm, f"{nm} {ptype.label}", "Instant download", f"For {aud}"[:40], "Commercial use included", "Made to create with"],
+        pin_description=f"{build.title}. Made for {aud}. Includes {feats}. Instant download - save this pin and get yours today.",
+    )
+
+
 def _builtin_copy(niche: NicheProfile, ptype: ProductType, build: BuildResult, rng: random.Random) -> ListingCopy:
     words = _TYPE_WORDS.get(ptype.key, [ptype.label.lower()])
+    if not ptype.niche_in_copy:
+        return _generic_copy(ptype, build, words)
     nm = niche.name
     title_parts = [f"{nm} {ptype.label}", words[1 % len(words)].title(), words[2 % len(words)].title(), "Instant Download", "Printable PDF" if "PDF" in ptype.typical_formats else "Digital Download",
                    niche.seo_keywords[0].title() if niche.seo_keywords else ""]
@@ -163,8 +191,9 @@ def make_kit(niche: NicheProfile, ptype: ProductType, build: BuildResult, router
              rng: random.Random, providers: list[str] | None = None) -> ListingKit:
     prompt = (
         f"Product: {ptype.label} - {ptype.description}\nTitle: {build.title}\nFeatures:\n- " + "\n- ".join(build.features)
-        + f"\nFormats: {ptype.typical_formats}\nNiche JSON:\n{niche.model_dump_json()}\n\n"
-        "Write the marketplace listing copy. Use the exact keywords buyers would search on Etsy and Pinterest. "
+        + f"\nFormats: {ptype.typical_formats}\n"
+        + (f"Niche JSON:\n{niche.model_dump_json()}\n\n" if ptype.niche_in_copy else f"Audience: {ptype.copy_audience}. Do not mention any niche or profession.\n\n")
+        + "Write the marketplace listing copy. Use the exact keywords buyers would search on Etsy and Pinterest. "
         "Be truthful: only claim what the features list says."
     )
     system = ("You are an expert Etsy/Gumroad SEO copywriter. Titles front-load the strongest buyer keywords. "

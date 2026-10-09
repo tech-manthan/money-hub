@@ -189,8 +189,63 @@ def test_clipart_pack_has_transparent_png_svg_licence_and_commercial_listing_ter
     pngs = [i for i in png.infolist() if i.filename.endswith(".png")]
     assert len(pngs) == 2 * len(art.MOTIFS)
     im = Image.open(png.open(pngs[0]))
-    assert im.mode == "RGBA" and im.size[0] >= 2000 and im.getchannel("A").getextrema()[0] == 0 and im.info.get("icc_profile")
+    assert im.mode == "RGBA" and im.size[0] == im.size[1] and im.size[0] in (3000, 2400, 2000) and im.getchannel("A").getextrema()[0] == 0 and im.info.get("icc_profile")
     assert len([n for n in zipfile.ZipFile(next(p for n, p in names.items() if n.endswith("SVG-vector.zip"))).namelist() if n.endswith(".svg")]) == 2 * len(art.MOTIFS)
     assert "Commercial-License.pdf" in names
     desc = (res.folder / "listing" / "etsy-description.txt").read_text()
     assert "Commercial use is included" in desc and "personal use only" not in desc.lower()
+
+
+def test_clipart_and_digital_paper_listings_never_mention_the_niche():
+    import json
+    for key in ("clipart_pack", "digital_paper"):
+        res = generate(Request("gardening", key, providers=["builtin"], seed=4, with_video=False, options={"no_research": True}))
+        listing = json.loads((res.folder / "listing" / "listing.json").read_text())
+        assert "garden" not in json.dumps(listing).lower() and "garden" not in res.title.lower()
+
+
+def test_seamless_patterns_tile_without_a_visible_seam_and_the_check_can_tell():
+    import tempfile
+    from pathlib import Path
+    import pypdfium2 as pdfium
+    from moneyhub import patterns
+    from moneyhub.render.pdf import render_pdf
+
+    def measure(kinds, pal):
+        html = ("<style>@page{size:12in 12in;margin:0}html,body{margin:0}.p{width:12in;height:12in;page-break-after:always}.p svg{width:12in;height:12in;display:block}</style>"
+                + "".join(f"<div class='p'>{patterns.paper_svg(k, pal, 3, 0, 1)}</div>" for k in kinds))
+        with tempfile.TemporaryDirectory() as t:
+            pdf = Path(t) / "a.pdf"
+            render_pdf(html, pdf, page_css_size="12in 12in")
+            doc = pdfium.PdfDocument(str(pdf))
+            return [patterns.seam_excess(doc[i].render(scale=800 / 864).to_pil().convert("RGB")) for i in range(len(kinds))]
+    kinds = ["terrazzo", "leaves", "daisies", "sparkles"]
+    good = measure(kinds, PALETTES[0])
+    assert max(good) < 12
+    real = patterns._wrap
+    patterns._wrap = lambda shape, cx, cy, r: shape(cx, cy)   # a pattern that forgets to wrap shapes around the edge
+    try:
+        bad = measure(kinds, PALETTES[0])
+    finally:
+        patterns._wrap = real
+    assert max(bad) > 12 and max(bad) > 3 * max(max(good), 1)
+
+
+def test_digital_paper_pack_has_exact_size_srgb_licence_and_fits_etsy():
+    import zipfile
+    from PIL import Image
+    res = generate(Request("gardening", "digital_paper", providers=["builtin"], seed=4, with_video=False, options={"no_research": True}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    names = {p.name: p for p in (res.folder / "product").glob("*")}
+    assert "Commercial-License.pdf" in names
+    total = 0
+    for n, p in names.items():
+        if n.endswith(".zip"):
+            assert p.stat().st_size < 20_000_000
+            zf = zipfile.ZipFile(p)
+            jpgs = [i for i in zf.infolist() if i.filename.endswith(".jpg")]
+            total += len(jpgs)
+            im = Image.open(zf.open(jpgs[0]))
+            assert im.size == (3600, 3600) and im.info.get("icc_profile") and im.info.get("dpi") == (300, 300)
+    assert total == 12
+    assert any(c.name == "Seamless tiling" and c.status == "pass" for c in res.checks)

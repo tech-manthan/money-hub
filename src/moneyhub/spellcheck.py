@@ -10,6 +10,7 @@ from .qa import Check
 _WORD = re.compile(r"[A-Za-z][A-Za-z'’]*")
 # Words that are normal here but missing from a general dictionary.
 _EXTRA = {
+    "scrapbookers", "scrapbooker", "scrapbooking", "scrapbook", "crafters", "crafter", "apps", "app", "seamless", "gingham", "harlequin", "jpgs", "pngs",
     "boho", "clipart", "cliparts", "colourway", "colourways", "procreate", "cricut", "photoshop", "illustrator", "inkscape", "affinity",
     "terrazzo", "vectors", "scalable", "transparency", "sublimation",
     "etsy", "gumroad", "payhip", "ko-fi", "kofi", "pinterest", "goodnotes", "notability", "remarkable", "boox", "kindle", "scribe",

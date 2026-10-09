@@ -73,6 +73,10 @@ class ProductType(ABC, Generic[C]):
     layout_marker: ClassVar[str] = ""   # text on the page that shows the layout best (used for the live thumbnail)
 
     # buyer-facing licence wording for the listing; empty = the default personal-use wording
+    # products whose art does not depend on the niche (clipart, digital paper) are listed without the niche word
+    niche_in_copy: ClassVar[bool] = True
+    copy_audience: ClassVar[str] = ""    # who the listing says it is for when the niche is left out
+    title_suffix: ClassVar[str] = ""     # trailing words of the title dropped to get the short name used in listing copy
     license_terms: ClassVar[str] = ""
     license_faq: ClassVar[str] = ""
     how_steps: ClassVar[tuple[str, ...]] = ()

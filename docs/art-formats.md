@@ -25,7 +25,7 @@ Five ratios cover most frames: **2:3** (4x6, 12x18, 20x30 in), **3:4** (9x12, 18
 - **Samsung The Frame TV art:** exactly **3840 x 2160 px**, 16:9, JPG (PNG also works), under 20 MB, sRGB. One pixel off (for example 3839 x 2160) makes the TV add a mat, so the size must be exact. Buyers want artwork only, no text. *MoneyHub: `--sizes frame_tv`, text-free, exact size.*
 - **Phone wallpapers:** about 1290 x 2796 px (iPhone) up to 1440 x 3120 (many Android phones); packs of 10-25 sell. *MoneyHub: `--sizes phone` (1290 x 2796).*
 - **Square 1:1:** gallery-wall sets of matching prints. *MoneyHub: `--sizes 1x1`.*
-- **Digital paper / seamless patterns:** 12 x 12 in = 3600 x 3600 px, JPG, tile must repeat with no seam, state the true tile size. *Not made yet.*
+- **Digital paper / seamless patterns:** 12 x 12 in = 3600 x 3600 px, JPG, tile must repeat with no seam, state the true tile size. *MoneyHub: `moneyhub make <niche> digital_paper` makes 12 (up to 24, `papers` option) seamless papers from a pattern engine (`patterns.py`), checks the edge join, splits zips to stay under 20 MB, adds a Commercial-License PDF, and shows a 2 x 2 repeat in the listing photos.*
 - **Clipart bundles:** transparent PNG-24 at 300 DPI, themed sets, plus a commercial licence PDF; commercial licences are commonly priced 2-3x personal use. *MoneyHub: `moneyhub make <niche> clipart_pack` (13 motifs x 3 colourways, `--` option `colourways`), with SVG vectors and a Commercial-License PDF. Have the licence wording reviewed before selling: it is a plain-language summary, not legal advice.*
 - **Coloring pages:** PDF at Letter/A4 (KDP: 8.5 x 11 or 8.5 x 8.5 in), black line art on white, one design per page. *Not made yet.*
 

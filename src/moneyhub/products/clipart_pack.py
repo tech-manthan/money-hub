@@ -52,6 +52,9 @@ class ClipartPack(ProductType[ClipartContent]):
     supported_sizes = ["png"]
     price_range = (5.0, 16.0)
     typical_formats = "PNG (transparent, 300 DPI) + SVG + licence PDF"
+    niche_in_copy = False
+    copy_audience = "crafters, planner makers and small shops"
+    title_suffix = " Clipart Set"
     license_terms = ("Commercial use is included: use the clipart in your own finished designs and products (printables, stickers, cards, planners, "
                      "social posts, packaging) with no credit needed. You may not resell, share or redistribute the clipart files themselves, "
                      "include them in other clipart or template packs, or use them to train AI models. Full terms are in the Commercial-License PDF inside the download.")
@@ -63,7 +66,7 @@ class ClipartPack(ProductType[ClipartContent]):
         return [("png", "Transparent PNG (3000 px) + SVG vectors + licence PDF")]
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> ClipartContent:
-        return ClipartContent(title=f"{niche.name} Boho Shapes Clipart Set", tagline=niche.tagline[:70], names=[MOTIF_NAMES[m] for m in MOTIFS])
+        return ClipartContent(title="Boho Shapes Clipart Set", tagline="Original shapes to create with.", names=[MOTIF_NAMES[m] for m in MOTIFS])
 
     def llm_brief(self, niche: NicheProfile, options: dict) -> str:
         return ("Name the elements of a boho abstract-shapes CLIPART set for crafters and small-shop owners. Give exactly "
@@ -78,6 +81,7 @@ class ClipartPack(ProductType[ClipartContent]):
         return [ctx.style.palette, *others[: n - 1]]
 
     def build(self, ctx: BuildContext, content: ClipartContent) -> BuildResult:
+        content = content.model_copy(update={"title": f"{ctx.style.palette.key.replace('_', ' ').title()} Boho Shapes Clipart Set"})   # named after the colour, never the niche
         slug = self.slug(content.title)
         ways = self.colourways(ctx)
         names = [_slug(n) for n in content.names]
@@ -105,6 +109,8 @@ class ClipartPack(ProductType[ClipartContent]):
                 try:
                     for i in range(len(MOTIFS)):
                         im = doc[i].render(scale=px / 720, fill_color=(255, 255, 255, 0)).to_pil().convert("RGBA")
+                        if im.size != (px, px):
+                            im = im.resize((px, px), Image.LANCZOS)
                         buf = io.BytesIO()
                         im.save(buf, "PNG", dpi=(300, 300), optimize=True, icc_profile=srgb_profile())
                         rendered.append((pal.key, i, buf.getvalue(), im))
@@ -129,7 +135,7 @@ class ClipartPack(ProductType[ClipartContent]):
 
         license_pdf = ctx.out_dir / "Commercial-License.pdf"
         cfg = get_config()
-        self.render_jobs(ctx, "clipart_license.html.j2", [(ctx.page("letter"), license_pdf, {"title": content.title, "count": len(MOTIFS) * len(ways),
+        self.render_jobs(ctx, "clipart_license.html.j2", [(ctx.page("letter"), license_pdf, {"title": content.title, "count": len(MOTIFS) * len(ways), "noun": "clipart designs",
                                                          "shop": {k: (cfg.get(f"shop.{k}") or "") for k in ("name", "email", "url")}})], margin=3.0)
 
         previews = _previews(art_dir, ways, rendered)

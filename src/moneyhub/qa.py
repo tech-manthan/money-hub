@@ -88,6 +88,9 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
         checks += _xlsx_checks(f.path)
     for f in [x for x in build.files if x.kind == "zip"]:
         checks += _zip_checks(f.path)
+    if "seam_excess" in build.meta:   # seamless patterns: the join between opposite edges must look like any other join
+        v = build.meta["seam_excess"]
+        checks.append(Check("Seamless tiling", "pass" if v <= 12 else "warn", f"edge join {v:+.1f} vs neighbouring pixels (12 or less is clean)"))
     return checks
 
 
