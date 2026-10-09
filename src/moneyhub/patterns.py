@@ -9,7 +9,13 @@ import random
 from .design import Palette, contrast
 
 T = 1000
-KINDS = ["dots", "gingham", "stripes", "waves", "scallops", "arches", "terrazzo", "sparkles", "leaves", "diamonds", "daisies", "checks"]
+KINDS = ["dots", "gingham", "stripes", "waves", "scallops", "arches", "terrazzo", "sparkles", "leaves", "diamonds", "daisies", "checks",
+         "plaid", "chevron", "hearts", "stars", "ditsy", "paisley", "hexagons", "rainbows", "celestial", "blobs", "memphis", "zigzag"]
+HARD_EDGE = ("stripes", "gingham", "checks", "plaid", "chevron", "zigzag")   # straight bands that meet the tile border by design
+
+
+def _star(a: float, b: float, r: float, inner: float = .45, n: int = 5, rot: float = -90) -> str:
+    return " ".join(f"{a + (r if i % 2 == 0 else r * inner) * math.cos(math.radians(rot + i * 180 / n)):.1f},{b + (r if i % 2 == 0 else r * inner) * math.sin(math.radians(rot + i * 180 / n)):.1f}" for i in range(n * 2))
 
 
 def _wrap(shape, cx: float, cy: float, r: float) -> str:
@@ -117,6 +123,111 @@ def pattern_tile(kind: str, pal: Palette, seed: int, index: int = 0) -> str:
                               f"fill='{petal}' transform='rotate({k * 45} {a + s * .62 * math.cos(math.radians(k * 45)):.1f} {b + s * .62 * math.sin(math.radians(k * 45)):.1f})'/>" for k in range(8))
                 return ps + f"<circle cx='{a:.1f}' cy='{b:.1f}' r='{s * .24:.1f}' fill='{centre}'/>"
             p.append(_wrap(flower, x, y, s))
+    elif kind == "plaid":   # tartan-style: wide translucent bands one way, another colour the other way, thin lines between
+        m = rng.choice([4, 6, 8])
+        w = T / m
+        p.append(f"<g fill='{c(0)}' opacity='.5'>" + "".join(f"<rect x='{i * w:.1f}' y='0' width='{w:.1f}' height='{T}'/>" for i in range(0, m, 2)) + "</g>")
+        p.append(f"<g fill='{c(1)}' opacity='.5'>" + "".join(f"<rect x='0' y='{i * w:.1f}' width='{T}' height='{w:.1f}'/>" for i in range(0, m, 2)) + "</g>")
+        p.append(f"<g stroke='{c(2)}' stroke-width='6' opacity='.85'>" + "".join(f"<line x1='{(i + .5) * w:.1f}' y1='0' x2='{(i + .5) * w:.1f}' y2='{T}'/><line x1='0' y1='{(i + .5) * w:.1f}' x2='{T}' y2='{(i + .5) * w:.1f}'/>" for i in range(m)) + "</g>")
+    elif kind in ("chevron", "zigzag"):
+        rows, k = rng.choice([6, 8, 10]), rng.choice([4, 6, 8])   # k even: the zig-zag meets itself across the wrap
+        h, amp = T / rows, T / rows * (.42 if kind == "chevron" else .22)
+        for i in range(-1, rows + 1):
+            pts = " ".join(f"{x * T / k:.1f},{i * h + (amp if x % 2 else -amp) + h / 2:.1f}" for x in range(k + 1))
+            if kind == "chevron":
+                p.append(f"<polyline points='{pts}' fill='none' stroke='{c(i)}' stroke-width='{h * .42:.1f}' stroke-linejoin='miter'/>")
+            else:
+                p.append(f"<polyline points='{pts}' fill='none' stroke='{c(i)}' stroke-width='{h * .16:.1f}' stroke-linecap='round' stroke-linejoin='round'/>")
+    elif kind == "hearts":
+        for _ in range(24):
+            x, y, s, ang = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(34, 62), rng.uniform(-25, 25)
+            col = c(rng.randrange(len(fg)))
+            p.append(_wrap(lambda a, b, s=s, ang=ang, col=col: (f"<path d='M{a:.1f} {b + .55 * s:.1f} C{a - 1.15 * s:.1f} {b - .25 * s:.1f} {a - .55 * s:.1f} {b - .95 * s:.1f} {a:.1f} {b - .4 * s:.1f} "
+                                                                f"C{a + .55 * s:.1f} {b - .95 * s:.1f} {a + 1.15 * s:.1f} {b - .25 * s:.1f} {a:.1f} {b + .55 * s:.1f}Z' fill='{col}' transform='rotate({ang:.0f} {a:.1f} {b:.1f})'/>"), x, y, s * 1.3))
+    elif kind == "stars":
+        for _ in range(22):
+            x, y, s, ang = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(34, 66), rng.uniform(-90, -60)
+            col = c(rng.randrange(len(fg)))
+            p.append(_wrap(lambda a, b, s=s, ang=ang, col=col: f"<polygon points='{_star(a, b, s, .46, 5, ang)}' fill='{col}'/>", x, y, s))
+    elif kind == "ditsy":   # tiny scattered five-petal flowers with leaves
+        for _ in range(46):
+            x, y, s = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(20, 34)
+            petal, centre, leaf = c(rng.randrange(len(fg))), c(rng.randrange(len(fg)) + 1), c(rng.randrange(len(fg)) + 2)
+
+            def ditsy(a, b, s=s, petal=petal, centre=centre, leaf=leaf):
+                ls = "".join(f"<ellipse cx='{a + s * 1.25 * math.cos(math.radians(k)):.1f}' cy='{b + s * 1.25 * math.sin(math.radians(k)):.1f}' rx='{s * .55:.1f}' ry='{s * .22:.1f}' fill='{leaf}' transform='rotate({k} {a + s * 1.25 * math.cos(math.radians(k)):.1f} {b + s * 1.25 * math.sin(math.radians(k)):.1f})'/>" for k in (20, 160))
+                ps = "".join(f"<circle cx='{a + s * .62 * math.cos(math.radians(k * 72 - 90)):.1f}' cy='{b + s * .62 * math.sin(math.radians(k * 72 - 90)):.1f}' r='{s * .42:.1f}' fill='{petal}'/>" for k in range(5))
+                return ls + ps + f"<circle cx='{a:.1f}' cy='{b:.1f}' r='{s * .26:.1f}' fill='{centre}'/>"
+            p.append(_wrap(ditsy, x, y, s * 2))
+    elif kind == "paisley":
+        for _ in range(16):
+            x, y, s, ang = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(46, 80), rng.uniform(0, 360)
+            c1, c2 = c(rng.randrange(len(fg))), c(rng.randrange(len(fg)) + 1)
+
+            def paisley(a, b, s=s, ang=ang, c1=c1, c2=c2):
+                body = f"M{a:.1f} {b - s:.1f} C{a + s * .95:.1f} {b - s * .6:.1f} {a + s * .8:.1f} {b + s * .75:.1f} {a - s * .2:.1f} {b + s:.1f} C{a - s * .7:.1f} {b + s * 1.1:.1f} {a - s * .3:.1f} {b + s * .6:.1f} {a - s * .1:.1f} {b + s * .5:.1f} C{a - s * .6:.1f} {b + s * .1:.1f} {a - s * .55:.1f} {b - s * .6:.1f} {a:.1f} {b - s:.1f}Z"
+                return (f"<g transform='rotate({ang:.0f} {a:.1f} {b:.1f})'><path d='{body}' fill='{c1}'/><ellipse cx='{a + s * .18:.1f}' cy='{b - s * .1:.1f}' rx='{s * .3:.1f}' ry='{s * .5:.1f}' fill='{c2}'/>"
+                        f"<circle cx='{a + s * .18:.1f}' cy='{b - s * .1:.1f}' r='{s * .12:.1f}' fill='{c1}'/></g>")
+            p.append(_wrap(paisley, x, y, s * 1.3))
+    elif kind == "hexagons":   # honeycomb: whole numbers of cells in both directions, so it wraps
+        m = rng.choice([4, 6])
+        w, rowh = T / m, T / m
+        ry = rowh * 2 / 3
+        for row in range(m):
+            for col in range(m):
+                x = ((col + .5 + (.5 if row % 2 else 0)) * w) % T
+                y = row * rowh + rowh / 2
+                pts = [(0, -ry), (w / 2, -ry / 2), (w / 2, ry / 2), (0, ry), (-w / 2, ry / 2), (-w / 2, -ry / 2)]
+                p.append(_wrap(lambda a, b, pts=pts, row=row, col=col: "<polygon points='" + " ".join(f"{a + u:.1f},{b + v:.1f}" for u, v in pts) + f"' fill='{c(row + col)}' stroke='{bg}' stroke-width='6'/>", x, y, w / 2 + 4))
+    elif kind == "rainbows":
+        for _ in range(14):
+            x, y, r = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(52, 84)
+            order = rng.randrange(len(fg))
+
+            def rainbow(a, b, r=r, order=order):
+                return "".join(f"<path d='M{a - r * (1 - k * .27):.1f} {b + r * .45:.1f} A{r * (1 - k * .27):.1f} {r * (1 - k * .27):.1f} 0 0 1 {a + r * (1 - k * .27):.1f} {b + r * .45:.1f}' fill='none' stroke='{c(order + k)}' stroke-width='{r * .2:.1f}' stroke-linecap='round'/>" for k in range(3))
+            p.append(_wrap(rainbow, x, y, r * 1.2))
+    elif kind == "celestial":
+        for _ in range(30):
+            x, y, s, which = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(22, 50), rng.randrange(3)
+            col = c(rng.randrange(len(fg)))
+            ang = rng.uniform(-40, 40)
+            if which == 0:   # crescent moon
+                shape = lambda a, b, s=s, col=col, ang=ang: f"<path d='M{a:.1f} {b - s:.1f} A{s:.1f} {s:.1f} 0 1 0 {a:.1f} {b + s:.1f} A{s * .72:.1f} {s * .72:.1f} 0 1 1 {a:.1f} {b - s:.1f}Z' fill='{col}' transform='rotate({ang:.0f} {a:.1f} {b:.1f})'/>"   # noqa: E731
+            elif which == 1:   # four-point star
+                shape = lambda a, b, s=s, col=col: f"<polygon points='{_star(a, b, s, .3, 4)}' fill='{col}'/>"   # noqa: E731
+            else:
+                shape = lambda a, b, s=s, col=col: f"<circle cx='{a:.1f}' cy='{b:.1f}' r='{s * .3:.1f}' fill='{col}'/>"   # noqa: E731
+            p.append(_wrap(shape, x, y, s * 1.1))
+    elif kind == "blobs":   # matisse-style cut-out shapes
+        for _ in range(16):
+            x, y, s = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(46, 96)
+            col = c(rng.randrange(len(fg)))
+            radii = [rng.uniform(.68, 1.18) for _ in range(8)]
+            ang0 = rng.uniform(0, 6.28)
+
+            def blob(a, b, s=s, col=col, radii=radii, ang0=ang0):
+                pts = [(a + s * r * math.cos(ang0 + i * math.pi / 4), b + s * r * math.sin(ang0 + i * math.pi / 4)) for i, r in enumerate(radii)]
+                mid = lambda q, r2: ((q[0] + r2[0]) / 2, (q[1] + r2[1]) / 2)   # noqa: E731
+                m0 = mid(pts[0], pts[1])
+                d = f"M{m0[0]:.1f} {m0[1]:.1f}" + "".join(f" Q{pts[(i + 1) % 8][0]:.1f} {pts[(i + 1) % 8][1]:.1f} {mid(pts[(i + 1) % 8], pts[(i + 2) % 8])[0]:.1f} {mid(pts[(i + 1) % 8], pts[(i + 2) % 8])[1]:.1f}" for i in range(8))
+                return f"<path d='{d}Z' fill='{col}'/>"
+            p.append(_wrap(blob, x, y, s * 1.3))
+    elif kind == "memphis":   # 80s confetti: triangles, squiggles, rings and dots
+        for _ in range(44):
+            x, y, s, which = rng.uniform(0, T), rng.uniform(0, T), rng.uniform(18, 40), rng.randrange(4)
+            col = c(rng.randrange(len(fg)))
+            ang = rng.uniform(0, 360)
+            if which == 0:
+                shape = lambda a, b, s=s, col=col, ang=ang: f"<polygon points='{a:.1f},{b - s:.1f} {a + s:.1f},{b + s * .8:.1f} {a - s:.1f},{b + s * .8:.1f}' fill='{col}' transform='rotate({ang:.0f} {a:.1f} {b:.1f})'/>"   # noqa: E731
+            elif which == 1:
+                shape = lambda a, b, s=s, col=col, ang=ang: (f"<polyline points='" + " ".join(f"{a - s * 1.5 + k * s * .5:.1f},{b + (s * .35 if k % 2 else -s * .35):.1f}" for k in range(7))   # noqa: E731
+                                                              + f"' fill='none' stroke='{col}' stroke-width='{s * .22:.1f}' stroke-linecap='round' stroke-linejoin='round' transform='rotate({ang:.0f} {a:.1f} {b:.1f})'/>")
+            elif which == 2:
+                shape = lambda a, b, s=s, col=col: f"<circle cx='{a:.1f}' cy='{b:.1f}' r='{s * .7:.1f}' fill='none' stroke='{col}' stroke-width='{s * .26:.1f}'/>"   # noqa: E731
+            else:
+                shape = lambda a, b, s=s, col=col: f"<circle cx='{a:.1f}' cy='{b:.1f}' r='{s * .38:.1f}' fill='{col}'/>"   # noqa: E731
+            p.append(_wrap(shape, x, y, s * 1.7))
     else:   # checks
         m = rng.choice([6, 8, 10])
         w = T / m

@@ -231,3 +231,49 @@ def test_oracle_deck_product_pages_and_listing_disclaimer(deck, n):
     pdf = next((res.folder / "product").glob("*-letter.pdf"))
     assert pdf_page_count(pdf) == 2 + -(-n // 6) + 1   # cover + guide + card sheets (6 per sheet) + backs
     assert "not predictions" in (res.folder / "listing" / "etsy-description.txt").read_text().lower()
+
+
+# ------------------------------------------------------------------ more patterns
+def test_all_pattern_kinds_draw_and_scatter_patterns_wrap_seamlessly():
+    from PIL import Image
+
+    from moneyhub import patterns
+    from moneyhub.products.digital_paper import PATTERN_NAMES, SEAM_CHECKED
+    assert len(patterns.KINDS) == 24 and set(PATTERN_NAMES) == set(patterns.KINDS)
+    assert set(SEAM_CHECKED) | set(patterns.HARD_EDGE) == set(patterns.KINDS)
+    pal = PALETTES[4]
+    for kind in patterns.KINDS:
+        assert "NaN" not in patterns.pattern_tile(kind, pal, 3, 0), kind
+    import io
+
+    import pypdfium2 as pdfium
+
+    from moneyhub.render.pdf import render_pdf
+    import tempfile
+    from pathlib import Path
+    for kind in [k for k in SEAM_CHECKED if k in patterns.KINDS[12:]]:
+        with tempfile.TemporaryDirectory() as t:
+            html = f"<style>@page{{size:6in 6in;margin:0}}body{{margin:0}}svg{{width:6in;height:6in;display:block}}</style>{patterns.paper_svg(kind, pal, 3, 0, 1)}"
+            render_pdf(html, Path(t) / "a.pdf", page_css_size="6in 6in")
+            im = pdfium.PdfDocument(str(Path(t) / "a.pdf"))[0].render(scale=2).to_pil().convert("RGB")
+        assert patterns.seam_excess(im) <= 12, kind
+
+
+def test_digital_paper_packs_use_a_seeded_selection_and_coloring_books_walk_through_the_patterns():
+    import random
+
+    from moneyhub import coloring
+    def names(seed):
+        res = generate(Request("x", "digital_paper", providers=["builtin"], seed=seed, with_video=False, with_images=False, options={"no_research": True}))
+        z = zipfile.ZipFile(next((res.folder / "product").glob("*JPG*.zip")))
+        return sorted(n for n in z.namelist() if n.endswith(".jpg"))
+    a, b = names(1), names(2)
+    assert len(a) == len(b) == 12 and [n.split("-", 1)[1] for n in a] != [n.split("-", 1)[1] for n in b]   # same size, different patterns
+    kinds_seen = set()
+    for i in range(60):
+        kind, svg, *_ = (*coloring.page_art(i, 7, PALETTES[0]), None)
+        assert svg.startswith("<svg") and "NaN" not in svg
+        kinds_seen.add(kind)
+    assert kinds_seen == {"mandala", "pattern", "motif"}
+    order = lambda s: sorted(coloring.PATTERN_KINDS, key=lambda k: random.Random(f"{s}-{k}").random())   # noqa: E731
+    assert order(7) != order(8) and len(coloring.PATTERN_KINDS) == 20

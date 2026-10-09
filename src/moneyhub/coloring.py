@@ -13,8 +13,10 @@ from .patterns import pattern_tile
 
 INK = "#222222"
 STROKE = 5
-PATTERN_KINDS = ["scallops", "daisies", "arches", "leaves", "diamonds", "waves", "dots", "sparkles"]
-DENSE = ("daisies", "leaves", "sparkles", "dots")   # scatter patterns drawn 2 x 2 so the page is full enough to colour
+PATTERN_KINDS = ["scallops", "daisies", "arches", "leaves", "diamonds", "waves", "dots", "sparkles", "hearts", "stars", "ditsy", "paisley", "hexagons", "rainbows", "celestial",
+                 "blobs", "memphis", "chevron", "zigzag", "plaid"]
+DENSE = ("daisies", "leaves", "sparkles", "dots")
+ZOOM = {"hearts": 1.35, "stars": 1.35, "ditsy": 1.5, "paisley": 1.3, "rainbows": 1.4, "celestial": 1.4, "blobs": 1.15, "memphis": 1.4}   # small scatter shapes, enlarged so they are big enough to colour   # scatter patterns drawn 2 x 2 so the page is full enough to colour
 LINE_MOTIFS = [m for m in MOTIFS if m not in ("terrazzo",)]
 _TAG = re.compile(r"<(path|circle|ellipse|rect|polygon|line|polyline)\b([^>]*?)(/?)>")
 
@@ -100,12 +102,16 @@ def mandala(seed: int) -> str:
     return _wrap_svg(lineart("".join(parts)))
 
 
-def pattern_page(index: int, seed: int, pal: Palette) -> str:
-    kind = PATTERN_KINDS[index % len(PATTERN_KINDS)]
+def pattern_page(index: int, seed: int, pal: Palette, kind: str | None = None) -> str:
+    kind = kind or PATTERN_KINDS[index % len(PATTERN_KINDS)]
     no_bg = lambda t: re.sub(r"^<rect width='1000' height='1000' fill='[^']*'/>", "", t)   # noqa: E731  (the page is white)
     if kind in DENSE:   # four different scatters, so the page is evenly full and nothing lines up along the seams
         return _wrap_svg("".join(f"<g transform='translate({i * 500} {j * 500}) scale(.5)'>{lineart(no_bg(pattern_tile(kind, pal, seed + 31 * (i * 2 + j + 1), index)), STROKE * 2)}</g>"
                                  for i in range(2) for j in range(2)))
+    if kind in ZOOM:
+        z = ZOOM[kind]
+        t = -500 * (z - 1)
+        return _wrap_svg(f"<g transform='translate({t:.0f} {t:.0f}) scale({z})'>{lineart(no_bg(pattern_tile(kind, pal, seed, index)), STROKE / z * 1.2)}</g>")
     return _wrap_svg(lineart(no_bg(pattern_tile(kind, pal, seed, index))))
 
 
@@ -119,5 +125,8 @@ def page_art(i: int, seed: int, pal: Palette) -> tuple[str, str]:
     if slot in (0, 2, 4, 6, 8, 11, 14, 17):
         return "mandala", mandala(seed * 101 + i)
     if slot in (1, 3, 5, 9, 12, 15, 18):
-        return "pattern", pattern_page(i, seed * 101 + i, pal)
+        slots = (1, 3, 5, 9, 12, 15, 18)
+        n = (i // 20) * len(slots) + slots.index(slot)   # which pattern page this is, so a book walks through a seeded shuffle of every pattern before repeating
+        order = sorted(PATTERN_KINDS, key=lambda k: random.Random(f"{seed}-{k}").random())
+        return "pattern", pattern_page(i, seed * 101 + i, pal, order[n % len(order)])
     return "motif", motif_page(i, seed * 101 + i, pal)

@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from ..config import get_config
 from ..niches import NicheProfile
-from ..patterns import KINDS, paper_svg, seam_excess
+from ..patterns import HARD_EDGE, KINDS, paper_svg, seam_excess
 from ..render.pdf import render_many
 from ..render import mockups
 from .base import BuildContext, BuildResult, ProductFile, ProductType
@@ -21,8 +21,11 @@ from .registry import register
 from .wall_art import JPEG_BUDGET, srgb_profile
 
 PATTERN_NAMES = {"dots": "Polka dots", "gingham": "Gingham", "stripes": "Candy stripes", "waves": "Wavy lines", "scallops": "Scallop scales", "arches": "Boho arches",
-                 "terrazzo": "Terrazzo", "sparkles": "Sparkles", "leaves": "Leaf scatter", "diamonds": "Harlequin diamonds", "daisies": "Daisy meadow", "checks": "Checkerboard"}
-SEAM_CHECKED = ("dots", "waves", "scallops", "arches", "terrazzo", "sparkles", "leaves", "diamonds", "daisies")   # stripes/gingham/checks have hard edges on the tile border by design
+                 "terrazzo": "Terrazzo", "sparkles": "Sparkles", "leaves": "Leaf scatter", "diamonds": "Harlequin diamonds", "daisies": "Daisy meadow", "checks": "Checkerboard",
+                 "plaid": "Cozy plaid", "chevron": "Chevron", "hearts": "Scattered hearts", "stars": "Star scatter", "ditsy": "Ditsy florals", "paisley": "Paisley",
+                 "hexagons": "Honeycomb", "rainbows": "Mini rainbows", "celestial": "Moons and stars", "blobs": "Cut-out blobs", "memphis": "Retro confetti", "zigzag": "Zig-zag lines"}
+SEAM_CHECKED = tuple(k for k in KINDS if k not in HARD_EDGE)   # straight bands (stripes, gingham, checks, plaid, chevron, zig-zag) meet the tile border by design
+MIN_PAPERS = 12   # a pack shows a seeded selection of the patterns, so every pack is different
 PX = 3600   # 12 in at 300 DPI
 EACH_MAX = 2_500_000
 
@@ -69,10 +72,12 @@ class DigitalPaper(ProductType[PaperContent]):
         pal = ctx.style.palette
         content = content.model_copy(update={"title": self.unique_title(ctx, f"{pal.key.replace('_', ' ').title()} Seamless")})   # named after the colour, never the niche
         slug = self.slug(content.title)
-        count = max(len(KINDS), min(int(ctx.options.get("papers", len(KINDS))), 24))
+        count = max(MIN_PAPERS, min(int(ctx.options.get("papers", MIN_PAPERS)), 36))
         art_dir = ctx.out_dir.parent / "art"
         art_dir.mkdir(exist_ok=True)
-        papers = [(KINDS[i % len(KINDS)], i // len(KINDS), content.names[i % len(KINDS)] + (f" {i // len(KINDS) + 1}" if i >= len(KINDS) else "")) for i in range(count)]
+        order = list(range(len(KINDS)))
+        random.Random(ctx.seed).shuffle(order)
+        papers = [(KINDS[order[i % len(KINDS)]], i // len(KINDS), content.names[order[i % len(KINDS)]] + (f" {i // len(KINDS) + 1}" if i >= len(KINDS) else "")) for i in range(count)]
 
         jobs = []
         chunks = [papers[i:i + 6] for i in range(0, count, 6)]
