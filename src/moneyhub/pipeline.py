@@ -154,6 +154,21 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     return Result(pid, folder, build.title, qa_status, checks, similar, content_source, kit.source)
 
 
+def delete_product(pid: int, store: Store | None = None) -> bool:
+    """Remove a product from the catalogue and delete its folder, but only a folder inside the output directory."""
+    import shutil
+    st = store or Store()
+    p = st.product(pid)
+    if not p:
+        return False
+    folder = Path(p["folder"]).resolve()
+    root = (get_config().output_dir / "products").resolve()
+    if folder != root and root in folder.parents:
+        shutil.rmtree(folder, ignore_errors=True)
+    st.delete_product(pid)
+    return True
+
+
 def make_package(folder: Path) -> Path:
     """Zip everything you need to upload (product files, images, guides) into one file."""
     import zipfile

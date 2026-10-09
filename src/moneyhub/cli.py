@@ -259,6 +259,19 @@ def batch(
             typer.echo(f"  -> {res.title} [{res.qa_status}] {res.folder}")
 
 
+@app.command(name="delete")
+def delete_cmd(product_id: int, yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask first")):
+    """Delete a product from the catalogue and remove its files."""
+    from .pipeline import delete_product
+    p = Store().product(product_id)
+    if not p:
+        raise typer.BadParameter(f"no product #{product_id}", param_hint="product_id")
+    if not yes and not typer.confirm(f"Delete #{product_id} '{p['title']}' and its files?"):
+        raise typer.Abort()
+    delete_product(product_id)
+    typer.echo(f"Deleted #{product_id}")
+
+
 @app.command(name="list")
 def list_products():
     """Show the catalogue."""

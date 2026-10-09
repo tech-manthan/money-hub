@@ -88,3 +88,16 @@ def test_niche_free_packs_get_volume_titles_and_only_match_on_same_design():
     assert b.similar[0] == 0.0                        # same palette, different seed: a different design, no warning
     assert c.similar[0] == 1.0 and c.similar[1] == a.product_id   # same seed and options: a real duplicate
     assert any(x.name == "Uniqueness" and x.status == "warn" for x in c.checks)
+
+
+def test_delete_removes_catalogue_row_and_folder_but_never_outside_the_output_dir(tmp_path):
+    from moneyhub.pipeline import delete_product
+    res = generate(Request("teacher", "card_deck", sizes=["letter"], providers=["builtin"], seed=3, with_images=False))
+    assert res.folder.exists() and delete_product(res.product_id) and not res.folder.exists() and Store().product(res.product_id) is None
+    keep = tmp_path / "precious"
+    keep.mkdir()
+    (keep / "a.txt").write_text("x")
+    st = Store()
+    pid = st.add_product(slug="x", title="t", niche="n", niche_name="n", product_type="card_deck", style="s", status="draft", folder=str(keep), price=1, qa=[],
+                         fingerprint="", content_source="", listing_source="", spec="{}")
+    assert delete_product(pid) and (keep / "a.txt").exists()   # the row goes, the foreign folder stays

@@ -599,12 +599,8 @@ def set_status(pid: int, status: str = Form(...), notes: str = Form("")):
 
 @app.post("/product/{pid}/delete")
 def delete(pid: int):
-    st = _store()
-    p = st.product(pid)
-    if p:
-        import shutil
-        shutil.rmtree(p["folder"], ignore_errors=True)
-        st.delete_product(pid)
+    from ..pipeline import delete_product
+    delete_product(pid, _store())
     return RedirectResponse("/", status_code=303)
 
 
