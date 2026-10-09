@@ -153,8 +153,6 @@ def layout_preview(product_type: str, layout: str, palette: str = "", fonts: str
     from .. import layouts as lay
     from ..design import is_hex_colour
     from ..render.preview import layout_preview_png
-    if (deck and deck not in ("oracle", "tarot")) or (card_size and card_size not in ("tall", "poker")):
-        raise HTTPException(422, f"Unknown deck or card size: {deck or card_size}")
     pt = all_product_types().get(product_type)
     if not pt or not pt.has_layout(layout):
         raise HTTPException(404, "unknown product type or layout")
@@ -468,6 +466,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
     from .. import kidsart
     if (theme and theme not in kidsart.THEMES) or (age and age not in kidsart.AGES):
         raise HTTPException(422, f"Unknown kids theme or age: {theme or age}")
+    if (deck and deck not in ("oracle", "tarot")) or (card_size and card_size not in ("tall", "poker")):
+        raise HTTPException(422, f"Unknown deck or card size: {deck or card_size}")
     pt = all_product_types().get(product_type)
     if layout.strip() and not page_layout and product_type == "wall_art":   # the old numbered select: the first five presets, or "mixed"
         from ..layouts import ART_PRESETS
