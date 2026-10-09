@@ -30,6 +30,7 @@ if (form) {
       sizeBox.appendChild(l);
     });
     weeks.style.display = type.value === 'weekly_planner' ? '' : 'none';
+    document.getElementById('kids-wrap').hidden = type.value !== 'kids_coloring';
     document.getElementById('type-desc').textContent = opt.dataset.desc || '';
   }
   type.addEventListener('change', syncType); syncType();

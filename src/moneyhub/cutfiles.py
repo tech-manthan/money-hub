@@ -233,9 +233,11 @@ def to_svg(d: Design, size_in: float, color: str = "#000000") -> str:
 
 
 def to_dxf(d: Design, size_in: float) -> str:
-    """DXF release 12 (ASCII) closed polylines in inches, the version nearly every cutting program opens."""
+    """DXF release 12 (ASCII) closed polylines in inches, the version nearly every cutting program opens. The header says the unit is inches
+    ($INSUNITS 1, $MEASUREMENT 0) so apps do not have to guess."""
     k = size_in / 1000.0
-    lines = ["0", "SECTION", "2", "ENTITIES"]
+    lines = ["0", "SECTION", "2", "HEADER", "9", "$ACADVER", "1", "AC1009", "9", "$INSUNITS", "70", "1", "9", "$MEASUREMENT", "70", "0", "0", "ENDSEC",
+             "0", "SECTION", "2", "ENTITIES"]
     for r in d.rings:
         lines += ["0", "POLYLINE", "8", "0", "66", "1", "70", "1"]
         for x, y in r:

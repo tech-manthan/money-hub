@@ -94,7 +94,7 @@ def _catalogue() -> list[dict]:
 
 
 def _look_ctx() -> dict:
-    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=MOTIFS, plain=guide)
+    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=MOTIFS, plain=guide, kids_themes=__import__("moneyhub.kidsart", fromlist=["THEMES"]).THEMES)
 
 
 MEDIA = HERE / "static" / "media"
@@ -314,7 +314,7 @@ async def upload_edits(pid: int, request: Request):
 
 def _export_kinds(ptype: str) -> list[str]:
     from ..exports import kdp, notion
-    pdf_types = {"weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "budget_tracker", "card_deck", "coloring_pages"}
+    pdf_types = {"weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "budget_tracker", "card_deck", "coloring_pages", "kids_coloring"}
     return [k for k, ok in (("kdp", ptype in kdp.SUPPORTED), ("notion", ptype in notion.SUPPORTED), ("canva", ptype in pdf_types)) if ok]
 
 
@@ -454,7 +454,7 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
                ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
                radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
                brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[]), page_layout: str = Form(""),
-               layout_spec: str = Form("")):
+               layout_spec: str = Form(""), theme: str = Form(""), age: str = Form(""), pages: str = Form("")):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
                                         (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif, MOTIFS, "motif")) if v and v not in ok]
     if bad:
@@ -462,6 +462,9 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
     from ..design import is_hex_colour
     if brand and not is_hex_colour(brand):
         raise HTTPException(422, "Brand colour must look like #2F6B57")
+    from .. import kidsart
+    if (theme and theme not in kidsart.THEMES) or (age and age not in kidsart.AGES):
+        raise HTTPException(422, f"Unknown kids theme or age: {theme or age}")
     pt = all_product_types().get(product_type)
     if layout.strip() and not page_layout and product_type == "wall_art":   # the old numbered select: the first five presets, or "mixed"
         from ..layouts import ART_PRESETS
@@ -477,7 +480,8 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
             niche=n, product_type=product_type, sizes=sizes or None, palette=palette or None, fonts=fonts or None,
             providers=[x.strip() for x in llm.split(",") if x.strip()] or None,
             seed=int(seed) if seed.strip().isdigit() else None,
-            options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look},
+            options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look,
+                     **({"theme": theme} if theme else {}), **({"age": age} if age else {}), **({"pages": int(pages)} if pages.strip().isdigit() else {})},
             with_video=not no_video,
         )
         if marketplaces:

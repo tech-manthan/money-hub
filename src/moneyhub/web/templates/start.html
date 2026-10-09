@@ -90,6 +90,11 @@
       <label class="opt"><input type="radio" name="fonts" value="{{ f.key }}"><span class="in"><b>{{ f.key|capitalize }}</b><span class="meta">{{ plain.FONT_PLAIN[f.key] }}</span></span></label>
       {% endfor %}
     </div>
+    <div class="row" id="kids-opts" hidden>
+      <div><label for="theme">Picture theme (kids coloring book)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
+      <div><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
+      <div><label for="pages">Number of pages</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
+    </div>
     <details class="help"><summary>More detail (optional)</summary>
       <div class="row">
         <div><label for="header">Page title style</label><select id="header" name="header"><option value="">Automatic</option>{% for h in headers %}<option value="{{ h }}">{{ plain.HEADER_PLAIN[h] }}</option>{% endfor %}</select></div>

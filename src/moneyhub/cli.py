@@ -60,6 +60,9 @@ def make(
     motion: str = typer.Option(None, help="Video engine chain, e.g. 'remotion,pillow' (engines: pillow, remotion, manim, hyperframes)"),
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
+    pages: int = typer.Option(None, help="Coloring books: number of pages (10-40)"),
+    theme: str = typer.Option(None, help="Kids coloring book: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
+    age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
 ):
@@ -71,6 +74,8 @@ def make(
     if palette and is_hex_colour(palette):
         brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
+    from . import kidsart
+    _check(theme, list(kidsart.THEMES), "--theme"), _check(age, list(kidsart.AGES), "--age")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
         from .layouts import ART_PRESETS
@@ -104,7 +109,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,

@@ -31,6 +31,9 @@
         <div class="meta" style="margin-top:4px">Available now: {% for p in providers %}{{ '✓' if p.available else '–' }} {{ p.name }}{{ ', ' if not loop.last }}{% endfor %}</div></div>
       <div><label>Options</label><div class="checks"><label><input type="checkbox" name="no_video" value="1"> Skip videos</label><label title="Wall art only; needs an image provider key"><input type="checkbox" name="ai_art" value="1"> AI art backgrounds</label></div></div>
       <div id="weeks-wrap"><label for="weeks">Weeks (planner)</label><input type="number" id="weeks" name="weeks" min="4" max="60" placeholder="52"></div>
+      <div id="kids-wrap" hidden><label for="theme">Kids book theme</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select>
+        <label for="age" style="margin-top:6px">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker)</option></select>
+        <label for="pages" style="margin-top:6px">Pages</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
       <div><label for="seed">Seed (optional)</label><input type="number" id="seed" name="seed" placeholder="random look"></div>
     </div>
     <details style="margin-bottom:12px"><summary>Fine-tune the look</summary>

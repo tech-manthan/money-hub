@@ -116,7 +116,7 @@ class CutFiles(ProductType[CutContent]):
 
 def _readme(content: CutContent, fmt: str, size_in: float) -> str:
     how = {"SVG": "Cricut Design Space: Upload > Upload Image > choose the SVG. Silhouette Studio (Designer Edition or above): File > Open. Brother, Glowforge and most cutters also open SVG.",
-           "DXF": "Silhouette Studio Basic Edition and Brother ScanNCut open DXF: File > Open. The size is in inches.",
+           "DXF": "Silhouette Studio Basic Edition and Brother ScanNCut open DXF: File > Open. The size is in inches; if a program shows it tiny (about 25 times too small), it read the units as millimetres: set the units to inches or scale it by 25.4.",
            "EPS": "For Illustrator, CorelDRAW and professional cutting software. The size is in points (72 per inch).",
            "PNG": "Transparent PNG (300 DPI) for printing, sublimation, Print Then Cut or mockups. Not for cutting directly."}[fmt]
     return (f"{content.title}\n\n{fmt} versions, designed at {size_in:g} x {size_in:g} inches. Resize freely in your cutting software.\n{how}\n"

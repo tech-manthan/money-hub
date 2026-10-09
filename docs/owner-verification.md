@@ -103,7 +103,7 @@ These make AI backgrounds for **wall art**. They cost money or use a free quota,
 MoneyHub checks the files itself ("Opens in cutting software" in QA re-reads every SVG and DXF), but only the real apps and a real blade prove they cut well.
 1. Make a bundle: `moneyhub make "x" cut_files --llm builtin`. Unzip the `-SVG.zip` and `-DXF.zip` from `out/products/<id>/product/`.
 2. **Cricut Design Space** (free, https://design.cricut.com): New Project > Upload > Upload Image > pick two or three `.svg` files > Save > Add to canvas. Check: the size reads 6 in, holes (stars, hearts with a hole) are see-through, nothing is merged into one blob.
-3. **Silhouette Studio** (free Basic Edition; DXF needs Designer Edition or higher, SVG needs Designer Edition): File > Open the `.dxf`. Check the same three things, and that Cut Style shows lines around every outline.
+3. **Silhouette Studio** (free Basic Edition; DXF needs Designer Edition or higher, SVG needs Designer Edition): File > Open the `.dxf`. Check the same three things (the size must read 6 in, not 6 mm or 0.24 in; Inkscape, for one, assumes millimetres for a DXF unless told otherwise), and that Cut Style shows lines around every outline.
 4. Test-cut one design on scrap cardstock or cheap vinyl at 3-4 in. Check: small points and thin bridges come away clean, the holes drop out, the blade does not tear the thinnest part.
 5. Report: app and version, file name, and what you saw. If a bridge tore, tell me the design name; I will raise the minimum gap (now 1.5 mm).
 Free alternative to look at files without a machine: Inkscape (https://inkscape.org) opens both SVG and DXF.

@@ -7,6 +7,7 @@ from moneyhub import coloring, cutfiles
 from moneyhub.design import PALETTES
 from moneyhub.exports import kdp, load
 from moneyhub.pipeline import Request, generate
+from moneyhub.render.raster import pdf_page_count
 from moneyhub.render import mockups
 from moneyhub.store import Store
 
@@ -53,7 +54,7 @@ def test_cut_file_exports_are_well_formed():
     svg, dxf, eps = cutfiles.to_svg(d, 6), cutfiles.to_dxf(d, 6), cutfiles.to_eps(d, 6)
     assert "width='6in'" in svg and "fill-rule='evenodd'" in svg and svg.count(" Z") == 2
     lines = dxf.splitlines()
-    assert lines[:4] == ["0", "SECTION", "2", "ENTITIES"] and lines[-1] == "EOF" and lines.count("POLYLINE") == 2 and lines.count("SEQEND") == 2
+    assert "$INSUNITS" in lines and lines[lines.index("$INSUNITS") + 2] == "1" and lines[-1] == "EOF" and lines.count("POLYLINE") == 2 and lines.count("SEQEND") == 2
     xs = [float(lines[i + 1]) for i, v in enumerate(lines) if v == "10"]
     assert 0 <= min(xs) and max(xs) <= 6.0   # inches
     assert eps.startswith("%!PS-Adobe-3.0 EPSF-3.0") and "%%BoundingBox: 0 0 432 432" in eps and eps.count("closepath") == 2 and "eofill" in eps
@@ -73,6 +74,22 @@ def test_round_trip_check_catches_broken_files():
     other = cutfiles.star(5, .4, hole=True)
     assert len(other.rings) == 2
     assert any("different shapes" in p for p in cutfiles.validate_exports(d, 6, dxf=cutfiles.to_dxf(other, 6)))
+
+
+@pytest.mark.skipif(__import__("shutil").which("inkscape") is None, reason="Inkscape not installed")
+def test_inkscape_renders_cut_svgs_like_our_own_renderer(tmp_path):
+    import subprocess
+
+    from PIL import Image
+    d = cutfiles.heart(hole=True)
+    svg = tmp_path / "h.svg"
+    svg.write_text(cutfiles.to_svg(d, 6))
+    png = tmp_path / "h.png"
+    subprocess.run(["inkscape", str(svg), "--export-type=png", f"--export-filename={png}", "-b", "white", "-d", "96"], check=True, capture_output=True, timeout=120)
+    im = Image.open(png).convert("L")
+    assert im.size == (576, 576)   # 6 in at 96 dpi: real inch size
+    ink = sum(1 for v in im.get_flattened_data() if v < 128) / (576 * 576) if hasattr(im, "get_flattened_data") else sum(1 for v in im.getdata() if v < 128) / (576 * 576)
+    assert 0.25 < ink < 0.75   # a filled heart with a hole, not blank and not solid
 
 
 def test_cut_files_bundle_has_four_formats_licence_and_passes_qa():
@@ -108,3 +125,38 @@ def test_wall_art_listing_gets_four_room_photos_within_etsys_limits():
     assert len(rooms) == 4 and len(et) <= 10
     for f in rooms:
         assert f.stat().st_size < 1_000_000 and Image.open(f).size == (2700, 2025)
+
+
+# ------------------------------------------------------------------ kids coloring books
+def test_every_kids_figure_draws_for_any_seed_and_age():
+    from moneyhub import kidsart
+    for kind in kidsart.KINDS:
+        outlines = {kidsart.figure(kind, s, 10, False) for s in range(6)}
+        assert all(len(o) > 400 and "NaN" not in o for o in outlines), kind
+    for age in kidsart.AGES:
+        for i in range(30):
+            kind, svg, caption = kidsart.page_art(i, 3, "mixed", age)
+            assert svg.startswith("<svg") and caption.endswith(("!", "!")) and "NaN" not in svg
+
+
+def test_kids_books_differ_between_seeds_and_figures_do_not_repeat_early():
+    from moneyhub import kidsart
+    a = [kidsart.page_art(i, 1, "animals")[2] for i in range(10)]
+    b = [kidsart.page_art(i, 2, "animals")[2] for i in range(10)]
+    assert a != b
+    figs = [c for k, (_, _, c) in zip(range(10), (kidsart.page_art(i, 1, "mixed") for i in range(10))) if c.startswith("Color the ")]
+    assert len(set(figs)) == len(figs)
+    assert kidsart.figure("cat", 1, 10, False) != kidsart.figure("cat", 2, 10, False)   # details change with the seed
+
+
+def test_kids_coloring_product_is_niche_free_and_kdp_ready():
+    res = generate(Request("nurse", "kids_coloring", providers=["builtin"], seed=4, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "pages": 12, "theme": "ocean"}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    assert res.title == "Under the Sea Coloring Pages for Kids"
+    listing = (res.folder / "listing" / "etsy-description.txt").read_text().lower()
+    assert "nurse" not in listing and "kids" in listing
+    pdf = next((res.folder / "product").glob("*.pdf"))
+    assert pdf_page_count(pdf) == 13   # a cover plus 12 pages
+    from moneyhub.exports import kdp
+    assert "kids_coloring" in kdp.SUPPORTED
