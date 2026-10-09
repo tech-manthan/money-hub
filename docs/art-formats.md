@@ -64,3 +64,18 @@ Evergreen top sellers: minimalist line art, botanicals (muted "quiet luxury" wat
 - Poster sizes in pixels: https://printshop.paperlust.co/blog/poster-size-in-pixels-and-dpi
 - Coloring books: https://www.inkfluenceai.com/how-to-sell-coloring-books
 - Style trends: https://printify.com/blog/leading-trends-for-etsy-sellers-in-2026/ and https://etsyhunt.com/best-etsy-wall-art
+
+## Children's coloring books (niche notes, October 2026)
+Sources are seller-education blogs, not platform data, so treat the numbers as directional. Check KDP's own help pages before uploading.
+- **Demand:** one 2026 blog quotes Circana BookScan: about 16.7 million US children's coloring and activity print units in 2025, up 18% on the year (children's print overall up about 3%) ([promptspace](https://www.promptspace.in/blog/ai-coloring-page-prompts-etsy-sellers-printable-2026), [bookcoverslab](https://bookcoverslab.com/blog/low-competition-kdp-niches-2026)).
+- **What kids' buyers want:** bold, simple outlines; dinosaurs, vehicles, animals, unicorns; multi-page bundles outsell single pages; seasonal drops do well. Adult buyers prefer fine detail, so kids' books should *not* look like the mandala pack.
+- **Competition:** "coloring pages" alone is crowded. Stack audience + theme + line weight (for example "ocean animals, toddler, thick lines"). That is why MoneyHub has `--theme` (7 themes) and `--age toddler|kids` (line width 15 vs 10 units).
+- **Interior for KDP:** 8.5 x 11 in is the usual size; art single-sided with a blank back because markers bleed through; no bleed, keep line work inside the margins; 24-page paperback minimum. MoneyHub's KDP export already adds the blank backs and checks margins and the page count.
+- **Legal/listing:** no licensed characters (the figures here are original shapes); disclose AI assistance where the platform asks (the Etsy disclosure line is already in every listing).
+- **What MoneyHub does:** `moneyhub make "x" kids_coloring --theme ocean --age toddler --pages 24` draws 16 figure types (cat, fish, butterfly, turtle, owl, snail, ladybug, whale, octopus, rocket, car, robot, dinosaur, flower, house, ice cream) with details that change every time (spots, bows, stripes, petals, faces), cycling so the same figure never repeats until the theme's list is used up, plus learning pages: shape faces (with names), count-and-colour (2-9), trace-the-dots and "color all the friends" scenes. Captions say what to colour. New figures: add a function in `kidsart.py` and list it in `KINDS`, `NAMES` and a theme.
+- **Ideas not built yet:** seasonal packs (Halloween, Christmas, Easter) as extra themes; alphabet and number tracing books; connect-the-dots and mazes; "colour by number" pages.
+
+## Tarot-style and oracle decks, sticker sheets
+- **Oracle / tarot-style deck** (`oracle_deck`, `--deck oracle|tarot`, `--card-size tall|poker`, `--cards 12-36`): 28 original symbols in arched, starry windows (`oracle_art.py`); 22 traditional archetype names with original gentle messages, or 36 oracle messages; guide page, matching card backs, cut guides. Messages are reflection prompts, never predictions; the listing FAQ says so. The traditional card names are public domain; the artwork is original (no Rider-Waite or other published imagery).
+- **Sticker sheets** (`sticker_sheets`, `--stickers 12-48`, `--theme`): the kids figures filled with the palette's colours plus decorations, white die-cut border, Letter/A4 sheets and transparent PNGs for GoodNotes. Personal-use licence. Not built: Cricut print-then-cut registration marks, cut-line SVGs.
+
