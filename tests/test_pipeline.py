@@ -20,7 +20,8 @@ def test_pipeline_produces_complete_upload_package(generated):
     res, msgs = generated
     f = res.folder
     assert (f / "product").glob("*.pdf") and list((f / "product").glob("*.pdf"))
-    assert len(list((f / "images" / "etsy").glob("*.jpg"))) == 6
+    etsy = sorted(p.name for p in (f / "images" / "etsy").glob("*.jpg"))
+    assert len(etsy) == 9 and sum("mockup" in n for n in etsy) == 3   # six listing images plus three "in use" mockups
     assert len(list((f / "images" / "pinterest").glob("*.png"))) == 6
     for m in ("etsy", "gumroad", "payhip", "kofi", "pinterest"):
         assert (f / "listing" / f"guide-{m}.md").read_text().startswith("#")

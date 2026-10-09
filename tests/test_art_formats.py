@@ -160,3 +160,16 @@ def test_kids_coloring_product_is_niche_free_and_kdp_ready():
     assert pdf_page_count(pdf) == 13   # a cover plus 12 pages
     from moneyhub.exports import kdp
     assert "kids_coloring" in kdp.SUPPORTED
+
+
+# ------------------------------------------------------------------ mockups for the other product families
+@pytest.mark.parametrize("ptype,opts,expect", [("kids_coloring", {"pages": 10}, 3), ("cut_files", {"designs": 12}, 2), ("clipart_pack", {"colourways": 1}, 3),
+                                              ("digital_paper", {}, 3)])
+def test_every_product_family_gets_in_use_mockups(ptype, opts, expect):
+    res = generate(Request("x", ptype, providers=["builtin"], seed=2, with_video=False, options={"no_research": True, **opts}))
+    names = sorted(p.name for p in (res.folder / "images" / "etsy").glob("*mockup*.jpg"))
+    assert len(names) == expect
+    assert len(list((res.folder / "images" / "etsy").glob("*.jpg"))) <= 10   # Etsy's photo limit
+    from PIL import Image
+    for n in names:
+        assert Image.open(res.folder / "images" / "etsy" / n).size == (2700, 2025)

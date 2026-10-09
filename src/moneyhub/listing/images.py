@@ -1,6 +1,7 @@
 """Create all listing/cover/pin images for a built product."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from PIL import Image
@@ -10,6 +11,9 @@ from ..products.base import BuildResult, ProductFile
 from ..render import graphics as g
 from ..render.html import PAGE_SIZES
 from ..render.raster import pdf_page_count, render_pages
+
+
+log = logging.getLogger("moneyhub.images")
 
 
 def _preview_pages(build: BuildResult, want: int = 6) -> tuple[list[Image.Image], list[Image.Image]]:
@@ -74,6 +78,16 @@ def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str,
             from ..render import mockups
             for n, scene in enumerate(mockups.SCENES[:max(0, 10 - len(out["etsy"]))]):
                 out["etsy"].append(g.save(mockups.room_scene(scene, extra or main, style.palette), et / f"{7 + n:02d}-room-{scene}.jpg"))
+        else:   # everything else: the product in use (pages on a desk, designs on cards, mugs and shirts), flat illustrations in the product's colours
+            from ..render import mockups
+            tiles = [Image.open(p) for p in build.meta.get("mockup_tiles", []) if Path(p).exists()]
+            for scene in mockups.scenes_for(ptype_key)[:max(0, 10 - len(out["etsy"]))]:
+                try:
+                    im = mockups.product_scene(scene, sheet_imgs + extra if not is_art else main, style.palette, tiles or None)
+                except Exception as e:   # a failed extra photo must never fail the product
+                    log.warning("mockup %s failed: %s", scene, e)
+                    continue
+                out["etsy"].append(g.save(im, et / f"{len(out['etsy']) + 1:02d}-mockup-{scene}.jpg"))
     if "gumroad" in want:
         out["gumroad"] += [
         g.save(g.cover_wide(main, build.title, build.subtitle, brush, (1280, 720)), out_dir / "images" / "gumroad" / "cover-1280x720.png"),

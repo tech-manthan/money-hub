@@ -15,6 +15,7 @@ from ..config import get_config
 from ..niches import NicheProfile
 from ..patterns import KINDS, paper_svg, seam_excess
 from ..render.pdf import render_many
+from ..render import mockups
 from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .registry import register
 from .wall_art import JPEG_BUDGET, srgb_profile
@@ -140,7 +141,7 @@ class DigitalPaper(ProductType[PaperContent]):
         features = [f"{count} seamless digital papers", "12 x 12 in, 3600 x 3600 px, 300 DPI JPG", "Each paper repeats with no visible seam",
                     "Commercial use included, no credit needed", "Instant download - works in Canva, Procreate, Photoshop and scrapbook apps"]
         return BuildResult(content.title, content.subtitle, files, features, count, renderer,
-                           meta={"art_previews": _previews(art_dir, pal, thumbs), "flat_art": True, "badges": ["Instant download", "Seamless JPG", "Commercial use"],
+                           meta={"art_previews": _previews(art_dir, pal, thumbs), "mockup_tiles": mockups.save_tiles(art_dir, thumbs[::2]), "flat_art": True, "badges": ["Instant download", "Seamless JPG", "Commercial use"],
                                  "delivery_note": "Instant download: seamless 12 x 12 in JPG papers, plus a commercial licence.", "seam_excess": round(seam, 1)})
 
 

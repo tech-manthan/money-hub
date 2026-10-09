@@ -18,6 +18,7 @@ from ..config import get_config
 from ..design import PALETTES, Palette
 from ..niches import NicheProfile
 from ..render.pdf import render_many
+from ..render import mockups
 from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .registry import register
 from .wall_art import JPEG_BUDGET, srgb_profile
@@ -146,7 +147,7 @@ class ClipartPack(ProductType[ClipartContent]):
                     f"{len(MOTIFS) * len(ways)} editable SVG vector files", f"PNG at {used_px} x {used_px} px, 300 DPI, transparent background",
                     "Commercial use included, no credit needed", "Instant download - works in Canva, Procreate, Photoshop and Cricut Design Space"]
         return BuildResult(content.title, content.subtitle, files, features, len(MOTIFS) * len(ways), renderer,
-                           meta={"art_previews": previews, "flat_art": True, "badges": ["Instant download", "PNG + SVG", "Commercial use"],
+                           meta={"art_previews": previews, "mockup_tiles": mockups.save_tiles(art_dir, [r[3] for r in rendered if r[0] == ways[0].key][::2]), "flat_art": True, "badges": ["Instant download", "PNG + SVG", "Commercial use"],
                                  "delivery_note": "Instant download: transparent PNG and SVG files, plus a commercial licence.", "colourways": [p.key for p in ways]})
 
 

@@ -16,6 +16,7 @@ from .. import cutfiles
 from ..config import get_config
 from ..niches import NicheProfile
 from ..render.pdf import render_many
+from ..render import mockups
 from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .registry import register
 
@@ -109,7 +110,7 @@ class CutFiles(ProductType[CutContent]):
         features = [f"{n} cut-file designs", "SVG, DXF, EPS and PNG versions of every design", f"Designed at {size_in:g} inches; resize to any size",
                     "Single clean outlines: nothing to weld, ready to cut", "Commercial use included, no credit needed", "Works with Cricut, Silhouette, Brother ScanNCut and more"]
         return BuildResult(content.title, content.subtitle, files, features, n, renderer,
-                           meta={"art_previews": _previews(art_dir, ctx.style.palette, pngs), "flat_art": True, "badges": ["Instant download", "SVG + DXF + EPS + PNG", "Commercial use"],
+                           meta={"art_previews": _previews(art_dir, ctx.style.palette, pngs), "mockup_tiles": mockups.save_tiles(art_dir, pngs), "flat_art": True, "badges": ["Instant download", "SVG + DXF + EPS + PNG", "Commercial use"],
                                  "delivery_note": "Instant download: SVG, DXF, EPS and PNG cut files, plus a commercial licence.", "cut_min_gap_mm": round(gap, 1),
                                  "cut_roundtrip_problems": sorted({p for d in designs for p in cutfiles.validate_exports(d, size_in)})})
 
