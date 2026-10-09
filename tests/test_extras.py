@@ -176,3 +176,21 @@ def test_wall_art_extra_formats_have_exact_sizes_srgb_and_fit_etsy():
         assert im.size == want[ratio] and im.info.get("icc_profile") and z.stat().st_size < 20_000_000
     from moneyhub.products import get_product_type
     assert get_product_type("wall_art").default_sizes == ["2x3", "3x4", "4x5", "5x7", "ISO-A"]
+
+
+def test_clipart_pack_has_transparent_png_svg_licence_and_commercial_listing_terms():
+    import zipfile
+    from PIL import Image
+    from moneyhub import art
+    res = generate(Request("gardening", "clipart_pack", providers=["builtin"], seed=4, with_video=False, options={"no_research": True, "colourways": 2}))
+    assert res.qa_status in ("pass", "warn") and not [c for c in res.checks if c.status == "fail"]
+    names = {p.name: p for p in (res.folder / "product").glob("*")}
+    png = zipfile.ZipFile(next(p for n, p in names.items() if n.endswith("PNG-transparent.zip")))
+    pngs = [i for i in png.infolist() if i.filename.endswith(".png")]
+    assert len(pngs) == 2 * len(art.MOTIFS)
+    im = Image.open(png.open(pngs[0]))
+    assert im.mode == "RGBA" and im.size[0] >= 2000 and im.getchannel("A").getextrema()[0] == 0 and im.info.get("icc_profile")
+    assert len([n for n in zipfile.ZipFile(next(p for n, p in names.items() if n.endswith("SVG-vector.zip"))).namelist() if n.endswith(".svg")]) == 2 * len(art.MOTIFS)
+    assert "Commercial-License.pdf" in names
+    desc = (res.folder / "listing" / "etsy-description.txt").read_text()
+    assert "Commercial use is included" in desc and "personal use only" not in desc.lower()

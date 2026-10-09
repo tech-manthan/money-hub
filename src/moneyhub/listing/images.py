@@ -53,17 +53,18 @@ def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str,
             sheet_imgs = [sheetshots.habit_shot(build.meta["habits"], title, brush, style.seed)]
         else:
             sheet_imgs = [sheetshots.budget_shot(build.meta["groups"], title, brush, style.seed)]
+    gallery = is_art and not build.meta.get("flat_art")   # wall art is shown on a gallery wall; clipart as a normal listing hero
     if is_art:
-        badges = ["Instant download", "High-res JPG", "5 print ratios"]
+        badges = build.meta.get("badges") or ["Instant download", "High-res JPG", "5 print ratios"]
     out: dict[str, list[Path]] = {"etsy": [], "gumroad": [], "payhip": [], "kofi": [], "pinterest": [], "video": []}
 
     if "etsy" in want:
         et = out_dir / "images" / "etsy"
         out["etsy"] += [
-            g.save(g.gallery_wall(main, build.title, build.subtitle, brush) if is_art else g.hero(main, build.title, build.subtitle, badges, brush), et / "01-hero.jpg"),
+            g.save(g.gallery_wall(main, build.title, build.subtitle, brush) if gallery else g.hero(main, build.title, build.subtitle, badges, brush), et / "01-hero.jpg"),
             g.save(g.included(main, build.features, brush), et / "02-whats-included.jpg"),
             g.save(g.page_grid(extra[1:] or main, "A look inside", brush), et / "03-inside.jpg"),
-            g.save(g.sizes_image(sizes_labels, ("Instant JPG download. Print at home or at any print shop." if is_art else "Instant PDF download. " + ("Spreadsheet works in Excel, Google Sheets and Numbers." if any(f.kind == "xlsx" for f in build.files) else "Print at home or at a print shop.")), main, brush), et / "04-sizes-formats.jpg"),
+            g.save(g.sizes_image(sizes_labels, (build.meta.get("delivery_note") or "Instant JPG download. Print at home or at any print shop." if is_art else "Instant PDF download. " + ("Spreadsheet works in Excel, Google Sheets and Numbers." if any(f.kind == "xlsx" for f in build.files) else "Print at home or at a print shop.")), main, brush), et / "04-sizes-formats.jpg"),
             g.save(g.how_it_works([("Buy", "Check out securely on the marketplace."), ("Download", "Get your files instantly after payment."), ("Use it", "Print it or open it on your device.")], brush), et / "05-how-it-works.jpg"),
             g.save(g.detail(extra[min(2, len(extra) - 1)], "Designed to be used, not just admired", brush), et / "06-detail.jpg"),
         ]

@@ -78,6 +78,7 @@ _TYPE_WORDS = {
     "wall_art": ["printable wall art", "digital wall art", "wall art set", "poster print", "affirmation print", "downloadable art"],
     "daily_planner": ["daily planner", "daily planner printable", "to do list", "day planner pdf", "daily schedule", "productivity planner"],
     "checklist_pack": ["printable checklists", "checklist bundle", "to do checklist", "organizer printable", "checklist pdf", "planner inserts"],
+    "clipart_pack": ["clipart bundle", "boho clipart", "commercial use clipart", "png clipart", "svg clipart", "abstract shapes clipart"],
     "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],
 }
 
@@ -125,7 +126,7 @@ def _builtin_copy(niche: NicheProfile, ptype: ProductType, build: BuildResult, r
         faq=[
             "Q: How do I receive the files? A: Instantly after purchase - you get a download link by email and on your purchases page.",
             "Q: Can I print it at home? A: Yes. Print on regular paper or cardstock, at home or at a print shop.",
-            "Q: Can I resell or share the files? A: No - personal use only. Please do not redistribute or resell.",
+            ptype.license_faq or "Q: Can I resell or share the files? A: No - personal use only. Please do not redistribute or resell.",
         ],
         pin_titles=pin_titles, pin_headlines=headlines, pin_description=pin_desc,
     )
@@ -139,12 +140,11 @@ def _description(copy: ListingCopy, build: BuildResult, ptype: ProductType) -> s
         f"{copy.intro}\n\n"
         f"WHAT'S INCLUDED\n{inc}\n\n"
         f"FILES YOU RECEIVE\n{files}\n\n"
-        "HOW IT WORKS\n1. Purchase and download your files instantly.\n"
-        "2. Print at home or at a print shop, or open on your tablet/computer.\n"
-        "3. Start today.\n\n"
+        "HOW IT WORKS\n" + "\n".join(f"{i}. {s}" for i, s in enumerate(ptype.how_steps or (
+            "Purchase and download your files instantly.", "Print at home or at a print shop, or open on your tablet/computer.", "Start today."), 1)) + "\n\n"
         f"GOOD TO KNOW\n{faq}\n\n"
-        "TERMS\nFor personal use only. No resale, sharing or redistribution of the digital files. "
-        "Colours may vary slightly between screens and printers. This is a digital product; no physical item will be shipped.\n\n"
+        "TERMS\n" + (ptype.license_terms or "For personal use only. No resale, sharing or redistribution of the digital files. ")
+        + " Colours may vary slightly between screens and printers. This is a digital product; no physical item will be shipped.\n\n"
         f"DISCLOSURE\n{AI_DISCLOSURE}"
     )
 

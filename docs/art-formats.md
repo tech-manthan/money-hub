@@ -8,7 +8,7 @@ Research summary (October 2026). The sources are seller guides and marketplace p
 |---|---|---|---|
 | JPG | Wall art, posters, photo-like art, wallpapers | Smaller and prints sharply; the default for art downloads. 300 DPI wall-art JPGs are typically 1-15 MB. | Wall art packs (JPG, 300 DPI) |
 | PDF | Planners, worksheets, multi-page printables, print-at-home sheets | Best for anything with several pages or exact paper sizes. | All planner/printable products |
-| PNG | Clipart, stickers, transparent elements | Needs a transparent background (PNG-24, RGB). Large 300 DPI PNGs often exceed Etsy's 20 MB file limit, so avoid PNG for big prints. | Not made yet |
+| PNG | Clipart, stickers, transparent elements | Needs a transparent background (PNG-24, RGB). Large 300 DPI PNGs often exceed Etsy's 20 MB file limit, so avoid PNG for big prints. | `clipart_pack`: 3000 px transparent PNGs (drops to 2400/2000 px if the zip would pass 19 MB) |
 | SVG (+ DXF, PNG, EPS) | Cut files for Cricut / Silhouette | Etsy will not take a bare SVG: deliver inside a zip. Include SVG, DXF, PNG and EPS so both machine brands work. | Not made yet |
 | PSD / Canva template | Editable templates | Sold as a link or file. Only your own designs; resold PLR templates must be changed substantially for Etsy. | Canva export |
 
@@ -26,7 +26,7 @@ Five ratios cover most frames: **2:3** (4x6, 12x18, 20x30 in), **3:4** (9x12, 18
 - **Phone wallpapers:** about 1290 x 2796 px (iPhone) up to 1440 x 3120 (many Android phones); packs of 10-25 sell. *MoneyHub: `--sizes phone` (1290 x 2796).*
 - **Square 1:1:** gallery-wall sets of matching prints. *MoneyHub: `--sizes 1x1`.*
 - **Digital paper / seamless patterns:** 12 x 12 in = 3600 x 3600 px, JPG, tile must repeat with no seam, state the true tile size. *Not made yet.*
-- **Clipart bundles:** transparent PNG-24 at 300 DPI, themed sets, plus a commercial licence PDF; commercial licences are commonly priced 2-3x personal use. *Not made yet.*
+- **Clipart bundles:** transparent PNG-24 at 300 DPI, themed sets, plus a commercial licence PDF; commercial licences are commonly priced 2-3x personal use. *MoneyHub: `moneyhub make <niche> clipart_pack` (13 motifs x 3 colourways, `--` option `colourways`), with SVG vectors and a Commercial-License PDF. Have the licence wording reviewed before selling: it is a plain-language summary, not legal advice.*
 - **Coloring pages:** PDF at Letter/A4 (KDP: 8.5 x 11 or 8.5 x 8.5 in), black line art on white, one design per page. *Not made yet.*
 
 ## Colour

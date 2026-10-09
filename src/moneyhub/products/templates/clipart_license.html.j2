@@ -1,0 +1,24 @@
+{% from '_macros.html.j2' import header, footer %}
+<section class="page">
+  {{ header(style, 'Commercial licence', title) }}
+  <p style="max-width:40em;">Thank you for your purchase. This page explains what you may do with the {{ count }} clipart designs you bought. It is a plain-language summary, not legal advice.</p>
+  <div class="label" style="margin:1em 0 .4em;">You may</div>
+  <ul style="max-width:42em;line-height:1.55;">
+    <li>Use the clipart in your own personal and commercial projects, as many times as you like.</li>
+    <li>Use it in finished designs and products you sell: printables, planners, stickers, cards, invitations, social media posts, websites, packaging and physical goods.</li>
+    <li>Change the colours, resize, rotate and combine it with your own work. No credit or link back is needed.</li>
+  </ul>
+  <div class="label" style="margin:1em 0 .4em;">You may not</div>
+  <ul style="max-width:42em;line-height:1.55;">
+    <li>Resell, share, give away or upload the original files (or edited versions of them) as clipart, graphics, templates or stock.</li>
+    <li>Include the files in another clipart pack, bundle, font or design kit, or in a template where buyers can pull the artwork out.</li>
+    <li>Say you drew the original artwork, or register it as your own copyright or trademark.</li>
+    <li>Use the files to train or fine-tune AI models, or add them to AI datasets.</li>
+    <li>Pass this licence on to someone else. It covers the buyer only (one person or one business).</li>
+  </ul>
+  <div class="card soft" style="margin-top:1em;max-width:42em;"><div class="label">About the artwork</div>
+    The artwork was made with software, including AI-assisted tools, and is sold under the licence above. Copyright stays with the seller.</div>
+  <div class="card" style="margin-top:.8em;max-width:42em;"><div class="label">Questions?</div>
+    {% if shop.name or shop.email %}{{ shop.name }}{% if shop.email %} - {{ shop.email }}{% endif %}{% else %}Message the seller through the marketplace you bought from.{% endif %}</div>
+  {{ footer(title) }}
+</section>

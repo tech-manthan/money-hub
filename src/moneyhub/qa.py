@@ -74,7 +74,7 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     for f in pdfs:
         n = pdf_page_count(f.path)
         size_mb = f.path.stat().st_size / 1e6
-        min_pages = 1 if "Start-Here" in f.path.name else 3
+        min_pages = 1 if ("Start-Here" in f.path.name or "License" in f.path.name) else 3
         checks.append(Check(f"{f.path.name}: pages", "pass" if n >= min_pages else "fail", f"{n} pages"))
         checks.append(Check(f"{f.path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)"))
         total, emb = _pdf_fonts_embedded(f.path)
@@ -99,12 +99,16 @@ def _zip_checks(path: Path) -> list[Check]:
     size_mb = path.stat().st_size / 1e6
     out = [Check(f"{path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)")]
     with zipfile.ZipFile(path) as z:
-        jpgs = [n for n in z.namelist() if n.lower().endswith(".jpg")]
-        out.append(Check(f"{path.name}: images", "pass" if jpgs else "fail", f"{len(jpgs)} JPG files"))
+        jpgs = [n for n in z.namelist() if n.lower().endswith((".jpg", ".png"))]
+        svgs = [n for n in z.namelist() if n.lower().endswith(".svg")]
+        out.append(Check(f"{path.name}: images", "pass" if jpgs or svgs else "fail", f"{len(jpgs)} image files" + (f", {len(svgs)} SVG" if svgs else "")))
         if jpgs:
             with z.open(jpgs[0]) as fh:
                 im = Image.open(fh)
-                out.append(Check(f"{path.name}: resolution", "pass" if min(im.size) >= 2400 else "warn", f"{im.size[0]}x{im.size[1]} px"))
+                out.append(Check(f"{path.name}: resolution", "pass" if min(im.size) >= 2000 else "warn", f"{im.size[0]}x{im.size[1]} px"))
+                if jpgs[0].lower().endswith(".png"):
+                    out.append(Check(f"{path.name}: transparency", "pass" if im.mode == "RGBA" and im.getchannel("A").getextrema()[0] == 0 else "fail",
+                                     "transparent background" if im.mode == "RGBA" else "no alpha channel"))
     return out
 
 

@@ -72,6 +72,10 @@ class ProductType(ABC, Generic[C]):
     layouts: ClassVar[dict[str, str]] = {}
     layout_marker: ClassVar[str] = ""   # text on the page that shows the layout best (used for the live thumbnail)
 
+    # buyer-facing licence wording for the listing; empty = the default personal-use wording
+    license_terms: ClassVar[str] = ""
+    license_faq: ClassVar[str] = ""
+    how_steps: ClassVar[tuple[str, ...]] = ()
     layout_preview_page: ClassVar[int] = 0   # PDF page (0-based) shown in the thumbnail when layout_marker is empty or not found
     auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option
 

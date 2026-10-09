@@ -36,6 +36,8 @@ moneyhub ui
 ## Known gaps (not verified on a real Mac / device yet)
 Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `claude_svg` works), how exports behave inside Canva/Notion/KDP's previewer, GoodNotes link behaviour, e-ink tablets, xlsx recalculation in Excel/Numbers. Not built: marketplace API publishing (by design), KDP export for non-planner products, layouts for product types other than weekly/daily planner, Penpot/Canva native template files.
 
+- **New since the pending list**: `clipart_pack` product (transparent PNG + SVG + licence PDF), wall-art formats `1x1`/`phone`/`frame_tv`, product-page file viewer and Sell-on platform packs (`listing/platforms.py`, `moneyhub export pack <id> etsy`), research in `docs/art-formats.md`. Product types can set `license_terms`/`license_faq`/`how_steps` to change the listing's licence wording.
+
 ## Pending work (start here in a new session)
 Do these in order; commit each with tests; no pushes unless the owner asks (3+ commits are local and unpushed at the time of writing).
 1. ~~Wall-art motifs~~ done (scallop/topo/bouquet/retro redrawn; test covers every motif).
