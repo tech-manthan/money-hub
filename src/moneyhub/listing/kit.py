@@ -79,6 +79,8 @@ _TYPE_WORDS = {
     "daily_planner": ["daily planner", "daily planner printable", "to do list", "day planner pdf", "daily schedule", "productivity planner"],
     "checklist_pack": ["printable checklists", "checklist bundle", "to do checklist", "organizer printable", "checklist pdf", "planner inserts"],
     "digital_paper": ["digital paper", "seamless pattern", "scrapbook paper", "digital paper pack", "seamless digital paper", "patterns jpg"],
+    "cut_files": ["svg cut files", "cricut svg", "silhouette cut files", "svg bundle", "boho svg", "dxf cut files"],
+    "coloring_pages": ["coloring pages", "mandala coloring", "printable coloring", "adult coloring pages", "coloring sheets", "coloring book pdf"],
     "clipart_pack": ["clipart bundle", "boho clipart", "commercial use clipart", "png clipart", "svg clipart", "abstract shapes clipart"],
     "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],
 }
@@ -91,7 +93,9 @@ def _generic_copy(ptype: ProductType, build: BuildResult, words: list[str]) -> L
     parts = [f"{nm} {ptype.label}", *[w.title() for w in words[1:3]], "Instant Download", "Digital Download"]
     title = ", ".join(dict.fromkeys(p for p in parts if p))
     tags: list[str] = []
-    for kw in [*words, "instant download", "digital download", "commercial use", f"{nm.lower()} {ptype.label.lower()}", "digital art", "craft supplies", "design resources", "small business"]:
+    commercial = "commercial" in ptype.license_terms.lower()
+    for kw in [*words, "instant download", "digital download", f"{nm.lower()} {ptype.label.lower()}", "digital art", "craft supplies", "printable art",
+               *(["commercial use", "design resources", "small business"] if commercial else ["gift idea", "relaxation", "mindfulness"])]:
         kw = kw.lower().strip()
         if 3 <= len(kw) <= ETSY_TAG_MAX_LEN and kw not in tags:
             tags.append(kw)
@@ -101,10 +105,11 @@ def _generic_copy(ptype: ProductType, build: BuildResult, words: list[str]) -> L
         intro=f"{build.title}: original artwork for {aud}. Download it instantly and start creating today.",
         faq=["Q: How do I receive the files? A: Instantly after purchase - you get a download link by email and on your purchases page.",
              ptype.license_faq or "Q: Can I resell or share the files? A: No - personal use only. Please do not redistribute or resell.",
-             "Q: Which apps can I use? A: Any app that opens PNG, JPG or SVG files: Canva, Procreate, Photoshop, Affinity, Cricut Design Space and more."],
+             "Q: Which apps can I use? A: Any app that opens PNG, JPG or SVG files: Canva, Procreate, Photoshop, Affinity, Cricut Design Space and more."
+             if commercial else "Q: Can I print it more than once? A: Yes. Print as many copies as you like for yourself or your classroom."],
         pin_titles=[f"{nm} {ptype.label}: {words[0]}", f"{words[1 % len(words)].title()} - {nm}", f"{nm} {words[0]} (instant download)",
                     f"{words[2 % len(words)].title()} for {aud}"[:100], f"New: {nm} {words[0]}", f"Best {words[0]} for your next project"],
-        pin_headlines=[nm, f"{nm} {ptype.label}", "Instant download", f"For {aud}"[:40], "Commercial use included", "Made to create with"],
+        pin_headlines=[nm, f"{nm} {ptype.label}", "Instant download", f"For {aud}"[:40], "Commercial use included" if commercial else "Print as often as you like", "Made to create with"],
         pin_description=f"{build.title}. Made for {aud}. Includes {feats}. Instant download - save this pin and get yours today.",
     )
 

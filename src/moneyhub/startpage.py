@@ -18,7 +18,7 @@ def _gsheet_copy_link(url: str | None) -> str | None:
 
 def build_start_page(build: BuildResult, style: Style, out_dir: Path, ptype_key: str, niche_key: str, gsheet_url: str | None = None) -> ProductFile | None:
     prim = [f for f in build.files if f.primary]
-    if ptype_key in ("wall_art", "clipart_pack", "digital_paper") or len(prim) >= 5:   # wall art packs include READ-ME.txt; Etsy allows 5 files
+    if ptype_key in ("wall_art", "clipart_pack", "digital_paper", "cut_files") or len(prim) >= 5:   # wall art packs include READ-ME.txt; Etsy allows 5 files
         return None
     cfg = get_config()
     shop = {k: (cfg.get(f"shop.{k}") or "") for k in ("name", "email", "url")}

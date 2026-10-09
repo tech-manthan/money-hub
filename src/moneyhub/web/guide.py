@@ -25,6 +25,8 @@ PRODUCT_PLAIN = {
     "ebook_guide": "A short beginner guide with chapters and action steps. Review the text before selling.",
     "wall_art": "A set of printable quote posters in several print sizes (JPG).",
     "clipart_pack": "Abstract boho clipart: transparent PNGs, SVG vectors and a commercial licence.",
+    "cut_files": "Clean cut-file shapes for Cricut and Silhouette: SVG, DXF, EPS and PNG, with a commercial licence.",
+    "coloring_pages": "Printable mandala and pattern coloring pages as clean line art (PDF).",
     "digital_paper": "Seamless 12 x 12 in patterns as JPG papers, with a commercial licence.",
 }
 

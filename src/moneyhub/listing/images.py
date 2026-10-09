@@ -70,6 +70,10 @@ def make_images(build: BuildResult, style: Style, out_dir: Path, ptype_key: str,
         ]
         for n, im in enumerate(sheet_imgs):
             out["etsy"].append(g.save(im, et / f"{7 + n:02d}-spreadsheet-illustration.jpg"))
+        if gallery:   # wall art: the artwork framed in rooms, the photos that sell art (Etsy allows 10 photos)
+            from ..render import mockups
+            for n, scene in enumerate(mockups.SCENES[:max(0, 10 - len(out["etsy"]))]):
+                out["etsy"].append(g.save(mockups.room_scene(scene, extra or main, style.palette), et / f"{7 + n:02d}-room-{scene}.jpg"))
     if "gumroad" in want:
         out["gumroad"] += [
         g.save(g.cover_wide(main, build.title, build.subtitle, brush, (1280, 720)), out_dir / "images" / "gumroad" / "cover-1280x720.png"),

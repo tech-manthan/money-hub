@@ -23,7 +23,7 @@ from ..render.html import KDP_TRIMS, PAGE_SIZES, PageSize, render_html
 from ..render.pdf import render_pdf
 from . import Loaded, out_dir
 
-SUPPORTED = ("weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker")
+SUPPORTED = ("weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "coloring_pages")
 PAPER = {"white": 0.002252, "cream": 0.0025, "color": 0.0032}   # inches per page (KDP)
 BLEED = 0.125
 MIN_PAGES, MAX_PAGES = 24, 828
@@ -54,7 +54,7 @@ def _build_interior(l: Loaded, trim: str, margin_in: float, work: Path) -> Path:
     if style.header == "band":   # a full-width band would run to the page edge, which needs bleed
         style = dataclasses.replace(style, header="rule")
     page = PAGE_SIZES[f"kdp_{trim}"]
-    opts = {**l.spec["request"].get("options", {}), "margin_em": round(margin_in * 72 / page.base_pt, 3)}
+    opts = {**l.spec["request"].get("options", {}), "margin_em": round(margin_in * 72 / page.base_pt, 3), "kdp": True}   # coloring pages: no cover page, a blank back for every design
     ctx = BuildContext(niche=resolve_niche(l.spec["request"]["niche"]), style=style, out_dir=work, sizes=[f"kdp_{trim}"],
                        seed=l.spec["request"].get("seed", 1), providers=["builtin"], options=opts)
     res = pt.build(ctx, pt.content_model.model_validate(l.content))

@@ -1,0 +1,22 @@
+{% if not kdp %}
+<section class="page cover" style="padding:0;">
+  <div style="background:var(--accent);padding:3.2em 3.4em 7.5em;">
+    <div class="label" style="color:var(--accent-ink);">{{ content.subtitle }}</div>
+    <h1 class="h" style="font-size:3.1em;margin:.3em 0 .2em;color:var(--accent-ink);">{{ content.title }}</h1>
+    <div class="script" style="font-size:1.6em;color:var(--accent-ink);">{{ content.tagline }}</div>
+  </div>
+  <div style="margin:-5.5em auto 0;width:{{ cover_side + 2 }}em;height:{{ cover_side + 2 }}em;background:#fff;border-radius:50%;border:2px solid var(--accent2);padding:1em;box-sizing:border-box;">{{ cover|safe }}</div>
+  <div style="position:absolute;left:3.4em;bottom:3.6em;right:3.4em;display:flex;gap:.5em;flex-wrap:wrap;justify-content:center;">
+    {% for chip in [arts|length ~ ' pages', 'Mandalas & patterns', 'Print as often as you like'] %}<span style="border:1.5px solid var(--accent);color:var(--accent);border-radius:99em;padding:.25em .9em;font-size:.72em;font-weight:700;letter-spacing:.06em;background:var(--paper);">{{ chip }}</span>{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% for art in arts %}
+<section class="page">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0;">
+    <div style="border:1.5px solid #222;border-radius:var(--radius);padding:.6em;box-sizing:content-box;width:{{ side }}em;height:{{ side }}em;">{{ art|safe }}</div>
+  </div>
+  {% if not kdp %}<div class="footer"><span>{{ content.title }}</span><span>{{ loop.index }}</span></div>{% endif %}
+</section>
+{% if kdp %}<section class="page"></section>{% endif %}
+{% endfor %}

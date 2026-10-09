@@ -9,7 +9,7 @@ Research summary (October 2026). The sources are seller guides and marketplace p
 | JPG | Wall art, posters, photo-like art, wallpapers | Smaller and prints sharply; the default for art downloads. 300 DPI wall-art JPGs are typically 1-15 MB. | Wall art packs (JPG, 300 DPI) |
 | PDF | Planners, worksheets, multi-page printables, print-at-home sheets | Best for anything with several pages or exact paper sizes. | All planner/printable products |
 | PNG | Clipart, stickers, transparent elements | Needs a transparent background (PNG-24, RGB). Large 300 DPI PNGs often exceed Etsy's 20 MB file limit, so avoid PNG for big prints. | `clipart_pack`: 3000 px transparent PNGs (drops to 2400/2000 px if the zip would pass 19 MB) |
-| SVG (+ DXF, PNG, EPS) | Cut files for Cricut / Silhouette | Etsy will not take a bare SVG: deliver inside a zip. Include SVG, DXF, PNG and EPS so both machine brands work. | Not made yet |
+| SVG (+ DXF, PNG, EPS) | Cut files for Cricut / Silhouette | Etsy will not take a bare SVG: deliver inside a zip. Include SVG, DXF, PNG and EPS so both machine brands work. | `cut_files`: 24 single-outline designs (nothing to weld) as SVG, DXF (R12, inches), EPS and PNG zips, plus licence = Etsy's 5 files; QA checks the thinnest gap between cuts is at least 1.5 mm |
 | PSD / Canva template | Editable templates | Sold as a link or file. Only your own designs; resold PLR templates must be changed substantially for Etsy. | Canva export |
 
 ## Print sizes (aspect ratios)
@@ -27,7 +27,7 @@ Five ratios cover most frames: **2:3** (4x6, 12x18, 20x30 in), **3:4** (9x12, 18
 - **Square 1:1:** gallery-wall sets of matching prints. *MoneyHub: `--sizes 1x1`.*
 - **Digital paper / seamless patterns:** 12 x 12 in = 3600 x 3600 px, JPG, tile must repeat with no seam, state the true tile size. *MoneyHub: `moneyhub make <niche> digital_paper` makes 12 (up to 24, `papers` option) seamless papers from a pattern engine (`patterns.py`), checks the edge join, splits zips to stay under 20 MB, adds a Commercial-License PDF, and shows a 2 x 2 repeat in the listing photos.*
 - **Clipart bundles:** transparent PNG-24 at 300 DPI, themed sets, plus a commercial licence PDF; commercial licences are commonly priced 2-3x personal use. *MoneyHub: `moneyhub make <niche> clipart_pack` (13 motifs x 3 colourways, `--` option `colourways`), with SVG vectors and a Commercial-License PDF. Have the licence wording reviewed before selling: it is a plain-language summary, not legal advice.*
-- **Coloring pages:** PDF at Letter/A4 (KDP: 8.5 x 11 or 8.5 x 8.5 in), black line art on white, one design per page. *Not made yet.*
+- **Coloring pages:** PDF at Letter/A4 (KDP: 8.5 x 11 or 8.5 x 8.5 in), black line art on white, one design per page. *MoneyHub: `moneyhub make <niche> coloring_pages` (`pages` option, 10-40): mandalas, patterns and shape pictures from the engines, white-filled outlines so overlaps read correctly; `moneyhub export kdp` makes the coloring-book interior with a blank back for every design and no cover page.*
 
 ## Colour
 
@@ -38,7 +38,7 @@ Five ratios cover most frames: **2:3** (4x6, 12x18, 20x30 in), **3:4** (9x12, 18
 
 - Digital files: up to **5 files, 20 MB each**. A zip counts as one file, so one zip per ratio fits the limit. *The Sell-on picker checks this and splits packs that are too big; the JPG quality loop keeps each pack under 19 MB.*
 - Listing photos: at least **2000 px** on the longest side, JPG or PNG, up to 10 MB; 10 photo slots. Winning listings show 5-7 scenes: clean product shot, room mockup, frame variants, size comparison, "what you get", close-up detail, a scale reference.
-- Include a **size guide image** listing every ratio and the sizes it prints at.
+- Include a **size guide image** listing every ratio and the sizes it prints at. *Wall-art listings now also get four generated room photos (living room, gallery wall, shelf, bedroom) with the real artwork framed in them, as Etsy photos 7-10.*
 
 ## AI disclosure and originality
 
