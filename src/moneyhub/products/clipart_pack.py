@@ -81,7 +81,7 @@ class ClipartPack(ProductType[ClipartContent]):
         return [ctx.style.palette, *others[: n - 1]]
 
     def build(self, ctx: BuildContext, content: ClipartContent) -> BuildResult:
-        content = content.model_copy(update={"title": f"{ctx.style.palette.key.replace('_', ' ').title()} Boho Shapes Clipart Set"})   # named after the colour, never the niche
+        content = content.model_copy(update={"title": self.unique_title(ctx, f"{ctx.style.palette.key.replace('_', ' ').title()} Boho Shapes")})   # named after the colour, never the niche
         slug = self.slug(content.title)
         ways = self.colourways(ctx)
         names = [_slug(n) for n in content.names]

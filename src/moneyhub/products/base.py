@@ -15,6 +15,7 @@ from ..llm import LLMRouter, get_router
 from ..niches import NicheProfile
 from ..render.html import PAGE_SIZES, PageSize, render_html
 from ..render.pdf import render_many, render_pdf
+from ..uniqueness import design_fingerprint, fingerprint_text
 
 log = logging.getLogger("moneyhub.products")
 C = TypeVar("C", bound=BaseModel)
@@ -50,6 +51,7 @@ class BuildContext:
     router: LLMRouter = field(default_factory=get_router)
     providers: list[str] | None = None
     options: dict = field(default_factory=dict)
+    taken_titles: frozenset[str] = frozenset()   # lower-cased titles already in the catalogue
 
     @property
     def rng(self) -> random.Random:
@@ -82,6 +84,23 @@ class ProductType(ABC, Generic[C]):
     how_steps: ClassVar[tuple[str, ...]] = ()
     layout_preview_page: ClassVar[int] = 0   # PDF page (0-based) shown in the thumbnail when layout_marker is empty or not found
     auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option
+
+    def unique_title(self, ctx: "BuildContext", name: str) -> str:
+        """`name` + title_suffix, or '<name> Vol. 2 <suffix>' (3, 4...) when the catalogue already has that title, so repeat packs get distinct listings."""
+        if self.title_suffix and name.endswith(self.title_suffix):
+            name = name[: -len(self.title_suffix)]
+        title = f"{name}{self.title_suffix}"
+        n = 1
+        while title.lower() in ctx.taken_titles:
+            n += 1
+            title = f"{name} Vol. {n}{self.title_suffix}"
+        return title
+
+    def fingerprint(self, ctx: "BuildContext", content) -> str:
+        """Catalogue fingerprint used for the uniqueness check."""
+        if self.niche_in_copy:
+            return fingerprint_text(content.model_dump_json())
+        return design_fingerprint(self.key, ctx.style.palette.key, ctx.seed, ctx.sizes, ctx.options)
 
     def layout_preview_image(self, ctx: "BuildContext", content):
         """A PIL image showing the chosen layout, for products whose files are not PDFs (None = use the PDF page marked by layout_marker)."""

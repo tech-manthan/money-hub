@@ -44,6 +44,7 @@ class ColoringPages(ProductType[ColoringContent]):
                 f"Set pages to {int(options.get('pages', 20))}. Do not mention any niche or profession.")
 
     def build(self, ctx: BuildContext, content: ColoringContent) -> BuildResult:
+        content = content.model_copy(update={"title": self.unique_title(ctx, content.title)})
         slug = self.slug(content.title)
         n = max(10, min(int(ctx.options.get("pages", content.pages)), 40))
         kdp = bool(ctx.options.get("kdp"))

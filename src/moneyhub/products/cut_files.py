@@ -58,6 +58,7 @@ class CutFiles(ProductType[CutContent]):
                 "Do not mention any niche or profession.")
 
     def build(self, ctx: BuildContext, content: CutContent) -> BuildResult:
+        content = content.model_copy(update={"title": self.unique_title(ctx, content.title)})
         slug = self.slug(content.title)
         n = max(12, min(int(ctx.options.get("designs", content.designs)), 40))
         size_in = max(3.0, min(float(ctx.options.get("size_in", 6.0)), 12.0))
@@ -109,7 +110,8 @@ class CutFiles(ProductType[CutContent]):
                     "Single clean outlines: nothing to weld, ready to cut", "Commercial use included, no credit needed", "Works with Cricut, Silhouette, Brother ScanNCut and more"]
         return BuildResult(content.title, content.subtitle, files, features, n, renderer,
                            meta={"art_previews": _previews(art_dir, ctx.style.palette, pngs), "flat_art": True, "badges": ["Instant download", "SVG + DXF + EPS + PNG", "Commercial use"],
-                                 "delivery_note": "Instant download: SVG, DXF, EPS and PNG cut files, plus a commercial licence.", "cut_min_gap_mm": round(gap, 1)})
+                                 "delivery_note": "Instant download: SVG, DXF, EPS and PNG cut files, plus a commercial licence.", "cut_min_gap_mm": round(gap, 1),
+                                 "cut_roundtrip_problems": sorted({p for d in designs for p in cutfiles.validate_exports(d, size_in)})})
 
 
 def _readme(content: CutContent, fmt: str, size_in: float) -> str:

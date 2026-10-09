@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 
 
@@ -15,7 +16,16 @@ def fingerprint_text(content_json: str) -> str:
     return hashlib.sha1(" ".join(sh).encode()).hexdigest()[:12] + "|" + " ".join(sh[:400])
 
 
+def design_fingerprint(key: str, palette: str, seed: int, sizes: list[str], options: dict) -> str:
+    """For products whose text never changes (clipart, papers, cut files...): what makes one different is the design inputs, so two
+    products match only when type, colours, seed, sizes and options are all the same."""
+    raw = json.dumps([key, palette, seed, sorted(sizes), options], sort_keys=True, default=str)
+    return "sig:" + hashlib.sha1(raw.encode()).hexdigest()[:16]
+
+
 def similarity(a: str, b: str) -> float:
+    if a.startswith("sig:") or b.startswith("sig:"):
+        return 1.0 if a == b else 0.0
     sa = set(a.split("|", 1)[-1].split(" "))
     sb = set(b.split("|", 1)[-1].split(" "))
     if not sa or not sb:

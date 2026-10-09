@@ -75,3 +75,15 @@ def test_spreadsheets_have_expected_structure():
     assert wb.sheetnames == ["Start Here", "Dashboard", "Settings", "Transactions", "Budget", "Savings", "Debt Payoff"]
     assert any(str(c.value).startswith("=SUMIFS") for row in wb["Budget"].iter_rows() for c in row)
     assert [c for c in res.checks if c.name.endswith("formulas")][0].status == "pass"
+
+
+def test_niche_free_packs_get_volume_titles_and_only_match_on_same_design():
+    def make(seed):
+        return generate(Request("x", "clipart_pack", providers=["builtin"], palette="sage", seed=seed, with_images=False, with_video=False,
+                                options={"no_research": True, "colourways": 1}))
+    a, b, c = make(5), make(6), make(5)
+    assert a.title == "Sage Boho Shapes Clipart Set" and "Vol." not in a.title
+    assert "Vol. 2" in b.title and "Vol. 3" in c.title and b.title.endswith("Clipart Set")
+    assert b.similar[0] == 0.0                        # same palette, different seed: a different design, no warning
+    assert c.similar[0] == 1.0 and c.similar[1] == a.product_id   # same seed and options: a real duplicate
+    assert any(x.name == "Uniqueness" and x.status == "warn" for x in c.checks)

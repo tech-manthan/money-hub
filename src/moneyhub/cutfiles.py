@@ -255,3 +255,64 @@ def to_eps(d: Design, size_in: float) -> str:
         out.append("closepath")
     out += ["0 setgray", "eofill", "%%EOF"]
     return "\n".join(out) + "\n"
+
+
+# --------------------------------------------------------------------------- round-trip check (stand-in for opening the file in a cutting app)
+def validate_exports(d: Design, size_in: float, svg: str | None = None, dxf: str | None = None) -> list[str]:
+    """Read the SVG and DXF text back the way a cutting app does and return what would go wrong there (empty = fine):
+    unclosed outlines, wrong size, shapes off the mat, or the two formats disagreeing about the shape."""
+    import re
+    import xml.etree.ElementTree as ET
+    svg = svg or to_svg(d, size_in)
+    dxf = dxf or to_dxf(d, size_in)
+    problems: list[str] = []
+
+    def area(ring):
+        return abs(sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]))) / 2
+
+    root = ET.fromstring(svg)
+    ns = "{http://www.w3.org/2000/svg}"
+    if root.get("width") != f"{size_in}in" or root.get("height") != f"{size_in}in":
+        problems.append("SVG width/height is not in real inches, so the app would import it at the wrong size")
+    if root.get("viewBox") != "0 0 1000 1000":
+        problems.append("SVG viewBox missing")
+    paths = [e for e in root.iter() if e.tag.removeprefix(ns) == "path"]
+    bad = [e.tag.removeprefix(ns) for e in root.iter() if e.tag.removeprefix(ns) in ("text", "image", "filter", "mask", "clipPath", "use")]
+    if bad or any(e.get("transform") for e in root.iter()):
+        problems.append(f"SVG has things cutting apps ignore or mis-handle: {sorted(set(bad)) or 'transform'}")
+    if len(paths) != 1:
+        problems.append(f"SVG should be one compound path, found {len(paths)}")
+    else:
+        sub = [s for s in re.split(r"(?=M)", paths[0].get("d", "")) if s.strip()]
+        if len(sub) != len(d.rings) or not all(s.strip().endswith("Z") for s in sub):
+            problems.append("SVG has an outline that is not closed with Z")
+        if paths[0].get("fill-rule") != "evenodd":
+            problems.append("SVG fill-rule is not evenodd, so holes would be filled in")
+
+    lines = dxf.splitlines()
+    pairs = list(zip(lines[::2], lines[1::2]))
+    polys, cur, closed = [], None, []
+    for code, val in pairs:
+        if code == "0" and val == "POLYLINE":
+            cur = []
+            polys.append(cur)
+        elif code == "70" and cur is not None and not cur:
+            closed.append(val == "1")
+        elif code == "10" and cur is not None:
+            cur.append([float(val), 0.0])
+        elif code == "20" and cur is not None:
+            cur[-1][1] = float(val)
+    if len(polys) != len(d.rings):
+        problems.append(f"DXF has {len(polys)} outlines, the design has {len(d.rings)}")
+    elif not all(closed):
+        problems.append("DXF has an open polyline")
+    else:
+        pts = [p for poly in polys for p in poly]
+        if min(min(p) for p in pts) < -1e-6 or max(max(p) for p in pts) > size_in + 1e-6:
+            problems.append("DXF shape lies outside the design size")
+        for poly, ring in zip(polys, d.rings):
+            want = area(ring) * (size_in / 1000.0) ** 2
+            if abs(area([tuple(p) for p in poly]) - want) > want * 0.01 + 1e-6:
+                problems.append("DXF and SVG describe different shapes")
+                break
+    return problems

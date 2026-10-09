@@ -66,7 +66,7 @@ class DigitalPaper(ProductType[PaperContent]):
 
     def build(self, ctx: BuildContext, content: PaperContent) -> BuildResult:
         pal = ctx.style.palette
-        content = content.model_copy(update={"title": f"{pal.key.replace('_', ' ').title()} Seamless Digital Paper Pack"})   # named after the colour, never the niche
+        content = content.model_copy(update={"title": self.unique_title(ctx, f"{pal.key.replace('_', ' ').title()} Seamless")})   # named after the colour, never the niche
         slug = self.slug(content.title)
         count = max(len(KINDS), min(int(ctx.options.get("papers", len(KINDS))), 24))
         art_dir = ctx.out_dir.parent / "art"

@@ -91,6 +91,9 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     if "cut_min_gap_mm" in build.meta:   # cut files: the thinnest bridge between two cuts must survive a real cutting mat
         g = build.meta["cut_min_gap_mm"]
         checks.append(Check("Cut-ready", "pass" if g >= 1.5 else "fail", f"thinnest gap between cuts {g} mm (1.5 mm or more holds on a mat)"))
+    if "cut_roundtrip_problems" in build.meta:   # SVG and DXF read back the way Cricut / Silhouette software reads them
+        bad = build.meta["cut_roundtrip_problems"]
+        checks.append(Check("Opens in cutting software", "fail" if bad else "pass", "; ".join(bad) if bad else "SVG and DXF re-read cleanly: closed outlines, real inch size, same shape in both"))
     if "seam_excess" in build.meta:   # seamless patterns: the join between opposite edges must look like any other join
         v = build.meta["seam_excess"]
         checks.append(Check("Seamless tiling", "pass" if v <= 12 else "warn", f"edge join {v:+.1f} vs neighbouring pixels (12 or less is clean)"))

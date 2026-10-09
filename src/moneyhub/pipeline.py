@@ -22,7 +22,7 @@ from . import risk as riskmod
 from .qa import Check, media_checks, run_checks, summarize
 from .startpage import build_start_page
 from .store import Store
-from .uniqueness import fingerprint_text, most_similar
+from .uniqueness import most_similar
 
 log = logging.getLogger("moneyhub.pipeline")
 
@@ -88,7 +88,8 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     pdir.mkdir(parents=True, exist_ok=True)
 
     ctx = BuildContext(niche=niche, style=style, out_dir=pdir, sizes=sizes, seed=seed, router=router,
-                       providers=req.providers, options=req.options)
+                       providers=req.providers, options=req.options,
+                       taken_titles=frozenset(t.lower() for _, t, _ in store.fingerprints()))
     say(f"Writing content ({'LLM' if router.status() else 'offline'} chain)")
     content, content_source = ptype.generate_content(ctx)
     say(f"Content from {content_source}; rendering files")
@@ -99,7 +100,7 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
         build.files.insert(0, start)
 
     say("Checking for similar existing products")
-    fp = fingerprint_text(content.model_dump_json())
+    fp = ptype.fingerprint(ctx, content)
     similar = most_similar(fp, store.fingerprints())
 
     say("Writing listing copy")

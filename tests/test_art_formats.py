@@ -59,9 +59,26 @@ def test_cut_file_exports_are_well_formed():
     assert eps.startswith("%!PS-Adobe-3.0 EPSF-3.0") and "%%BoundingBox: 0 0 432 432" in eps and eps.count("closepath") == 2 and "eofill" in eps
 
 
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_every_cut_design_survives_a_round_trip_through_svg_and_dxf(seed):
+    for d in cutfiles.make_designs(40, seed):
+        assert cutfiles.validate_exports(d, 6) == [], d.name
+
+
+def test_round_trip_check_catches_broken_files():
+    d = cutfiles.heart(hole=True)
+    assert any("not closed" in p for p in cutfiles.validate_exports(d, 6, svg=cutfiles.to_svg(d, 6).replace(" Z", "")))
+    assert any("inches" in p for p in cutfiles.validate_exports(d, 6, svg=cutfiles.to_svg(d, 6).replace("6in", "6px")))
+    assert any("open polyline" in p for p in cutfiles.validate_exports(d, 6, dxf=cutfiles.to_dxf(d, 6).replace("70\n1", "70\n0")))
+    other = cutfiles.star(5, .4, hole=True)
+    assert len(other.rings) == 2
+    assert any("different shapes" in p for p in cutfiles.validate_exports(d, 6, dxf=cutfiles.to_dxf(other, 6)))
+
+
 def test_cut_files_bundle_has_four_formats_licence_and_passes_qa():
     res = generate(Request("nurse", "cut_files", providers=["builtin"], seed=2, with_video=False, options={"no_research": True, "designs": 12}))
     assert not [c for c in res.checks if c.status == "fail"] and any(c.name == "Cut-ready" and c.status == "pass" for c in res.checks)
+    assert any(c.name == "Opens in cutting software" and c.status == "pass" for c in res.checks)
     names = {p.name: p for p in (res.folder / "product").glob("*")}
     assert len(names) == 5 and "Commercial-License.pdf" in names   # four zips and the licence: Etsy's five-file limit
     for ext in ("svg", "dxf", "eps", "png"):
