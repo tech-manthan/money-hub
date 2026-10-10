@@ -11,7 +11,7 @@
       <div class="meta">{{ p.niche_name }} · {{ p.product_type|replace('_',' ') }} · ${{ '%.2f'|format(p.price or 0) }}</div>
       <div style="margin-top:6px"><span class="badge {{ p.status }}">{{ p.status }}</span> <span class="badge {{ p.qa_status }}">QA {{ p.qa_status }}</span></div></div>
   </a>
-  <form method="post" action="/product/{{ p.id }}/delete" onsubmit="return confirm('Delete #{{ p.id }} and its files? This cannot be undone.')" style="margin-top:6px"><button class="danger sm">Delete</button></form>
+  <form method="post" action="/product/{{ p.id }}/delete" data-confirm-title="Delete this product?" data-confirm-name="#{{ p.id }} · {{ p.title }}" data-confirm-message="Its files and listing kit are removed from this computer. This cannot be undone." {% if p.status == 'listed' %}data-confirm-note="This product is marked as listed. Deleting it here does not remove your listing on the marketplace." {% endif %}data-confirm-label="Delete product" style="margin-top:6px"><button class="danger sm">Delete</button></form>
   </div>
 {% endfor %}
 </div>

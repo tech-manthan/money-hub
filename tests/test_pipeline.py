@@ -101,3 +101,15 @@ def test_delete_removes_catalogue_row_and_folder_but_never_outside_the_output_di
     pid = st.add_product(slug="x", title="t", niche="n", niche_name="n", product_type="card_deck", style="s", status="draft", folder=str(keep), price=1, qa=[],
                          fingerprint="", content_source="", listing_source="", spec="{}")
     assert delete_product(pid) and (keep / "a.txt").exists()   # the row goes, the foreign folder stays
+
+
+def test_delete_returns_to_my_products_with_a_toast_message_and_uses_the_confirm_dialog(generated):
+    res, _ = generated
+    from moneyhub.web.app import app
+    c = TestClient(app)
+    page = c.get("/products").text
+    assert f'action="/product/{res.product_id}/delete"' in page and "data-confirm-title" in page and "onsubmit" not in page   # no browser alert
+    assert "confirm(" not in c.get(f"/product/{res.product_id}").text
+    r = c.post(f"/product/{res.product_id}/delete", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/products?deleted=")
+    assert Store().product(res.product_id) is None

@@ -616,9 +616,13 @@ def set_status(pid: int, status: str = Form(...), notes: str = Form("")):
 
 @app.post("/product/{pid}/delete")
 def delete(pid: int):
+    from urllib.parse import quote
+
     from ..pipeline import delete_product
+    p = _store().product(pid)
+    title = (p or {}).get("title", f"#{pid}")
     delete_product(pid, _store())
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse(f"/products?deleted={quote(title[:80])}", status_code=303)
 
 
 @app.post("/product/{pid}/listing")

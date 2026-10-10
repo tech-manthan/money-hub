@@ -62,3 +62,58 @@ if (form) {
     }, 1500);
   }
 }
+
+/* Confirm dialog: any form with data-confirm-title opens it instead of the browser's alert. confirmDialog() can be used from scripts too. */
+function confirmDialog(o) {
+  return new Promise(resolve => {
+    let d = document.getElementById('confirm-dialog');
+    if (d) d.remove();
+    d = document.createElement('dialog');
+    d.id = 'confirm-dialog'; d.className = 'confirm';
+    d.setAttribute('aria-labelledby', 'cf-title');
+    const esc = s => String(s || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    d.innerHTML = `<form method="dialog"><div class="cf-body"><div class="cf-icon" aria-hidden="true">${o.icon || '🗑'}</div><div>
+      <h3 id="cf-title">${esc(o.title || 'Are you sure?')}</h3>
+      ${o.name ? `<div class="cf-name">${esc(o.name)}</div>` : ''}
+      ${o.message ? `<p>${esc(o.message)}</p>` : ''}
+      ${o.note ? `<div class="cf-note">${esc(o.note)}</div>` : ''}</div></div>
+      <div class="cf-actions"><button type="button" class="ghost cf-cancel" value="cancel">Cancel</button>
+      <button type="button" class="cf-danger" value="ok">${esc(o.confirm || 'Delete')}</button></div></form>`;
+    document.body.appendChild(d);
+    const ok = d.querySelector('.cf-danger'), cancel = d.querySelector('.cf-cancel');
+    let result = false;
+    ok.addEventListener('click', () => { result = true; d.close(); });
+    cancel.addEventListener('click', () => d.close());
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });   // backdrop click
+    d.addEventListener('close', () => { d.remove(); resolve(result); });
+    d.showModal();
+    cancel.focus();   // the safe choice is focused, so Enter never deletes by accident
+  });
+}
+document.addEventListener('submit', async e => {
+  const f = e.target.closest('form[data-confirm-title]');
+  if (!f || f.dataset.confirmed) return;
+  e.preventDefault();
+  const yes = await confirmDialog({ title: f.dataset.confirmTitle, name: f.dataset.confirmName, message: f.dataset.confirmMessage,
+                                    note: f.dataset.confirmNote, confirm: f.dataset.confirmLabel });
+  if (!yes) return;
+  f.dataset.confirmed = '1';
+  const b = f.querySelector('button'); if (b) { b.disabled = true; b.textContent = 'Deleting…'; }
+  f.submit();
+});
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 250); }, 3200);
+}
+(function () {   // "?deleted=Name" after a delete: say so once, then clean the address bar
+  const q = new URLSearchParams(location.search);
+  if (q.has('deleted')) {
+    toast('Deleted: ' + q.get('deleted'));
+    q.delete('deleted');
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  }
+})();
+

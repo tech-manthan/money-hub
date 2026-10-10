@@ -117,3 +117,25 @@ button.rec:hover .in{background:var(--soft)}
 
 .layopt .in img{background:linear-gradient(100deg,var(--soft) 30%,var(--panel) 50%,var(--soft) 70%);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
 @keyframes shimmer{to{background-position:-200% 0}}@media(prefers-reduced-motion:reduce){.layopt .in img{animation:none}}
+
+/* confirm dialog + toast */
+dialog.confirm{border:0;padding:0;border-radius:16px;background:var(--panel);color:var(--ink);width:min(440px,calc(100vw - 32px));box-shadow:0 24px 70px rgba(0,0,0,.35);overflow:hidden}
+dialog.confirm::backdrop{background:rgba(15,20,18,.5);backdrop-filter:blur(3px)}
+dialog.confirm[open]{animation:cf-in .16s ease-out}
+dialog.confirm .cf-body{padding:22px 22px 8px;display:flex;gap:14px}
+dialog.confirm .cf-icon{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad);font-size:20px}
+dialog.confirm h3{margin:0 0 4px;font-size:17px;letter-spacing:-.01em}
+dialog.confirm .cf-name{font-weight:700;word-break:break-word}
+dialog.confirm p{margin:6px 0 0;color:var(--muted);font-size:14px}
+dialog.confirm .cf-note{margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--soft);color:var(--ink);font-size:13px}
+dialog.confirm .cf-actions{display:flex;gap:10px;justify-content:flex-end;padding:16px 22px 20px}
+dialog.confirm .cf-actions button{min-width:92px}
+button.cf-danger{background:var(--bad);color:#fff;border:0}
+button.cf-danger[disabled],button.cf-cancel[disabled]{opacity:.6;cursor:progress}
+dialog.confirm button:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;transition:opacity .2s,transform .2s;z-index:50;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes cf-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){dialog.confirm[open]{animation:none}.toast{transition:none}}
+@media (max-width:520px){dialog.confirm{margin:auto auto 0;width:100vw;border-radius:16px 16px 0 0}dialog.confirm .cf-actions button{flex:1}}
+

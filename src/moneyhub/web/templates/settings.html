@@ -51,7 +51,7 @@
     const b = e.target.closest('button'); if (!b) return;
     try {
       if (b.dataset.save) { const row = b.closest('.keyrow'); await post('/api/settings/key', { name: b.dataset.save, value: row.querySelector('input').value }); location.reload(); }
-      else if (b.dataset.remove) { if (!confirm('Remove this key from this computer?')) return; await post('/api/settings/key/remove', { name: b.dataset.remove }); location.reload(); }
+      else if (b.dataset.remove) { if (!(await confirmDialog({ icon: '🔑', title: 'Remove this key?', message: 'It is deleted from this computer. You can add it again later.', confirm: 'Remove key' }))) return; await post('/api/settings/key/remove', { name: b.dataset.remove }); location.reload(); }
       else if (b.dataset.test) { say(b, 'Testing…', true); b.disabled = true; const r = await post('/api/settings/test', { provider: b.dataset.test }); say(b, r.message, r.ok); b.disabled = false; }
     } catch (err) { b.disabled = false; say(b, err.message, false); }
   });

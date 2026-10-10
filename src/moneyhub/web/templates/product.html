@@ -155,7 +155,7 @@ document.querySelectorAll('form.exp').forEach(f => f.addEventListener('submit', 
       <div><label>Pin clicks</label><input type="number" name="pin_clicks" value="0"></div>
       <div><label>&nbsp;</label><button class="ghost">Add stats</button></div></form></div>
 </div>
-<form method="post" action="/product/{{ p.id }}/delete" onsubmit="return confirm('Delete this product and its files?')" style="margin-top:24px"><button class="danger sm">Delete product</button></form>
+<form method="post" action="/product/{{ p.id }}/delete" data-confirm-title="Delete this product?" data-confirm-name="#{{ p.id }} · {{ p.title }}" data-confirm-message="Its files and listing kit are removed from this computer. This cannot be undone." {% if p.status == 'listed' %}data-confirm-note="This product is marked as listed. Deleting it here does not remove your listing on the marketplace." {% endif %}data-confirm-label="Delete product" style="margin-top:24px"><button class="danger sm">Delete product</button></form>
 
 <style>
 #viewer { position:fixed; inset:0; z-index:1000; background:rgba(10,12,16,.96); display:flex; flex-direction:column; }
