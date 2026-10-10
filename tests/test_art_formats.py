@@ -361,3 +361,35 @@ def test_character_clipart_has_png_svg_licence_and_commercial_terms():
     assert im.size == (2400, 2400) and im.mode == "RGBA" and im.getchannel("A").getextrema()[0] == 0
     text = (res.folder / "listing" / "etsy-description.txt").read_text().lower()
     assert "commercial use" in text and "nurse" not in text
+
+
+# ------------------------------------------------------------------ open-source icon sets: licence guard, importer, icon stickers
+def _fake_icons():
+    return {f"{n}.svg": f"<!-- c --><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor'><path stroke='none' d='M0 0h24v24H0z' fill='none'/><circle cx='12' cy='12' r='{4 + i % 5}'/><path d='M4 20l16 -16'/></svg>"
+            for i, n in enumerate(["heart", "heart-off", "star", "home", "sun", "moon", "book", "cup", "bell", "pin", "key", "map", "mail", "tag", "cart", "gift"])}
+
+
+def test_icon_licence_guard_and_importer_refuse_unsafe_input():
+    from moneyhub import svgassets
+    for bad in ("CC-BY-SA-4.0", "CC-BY-NC-4.0", "GPL-3.0", "Unknown-1.0"):
+        with pytest.raises(ValueError):
+            svgassets.install("x", "x", bad, "u", _fake_icons())
+    assert svgassets.clean_svg("<svg><script>alert(1)</script></svg>") is None
+    assert svgassets.clean_svg("<svg><image href='http://x/y.png'/></svg>") is None
+    assert svgassets.clean_svg("<svg><circle cx='1' cy='1' r='1' onclick='x()'/></svg>") is None
+    assert svgassets.clean_svg("<svg viewBox='0 0 24 24'><path stroke='none' d='M0 0h24v24H0z'/><circle cx='1' cy='1' r='1'/></svg>") == "<circle cx='1' cy='1' r='1'/>"
+    with pytest.raises(ValueError):
+        svgassets.load("not-installed")
+
+
+def test_icon_pack_builds_with_licence_notice_and_prefers_base_icons():
+    from moneyhub import svgassets
+    svgassets.install("tiny", "Tiny Icons", "MIT", "https://example.org/tiny", _fake_icons(), "MIT License\nCopyright (c) Test\n", "1.0")
+    res = generate(Request("x", "icon_pack", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "collection": "tiny", "count": 12}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    z = zipfile.ZipFile(next((res.folder / "product").glob("*PNG-and-SVG.zip")))
+    names = z.namelist()
+    assert "LICENSES.txt" in names and "MIT License" in z.read("LICENSES.txt").decode() and "Tiny Icons" in z.read("LICENSES.txt").decode()
+    assert len([n for n in names if n.startswith("png/")]) == 12 and "png/heart-off.png" not in names   # the "-off" variant is last in line
+    assert "MIT" in (res.folder / "listing" / "etsy-description.txt").read_text()

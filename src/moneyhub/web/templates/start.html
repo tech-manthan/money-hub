@@ -95,6 +95,11 @@
       <div><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
       <div><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
     </div>
+    <div class="row" id="icon-opts" hidden>
+      <div><label for="collection">Icon set</label><select id="collection" name="collection">{% for c in icon_sets %}<option value="{{ c.key }}">{{ c.name }} ({{ c.license }}, {{ c.icons }} icons)</option>{% else %}<option value="">None installed: run "moneyhub assets fetch tabler"</option>{% endfor %}</select></div>
+      <div><label for="query">Only icons about (optional)</label><input id="query" name="query" placeholder="heart, star, home"></div>
+      <div><label for="shape">Badge</label><select id="shape" name="shape"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="none">No badge</option></select></div>
+    </div>
     <div class="row" id="learn-opts" hidden>
       <div id="level-wrap"><label for="level">Difficulty (activity book)</label><select id="level" name="level"><option value="kids">Kids (ages 4-7)</option><option value="toddler">Toddler (ages 2-4, easy)</option><option value="big">Big kids (ages 6-9, harder)</option></select></div>
       <div id="focus-wrap"><label for="focus">Focus (learning workbook)</label><select id="focus" name="focus"><option value="mixed">Mixed preschool topics</option><option value="colours">Colors and shapes</option><option value="words">First words tracing</option><option value="numbers">Counting and numbers</option><option value="time">Time, days and seasons</option><option value="feelings">Feelings and opposites</option></select></div>

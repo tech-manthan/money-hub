@@ -96,3 +96,15 @@ Built (all niche-free, printable PDF, Letter + A4, KDP-ready interiors, original
 Open niches worth adding next (not built): special-needs visual schedules and "first-then" cards; Montessori-style 3-part cards; bilingual (English/Spanish) flashcards; handwriting with cursive; sight-word packs by grade; seasonal bundles (Halloween/Christmas activity books use the same engines); Bible-story coloring (public-domain stories, original art); STEM (shapes, simple machines); classroom printables (name tags, reward charts, behaviour charts, calendar sets).
 Notes: educational claims should stay modest ("practice", "ages 3-7"), never "will teach your child to read"; keep original art only (no licensed characters or school-curriculum brand names); the listing already carries the Etsy AI-disclosure line.
 
+## Using open-source SVGs (licence rules)
+"Free to download" is not the same as "free to resell". MoneyHub only accepts sets whose licence lets you reuse and redistribute with a notice, checks the licence on every import, and puts the licence text into the buyer's download (`LICENSES.txt`).
+| Set | Licence | Status |
+|---|---|---|
+| Tabler Icons (5,000+ outline, 1,000+ filled) | MIT | built in: `moneyhub assets fetch tabler` / `tabler-filled` |
+| Lucide (2,100+) | ISC | built in: `moneyhub assets fetch lucide` |
+| Your own folder, CC0 / public domain / MIT / ISC / Apache-2.0 / CC BY 4.0 | as stated | `moneyhub assets add <folder> --name X --license MIT --source URL` |
+| OpenMoji, anything CC BY-SA | share-alike | **refused**: derived products would have to carry the same licence |
+| Anything CC BY-NC, GPL, unknown | non-commercial / copyleft | **refused** |
+| game-icons.net | mostly CC BY 3.0 (per author) | not built in; add per-author CC0 files yourself if you want them |
+What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, printable sheets, PNG, SVG). The icons are recoloured and cut, not resold as-is, and the pack is personal-use. Selling raw copies of someone else's icons as "your clipart" would be weak product and may break marketplace originality rules, so MoneyHub does not do that. Check each marketplace's current rules on third-party and open-source assets before listing. Attribution licences (CC BY) need the credit kept in the listing text as well.
+

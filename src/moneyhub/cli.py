@@ -66,7 +66,10 @@ def make(
     deck: str = typer.Option(None, help="Oracle deck: 'oracle' (gentle message cards, default) or 'tarot' (22 archetype cards)"),
     card_size: str = typer.Option(None, help="Oracle deck: 'tall' (2.5 x 4.5 in, default) or 'poker' (2.5 x 3.5 in)"),
     cards: int = typer.Option(None, help="Oracle deck: number of oracle cards (12-36)"),
-    count: int = typer.Option(None, help="Character clipart: number of characters (12-60)"),
+    count: int = typer.Option(None, help="Character clipart: number of characters (12-60); icon stickers: number of icons (12-120)"),
+    collection: str = typer.Option(None, help="Icon stickers: installed icon set (see `moneyhub assets list`)"),
+    query: str = typer.Option(None, help="Icon stickers: only icons whose name contains one of these comma-separated words"),
+    shape: str = typer.Option(None, help="Icon stickers: badge shape circle, rounded or none"),
     stickers: int = typer.Option(None, help="Sticker sheets: number of stickers (12-48)"),
     theme: str = typer.Option(None, help="Kids coloring book and sticker sheets: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
     age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
@@ -118,7 +121,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
@@ -261,6 +264,45 @@ def batch(
             typer.echo(f"\n=== {n} / {p}")
             res = generate(Request(niche=n, product_type=p, providers=_csv(llm)), progress=lambda m: typer.echo(f"  - {m}"))
             typer.echo(f"  -> {res.title} [{res.qa_status}] {res.folder}")
+
+
+assets_app = typer.Typer(help="Open-source SVG icon sets used as raw material (licence-checked): list, fetch tabler/lucide, add your own folder.", no_args_is_help=True)
+app.add_typer(assets_app, name="assets")
+
+
+@assets_app.command("list")
+def assets_list():
+    """Installed icon sets, their licences and what can be fetched."""
+    from . import svgassets
+    have = svgassets.collections()
+    for c in have:
+        typer.echo(f"  {c['key']:<14} {c['icons']:>5} icons  {c['license']:<8} {c['name']}  (fetched {c['fetched']})")
+    if not have:
+        typer.echo("  none installed yet")
+    typer.echo("\nCan fetch: " + ", ".join(f"{k} ({v['license']})" for k, v in svgassets.KNOWN.items()) + "\nUse: moneyhub assets fetch tabler")
+
+
+@assets_app.command("fetch")
+def assets_fetch(key: str = typer.Argument(..., help="tabler, tabler-filled or lucide"), limit: int = typer.Option(600, help="How many icons to download (evenly spaced)")):
+    """Download an open-source icon set (MIT / ISC) and install it with its licence."""
+    from . import svgassets
+    try:
+        d = svgassets.fetch(key, limit, progress=typer.echo)
+    except Exception as e:  # noqa: BLE001
+        raise typer.BadParameter(str(e), param_hint="key")
+    typer.echo(f"Installed to {d}")
+
+
+@assets_app.command("add")
+def assets_add(folder: Path = typer.Argument(..., exists=True, file_okay=False), name: str = typer.Option(..., help="A short key, e.g. my-icons"),
+               license: str = typer.Option(..., help="SPDX id: CC0-1.0, MIT, ISC, Apache-2.0, PD or CC-BY-4.0"), source: str = typer.Option(..., help="Where the files came from (URL)")):
+    """Add your own folder of SVG icons. Refuses licences that would not allow reselling products made from them."""
+    from . import svgassets
+    try:
+        d = svgassets.install(name, name, license, source, {p.name: p.read_text(encoding="utf-8", errors="ignore") for p in folder.glob("*.svg")})
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    typer.echo(f"Installed to {d}")
 
 
 @app.command(name="delete")
