@@ -33,7 +33,7 @@ vector/    each poster design as SVG (open in any vector editor) plus AI, EPS, P
            AI or PDF version).
 docs/      an editable .docx (Word-format) copy of the text: headings, paragraphs and lists. It is a plain text version,
            not a copy of the printable page design.
-sheets/    CSV and HTML copies of the spreadsheet (first sheet) for tools that cannot open .xlsx.
+sheets/    CSV and HTML copies of each sheet of the spreadsheet for tools that cannot open .xlsx.
 
 Fonts: the designs use {fonts}. They are free Google Fonts: install them before opening the files, otherwise your
 software shows a replacement font.
@@ -249,17 +249,31 @@ def build_vectors(folder: Path, pid: int | None, out: Path, timeout: float, text
     return rows
 
 
+def _sheet_names(xlsx: Path, timeout: float) -> list[str]:
+    r = ct.run("gridcraft", ["info", str(xlsx), "--json"], timeout)
+    try:
+        return [str(x["name"]) for x in json.loads(r.out).get("sheets", []) if x.get("name")][:12] if r.ok else []
+    except (ValueError, AttributeError, TypeError, KeyError):
+        return []
+
+
 def build_sheets(folder: Path, out: Path, timeout: float) -> list[dict]:
+    """CSV and HTML copies of every sheet (up to 12). When the sheet list cannot be read, the first sheet only."""
+    import re
     rows: list[dict] = []
+    shutil.rmtree(out / "sheets", ignore_errors=True)     # drop copies from an earlier run
     for xlsx in sorted((folder / "product").glob("*.xlsx")):
         dest = out / "sheets"
         dest.mkdir(parents=True, exist_ok=True)
-        for ext in ("csv", "html"):
-            target = dest / f"{xlsx.stem}.{ext}"
-            ok, warn, msg = _convert("gridcraft", xlsx, target, timeout=timeout, min_bytes=5)
-            if not ok:
-                target.unlink(missing_ok=True)
-            rows.append(_row("sheets", "gridcraft", target.name, ok, msg if not ok else f"{target.stat().st_size} bytes", warn))
+        names = _sheet_names(xlsx, timeout)
+        for sheet in names or [None]:
+            tag = "" if sheet is None else "-" + (re.sub(r"[^A-Za-z0-9]+", "-", sheet).strip("-") or "sheet")
+            for ext in ("csv", "html"):
+                target = dest / f"{xlsx.stem}{tag}.{ext}"
+                ok, warn, msg = _convert("gridcraft", xlsx, target, ["--sheet", sheet] if sheet else None, timeout=timeout, min_bytes=5)
+                if not ok:
+                    target.unlink(missing_ok=True)
+                rows.append(_row("sheets", "gridcraft", target.name, ok, msg if not ok else f"{target.stat().st_size} bytes", warn))
     return rows
 
 

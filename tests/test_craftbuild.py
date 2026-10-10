@@ -338,3 +338,14 @@ def test_docx_is_dropped_when_the_text_check_fails(tools, monkeypatch, tmp_path)
     assert not list((res.folder / "product" / craftbuild.FOLDER / "docs").glob("*.docx"))
     fake_wordcraft(tmp_path / "craft", fail=True)
     assert [r["ok"] for r in craftbuild.build(res.folder, kinds=["docx"])] == [False]
+
+
+def test_sheets_export_every_sheet_when_the_list_can_be_read(tools, monkeypatch, tmp_path):
+    settings(monkeypatch)
+    fake(tmp_path / "craft", "gridcraft", '''if [ "$1" = info ]; then echo '{"sheets":[{"name":"Start Here"},{"name":"Budget 2"}]}'; exit 0; fi
+printf "xx,yy\\n1,2\\n" > "$3"\n''')
+    res = generate(Request("x", "budget_tracker", providers=["builtin"], seed=5, sizes=["letter"], with_images=False, with_video=False,
+                           options={"no_research": True}))
+    rows = craftbuild.build(res.folder, kinds=["sheets"])
+    stem = next((res.folder / "product").glob("*.xlsx")).stem
+    assert sorted(r["file"] for r in rows if r["ok"]) == [f"{stem}-{n}.{e}" for n in ("Budget-2", "Start-Here") for e in ("csv", "html")]
