@@ -301,3 +301,34 @@ def test_wall_art_accepts_the_new_backgrounds_and_rejects_unknown_ones():
     from moneyhub.cli import app
     r = CliRunner().invoke(app, ["make", "x", "wall_art", "--motif", "nursery-nope", "--llm", "builtin"])
     assert r.exit_code != 0
+
+
+# ------------------------------------------------------------------ activity book and learning workbook
+def test_mazes_are_always_solvable_and_every_activity_and_learning_page_draws():
+    from moneyhub import activities, learning
+    for level in activities.LEVELS:
+        cols, rows = activities.LEVELS[level]["maze"]
+        for seed in range(6):
+            passages, path = activities.maze_cells(cols, rows, seed)
+            assert path[0] == (0, 0) and path[-1] == (cols - 1, rows - 1)
+            assert len(passages) == cols * rows - 1   # a perfect maze: one route between any two cells
+            assert all(abs(a[0] - b[0]) + abs(a[1] - b[1]) == 1 for a, b in zip(path, path[1:]))
+        for i in range(20):
+            kind, svg, cap = activities.page_art(i, 3, level)
+            assert svg.startswith("<svg") and "NaN" not in svg and cap
+    for focus in learning.FOCUS:
+        for i in range(14):
+            kind, svg, cap = learning.page_art(i, 2, focus)
+            assert svg.startswith("<svg") and "NaN" not in svg and cap
+
+
+def test_activity_book_has_answer_pages_and_learning_workbook_is_niche_free():
+    res = generate(Request("nurse", "activity_book", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "pages": 12, "level": "toddler"}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    pdf = next((res.folder / "product").glob("*-letter.pdf"))
+    mazes = 3   # pages 0, 4 and 10 of the plan are mazes
+    assert pdf_page_count(pdf) == 1 + 12 + -(-mazes // 4)   # cover + pages + one answer page
+    res2 = generate(Request("nurse", "learning_workbook", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                            options={"no_research": True, "pages": 10, "focus": "numbers"}))
+    assert not [c for c in res2.checks if c.status == "fail"] and "nurse" not in (res2.folder / "listing" / "etsy-description.txt").read_text().lower()

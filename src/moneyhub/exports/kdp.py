@@ -23,7 +23,7 @@ from ..render.html import KDP_TRIMS, PAGE_SIZES, PageSize, render_html
 from ..render.pdf import render_pdf
 from . import Loaded, out_dir, pack_zip
 
-SUPPORTED = ("weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "coloring_pages", "kids_coloring")
+SUPPORTED = ("weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "coloring_pages", "kids_coloring", "activity_book", "learning_workbook")
 PAPER = {"white": 0.002252, "cream": 0.0025, "color": 0.0032}   # inches per page (KDP)
 BLEED = 0.125
 MIN_PAGES, MAX_PAGES = 24, 828

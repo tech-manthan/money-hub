@@ -29,6 +29,8 @@
   function syncType() {
     const wall = val('product_type') === 'wall_art';
     $('#wall-opts').hidden = !wall; $('#ai-wrap').hidden = !wall;
+    $('#learn-opts').hidden = !['activity_book', 'learning_workbook'].includes(val('product_type'));
+    $('#level-wrap').hidden = val('product_type') !== 'activity_book'; $('#focus-wrap').hidden = val('product_type') !== 'learning_workbook';
     $('#oracle-opts').hidden = val('product_type') !== 'oracle_deck';
     $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets'].includes(val('product_type'));
     const r = $(`input[name="product_type"]:checked`);
@@ -147,6 +149,8 @@
     else if (pl) o.page_layout = pl;
     if (val('product_type') === 'wall_art' && $('#opt-ai').checked) o.ai_art = '1';
     if (val('product_type') === 'kids_coloring') { o.theme = $('#theme').value; o.age = $('#age').value; if ($('#pages').value) o.pages = $('#pages').value; }
+    if (val('product_type') === 'activity_book') { o.level = $('#level').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
+    if (val('product_type') === 'learning_workbook') { o.focus = $('#focus').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
     if (val('product_type') === 'oracle_deck') { o.deck = $('#deck').value; o.card_size = $('#card_size').value; }
     if (val('product_type') === 'sticker_sheets') { o.theme = $('#theme').value; if ($('#pages').value) o.stickers = $('#pages').value; }
     return o;
@@ -158,7 +162,7 @@
     if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
     $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
-    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', deck: '--deck', card_size: '--card-size' };
+    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';

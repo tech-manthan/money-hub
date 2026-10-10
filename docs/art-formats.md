@@ -83,3 +83,16 @@ Sources are seller-education blogs, not platform data, so treat the numbers as d
 - **Kids figures:** 38 (was 16). New: frog, bunny, bear, penguin, duck, elephant, giraffe, lion, bee, crab, shark, airplane, sailboat, train, cupcake, mushroom, unicorn, pizza, apple, flying saucer, planet, balloons. Themes are now: mixed, animals, ocean, garden, vehicles, dinosaurs, treats, farm, jungle, space, arctic, transport, fairytale. Stickers use the same library.
 - **Wall-art backgrounds with no AI key:** `--motif` now accepts 13 drawn motifs plus `window-<symbol>` (22 arched-window symbols such as lotus, moon, mountain), `nursery-<figure>` (32 colour-filled kids figures, good for nursery prints) and `pattern-<kind>` (10 seamless pattern panels). `moneyhub styles` lists them all. AI image providers remain optional.
 
+## Kids learning and activity niches (what MoneyHub makes, and what is still open)
+Built (all niche-free, printable PDF, Letter + A4, KDP-ready interiors, original artwork):
+| Niche / buyer | Product | Command |
+|---|---|---|
+| Parents of 2-8s who want screen-free fun | Kids coloring book (80 figures, 26 themes incl. Halloween, Christmas, Easter, farm, ocean, space) | `kids_coloring --theme space --age toddler` |
+| Parents and teachers of 2-9s: mazes, puzzles | Activity book: mazes with answer pages, dot-to-dot, letter and number tracing, odd-one-out | `activity_book --level toddler|kids|big` |
+| Preschool, kindergarten-prep and homeschool | Learning workbook: colours, opposites, days, seasons, feelings, telling time, counting, shadow matching, patterns, word tracing | `learning_workbook --focus colours|words|numbers|time|feelings` |
+| Planner kids, journal keepers, kids | Sticker sheets (printable + GoodNotes PNGs) | `sticker_sheets --theme farm` |
+| Reflection and self-care | Oracle / tarot-style decks | `oracle_deck --deck tarot` |
+
+Open niches worth adding next (not built): special-needs visual schedules and "first-then" cards; Montessori-style 3-part cards; bilingual (English/Spanish) flashcards; handwriting with cursive; sight-word packs by grade; seasonal bundles (Halloween/Christmas activity books use the same engines); Bible-story coloring (public-domain stories, original art); STEM (shapes, simple machines); classroom printables (name tags, reward charts, behaviour charts, calendar sets).
+Notes: educational claims should stay modest ("practice", "ages 3-7"), never "will teach your child to read"; keep original art only (no licensed characters or school-curriculum brand names); the listing already carries the Etsy AI-disclosure line.
+
