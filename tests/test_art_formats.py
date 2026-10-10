@@ -343,3 +343,21 @@ def test_every_special_coloring_style_draws_and_books_walk_through_them():
     assert "special" in seen
     from moneyhub.coloring import SPECIALS
     assert len(SPECIALS) >= 7
+
+
+def test_character_clipart_has_png_svg_licence_and_commercial_terms():
+    res = generate(Request("nurse", "character_clipart", providers=["builtin"], seed=3, with_video=False, with_images=False,
+                           options={"no_research": True, "theme": "farm", "count": 12}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    assert res.title == "Farm Friends Clipart Bundle"
+    names = {p.name for p in (res.folder / "product").glob("*")}
+    assert "Commercial-License.pdf" in names and any(n.endswith("-SVG.zip") for n in names)
+    z = zipfile.ZipFile(next((res.folder / "product").glob("*-PNG*.zip")))
+    pngs = [n for n in z.namelist() if n.endswith(".png")]
+    assert len(pngs) == 12
+    from PIL import Image
+    import io
+    im = Image.open(io.BytesIO(z.read(pngs[0])))
+    assert im.size == (2400, 2400) and im.mode == "RGBA" and im.getchannel("A").getextrema()[0] == 0
+    text = (res.folder / "listing" / "etsy-description.txt").read_text().lower()
+    assert "commercial use" in text and "nurse" not in text

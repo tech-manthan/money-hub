@@ -173,7 +173,7 @@ def room_scene(name: str, arts: list[Image.Image], pal: Palette) -> Image.Image:
 DOC_SCENES = ["desk", "fan", "tablet"]          # printed pages: planners, journals, trackers, worksheets, coloring pages...
 STATIONERY_SCENES = ["cards", "gift", "notebooks"]   # clipart and digital paper, shown on things people make with them
 CUT_SCENES = ["mugs", "apparel"]                # cut files, shown as vinyl decals
-FAMILIES = {"clipart_pack": STATIONERY_SCENES, "digital_paper": STATIONERY_SCENES, "cut_files": CUT_SCENES}
+FAMILIES = {"clipart_pack": STATIONERY_SCENES, "character_clipart": STATIONERY_SCENES, "digital_paper": STATIONERY_SCENES, "cut_files": CUT_SCENES}
 
 
 def scenes_for(ptype_key: str) -> list[str]:

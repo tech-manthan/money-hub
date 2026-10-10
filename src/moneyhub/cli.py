@@ -66,6 +66,7 @@ def make(
     deck: str = typer.Option(None, help="Oracle deck: 'oracle' (gentle message cards, default) or 'tarot' (22 archetype cards)"),
     card_size: str = typer.Option(None, help="Oracle deck: 'tall' (2.5 x 4.5 in, default) or 'poker' (2.5 x 3.5 in)"),
     cards: int = typer.Option(None, help="Oracle deck: number of oracle cards (12-36)"),
+    count: int = typer.Option(None, help="Character clipart: number of characters (12-60)"),
     stickers: int = typer.Option(None, help="Sticker sheets: number of stickers (12-48)"),
     theme: str = typer.Option(None, help="Kids coloring book and sticker sheets: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
     age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
@@ -117,7 +118,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,

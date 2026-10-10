@@ -17,7 +17,7 @@ _EXTRA = {
     "etsy", "gumroad", "payhip", "ko-fi", "kofi", "pinterest", "goodnotes", "notability", "remarkable", "boox", "kindle", "scribe",
     "pdf", "pdfs", "xlsx", "jpg", "jpeg", "png", "svg", "zip", "gsheet", "gsheets", "excel", "numbers", "canva", "notion", "kdp",
     "printable", "printables", "undated", "hyperlinked", "planner", "planners", "tracker", "trackers", "worksheet", "worksheets",
-    "adhd", "srgb", "ai", "ui", "diy", "wifi", "tiktok", "reels", "pins", "pin", "tabs", "mockup", "mockups", "checklist", "checklists",
+    "adhd", "srgb", "dpi", "ai", "ui", "diy", "wifi", "tiktok", "reels", "pins", "pin", "tabs", "mockup", "mockups", "checklist", "checklists",
     "decluttering", "meal", "preps", "meds", "ebook", "ebooks", "eink", "e-ink", "a4", "a5", "ios", "ipad", "ipads", "samsung",
     "moneyhub", "affirmations", "weekly", "monthly", "dotted", "habit", "habits", "lifestyle", "homeschool", "homeschooling",
     "wi", "fi", "etc", "vs", "okay", "ok", "gen", "z", "mom", "moms", "mum", "mums", "pre", "non", "re", "tabbed", "spreadsheet",

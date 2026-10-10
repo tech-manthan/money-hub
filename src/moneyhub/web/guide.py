@@ -26,6 +26,7 @@ PRODUCT_PLAIN = {
     "wall_art": "A set of printable quote posters in several print sizes (JPG).",
     "clipart_pack": "Abstract boho clipart: transparent PNGs, SVG vectors and a commercial licence.",
     "cut_files": "Clean cut-file shapes for Cricut and Silhouette: SVG, DXF, EPS and PNG, with a commercial licence.",
+    "character_clipart": "Cute colored character clipart (animals, vehicles, seasonal, fantasy): transparent PNG, SVG and a commercial licence.",
     "learning_workbook": "Preschool learning workbook: colors, opposites, days, seasons, feelings, telling time, counting, shadows, patterns, word tracing (PDF).",
     "activity_book": "Kids activity book: mazes with answers, dot-to-dot, letter and number tracing, odd-one-out puzzles (PDF).",
     "oracle_deck": "Illustrated tarot-style or oracle card deck with gentle messages, cut guides, a how-to page and card backs (PDF).",
