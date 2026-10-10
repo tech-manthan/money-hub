@@ -34,7 +34,21 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "bundle"
 
 
-def make_bundle(pids: list[int], name: str, discount: float = 0.30, store: Store | None = None) -> Path:
+def _cover_page(folder: Path):
+    """First page of a product's main PDF (its cover) as an image, or None."""
+    from .render.raster import render_pages
+    pdfs = sorted(f for f in (folder / "product").glob("*.pdf") if not f.name.startswith("00-"))
+    if not pdfs:
+        return None
+    try:
+        return render_pages(pdfs[0], [0], scale=1.1)[0]
+    except Exception:   # a damaged or unusual PDF must not stop the bundle
+        return None
+
+
+def make_bundle(pids: list[int], name: str, discount: float = 0.30, store: Store | None = None, title: str | None = None,
+                extra_tags: list[str] | None = None) -> Path:
+    """One zip of several products plus a listing kit (title, tags, description, price with fees, AI line) and a collage cover image."""
     if len(pids) < 2:
         raise ValueError("a bundle needs at least two products")
     store = store or Store()
@@ -45,6 +59,10 @@ def make_bundle(pids: list[int], name: str, discount: float = 0.30, store: Store
             raise ValueError(f"no product #{pid}")
         rows.append(p)
     out = Path(get_config().output_dir) / "bundles" / f"{date.today():%Y%m%d}-{_slug(name)}"
+    n = 1
+    while (out / "product").exists() and any((out / "product").iterdir()):
+        n += 1   # a second bundle with the same name must not mix into the first
+        out = Path(get_config().output_dir) / "bundles" / f"{date.today():%Y%m%d}-{_slug(name)}-{n}"
     (out / "product").mkdir(parents=True, exist_ok=True)
     zpath = out / "product" / f"{_slug(name)}.zip"
     with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
@@ -55,19 +73,39 @@ def make_bundle(pids: list[int], name: str, discount: float = 0.30, store: Store
     prices = [float(p["price"] or 0) for p in rows]
     price = bundle_price([x or 5.0 for x in prices], discount)
     nets = "\n".join(f"- {m}: you keep about ${net_after_fees(price, m):.2f} - {FEES[m]['note']}" for m in FEES)
-    tags = []
+    tags, intros, disclosure = [], [], ""
     for p in rows:
         lst = Path(p["folder"]) / "listing" / "listing.json"
         if lst.exists():
-            tags += json.loads(lst.read_text()).get("copy_", {}).get("tags", [])
-    tags = list(dict.fromkeys(t for t in tags if len(t) <= 20))[:13]
+            data = json.loads(lst.read_text())
+            tags += data.get("copy_", {}).get("tags", [])
+            intro = re.sub(r"^" + re.escape(p["title"]) + r"\s*[:.-]\s*", "", data.get("copy_", {}).get("intro", "").strip(), flags=re.I)
+            intros.append(f"- {p['title']}: {intro}".rstrip(": "))
+            disclosure = disclosure or data.get("ai_disclosure", "")
+    tags = list(dict.fromkeys(t for t in [*(extra_tags or []), *tags] if len(t) <= 20))[:13]
     items = "\n".join(f"- {p['title']} (sold separately at ${float(p['price'] or 0):.2f})" for p in rows)
+    title = (title or f"{name} - {len(rows)} Printable Digital Downloads - Instant Download")[:140]
     (out / "listing.md").write_text(
         f"# {name}\n\n**Suggested price:** ${price:.2f} (sum of parts ${sum(prices):.2f}, {int(discount * 100)}% bundle discount)\n\n"
+        f"## Etsy title (140 characters max)\n{title}\n\n"
         f"## What you keep (estimates)\n{nets}\n\n## Tags (reused from the products, max 13)\n{', '.join(tags)}\n\n"
         f"## Description starter\nA bundle of {len(rows)} digital downloads, saving {int(discount * 100)}% against buying them one by one.\n\n"
-        f"Included:\n{items}\n\nInstant digital download - no physical item will be shipped. Personal use only.\n"
-        f"(If any product used AI assistance, keep the AI disclosure line from its listing.)\n", encoding="utf-8")
+        f"Included:\n{items}\n\nAbout each one:\n" + "\n".join(intros) + "\n\n"
+        f"Instant digital download - no physical item will be shipped. Each folder in the zip keeps its own terms: copy the strictest licence wording "
+        f"(for example from a clipart pack) into the listing.\n\n## AI disclosure line\n{disclosure or 'Add the AI disclosure line from the product listings.'}\n", encoding="utf-8")
+    try:
+        from PIL import Image  # noqa: F401
+        from .design import choose_style
+        from .render import graphics as g
+        pages = [im for im in (_cover_page(Path(p["folder"])) for p in rows) if im is not None]
+        if pages:
+            brush = g.Brush(choose_style(seed=sum(pids)))
+            g.hero(pages[:4], name, f"{len(rows)} products in one download", [f"Save {int(discount * 100)}%", "Instant download"], brush).convert("RGB").save(
+                out / "bundle-cover.jpg", quality=90)
+    except Exception as e:   # the cover is a bonus; the zip and listing are what matters
+        (out / "bundle-cover-error.txt").write_text(str(e), encoding="utf-8")
+    (out / "bundle.json").write_text(json.dumps({"name": name, "price": price, "discount": discount, "products": [
+        {"id": p["id"], "title": p["title"], "type": p["product_type"], "price": p["price"]} for p in rows]}, indent=2), encoding="utf-8")
     return out
 
 

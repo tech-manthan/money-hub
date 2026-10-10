@@ -46,7 +46,9 @@ class ActivityBook(ProductType[ActivityContent]):
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> ActivityContent:
         n = max(10, min(int(options.get("pages", 24)), 48))
         lv = {"toddler": "Little Learner", "kids": "Fun Puzzle", "big": "Super Brain"}[_level(options)]
-        return ActivityContent(title=f"{lv} Activity Book for Kids", subtitle=f"{n} pages of mazes, dot-to-dot, tracing and puzzles", tagline="Mazes, dots and letters to keep little minds busy.", pages=n)
+        th = str(options.get("theme") or "mixed")
+        pre = f"{kidsart.THEMES[th][0]} " if th in kidsart.THEMES and th != "mixed" else ""
+        return ActivityContent(title=f"{pre}{lv} Activity Book for Kids", subtitle=f"{n} pages of mazes, dot-to-dot, tracing and puzzles", tagline="Mazes, dots and letters to keep little minds busy.", pages=n)
 
     def llm_brief(self, niche: NicheProfile, options: dict) -> str:
         return (f"Write a short cheerful title and tagline for a CHILDREN'S ACTIVITY BOOK ({_level(options)} level) with mazes, dot-to-dot, letter tracing and odd-one-out "

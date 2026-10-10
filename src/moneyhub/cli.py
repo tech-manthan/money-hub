@@ -557,12 +557,62 @@ def brag(
 
 
 @app.command()
-def bundle(product_ids: str = typer.Argument(..., help="Comma-separated product ids"), name: str = typer.Option(..., help="Bundle name"),
-           discount: float = typer.Option(0.30, help="Discount vs buying separately (0-0.6)")):
-    """Combine products into one zip + listing starter with fee-aware pricing."""
+def bundle(subject: str = typer.Argument(..., help="Product ids to combine ('3,4,5'), or a kids theme (halloween, christmas...) or niche to build a bundle from scratch"),
+           name: str = typer.Option(None, help="Bundle name (required when combining ids)"),
+           discount: float = typer.Option(0.30, help="Discount vs buying separately (0-0.6)"),
+           types: str = typer.Option(None, help="Product types to make for a theme or niche, comma separated (default: coloring book, activity book, sticker sheets, "
+                                                "character clipart for a theme; weekly planner, habit tracker, budget tracker, checklist pack for a niche)"),
+           seed: int = typer.Option(None, help="Reuse a seed to reproduce the shared look"),
+           palette: str = typer.Option(None, help=f"One palette for every product, one of: {', '.join(palette_keys())}"),
+           fonts: str = typer.Option(None, help=f"One font pair for every product, one of: {', '.join(font_keys())}"),
+           sizes: str = typer.Option(None, help="Comma list: letter,a4"),
+           llm: str = typer.Option(None, help="Provider chain override, e.g. 'builtin'"),
+           no_images: bool = typer.Option(False, help="Skip listing images/pins for the products"),
+           video: bool = typer.Option(False, help="Also make the launch video for each product (slow)")):
+    """Combine products into one zip + listing kit with fee-aware pricing. Give ids to combine existing products, or a theme / niche to make them."""
     from .growth import make_bundle
-    out = make_bundle([int(x) for x in product_ids.split(",") if x.strip()], name, min(0.6, max(0.0, discount)))
-    typer.echo(f"Bundle written to {out}\nOpen listing.md for price, tags and description; upload product/*.zip.")
+    discount = min(0.6, max(0.0, discount))
+    parts = [x.strip() for x in subject.split(",") if x.strip()]
+    if parts and all(x.isdigit() for x in parts):
+        if not name:
+            raise typer.BadParameter("give the bundle a name with --name", param_hint="--name")
+        out = make_bundle([int(x) for x in parts], name, discount)
+        typer.echo(f"Bundle written to {out}\nOpen listing.md for price, tags and description; upload product/*.zip.")
+        return
+    from .bundles import build_bundle
+    _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts")
+    try:
+        res = build_bundle(subject, _csv(types), name, discount, seed, palette, fonts, _csv(llm), _csv(sizes), not no_images, video,
+                           progress=lambda m: typer.echo(f"  - {m}"))
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    typer.echo(f"\n{res.name}")
+    for r in res.products:
+        typer.echo(f"  #{r.product_id:<4} {r.qa_status.upper():<5} {r.title}")
+    typer.echo(f"Bundle written to {res.folder}\nOpen listing.md for price, tags and description; upload product/*.zip. Check the QA notes above first.")
+
+
+@app.command("make-many")
+def make_many_cmd(subject: str = typer.Argument(..., help="Niche or audience (niche-free products ignore it)"),
+                  product: str = typer.Argument(..., help="Product type, see `moneyhub types`"),
+                  count: int = typer.Option(10, help="How many variations (1-30)"),
+                  vary: str = typer.Option("look", help="What changes between them: look, theme, seed (comma separated; layouts and art always change)"),
+                  seed: int = typer.Option(None, help="Reuse a seed to reproduce the batch"),
+                  sizes: str = typer.Option(None, help="Comma list: letter,a4"),
+                  llm: str = typer.Option(None, help="Provider chain override, e.g. 'builtin'"),
+                  no_images: bool = typer.Option(False, help="Skip listing images/pins"),
+                  video: bool = typer.Option(False, help="Also make the launch video for each (slow)")):
+    """Make several distinct variations of one product and print a summary table (id, title, QA, uniqueness)."""
+    from .bundles import make_many
+    try:
+        rows = make_many(subject, product, count, _csv(vary), seed, _csv(llm), _csv(sizes), not no_images, video, progress=lambda m: typer.echo(f"  - {m}"))
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    typer.echo(f"\n{'ID':<6}{'QA':<7}{'Uniqueness':<16}Title")
+    for r in rows:
+        typer.echo(f"{r.product_id:<6}{r.qa.upper():<7}{r.uniqueness:<16}{r.title}")
+    warn = [r for r in rows if r.qa != "pass"]
+    typer.echo(f"\n{len(rows)} made, {len(warn)} with warnings or failures (open them in `moneyhub ui` or `moneyhub list`).")
 
 
 @app.command()

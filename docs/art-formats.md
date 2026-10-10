@@ -138,3 +138,10 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 - **sightwords** (`learning.py`, `DOLCH`): the Dolch lists, mapped prek = pre-primer (40 words), k = primer (52), 1 = grade 1 (41), 2 = grade 2 (46), 3 = grade 3 (41). Page types: trace, missing letter, rainbow write, look-cover-write-check. The title carries the grade ("2nd Grade Sight Words Workbook for Kids"). Dolch is a widely used public word list; the listing says "Dolch list" and makes no claim about test results.
 - **stem**: 2D shape names, 3D solids with "like a ball" hints, count-the-shapes pages, simple machines (lever, wheel and axle, pulley, inclined plane, wedge, screw) and pattern pages.
 - Needs a human eye: the cursive shapes are my own simple strokes. Have someone who teaches cursive check the letters you plan to sell, and compare print letter formation with the style your school uses (D'Nealian and Zaner-Bloser differ).
+
+## Bundles and batches (CLI)
+- `moneyhub bundle halloween` (any kids theme: halloween, christmas, easter, valentine, ...) makes a coloring book, activity book, sticker sheets and character clipart with one shared palette, font pair and header, then packs them into `out/bundles/<date>-<name>/`: the zip, `listing.md` (Etsy title, tags, description, price with fee estimates, AI line), `bundle-cover.jpg` and `bundle.json`. Change what goes in with `--types a,b,c`.
+- `moneyhub bundle nurse` (any other word) makes a starter kit: weekly planner, habit tracker, budget tracker, checklist pack. `moneyhub bundle 3,4,5 --name "My Bundle"` still combines products you already made.
+- `moneyhub make-many x sticker_sheets --count 10 --vary look,theme` makes 10 variations (palette and fonts cycle with `look`, kids themes cycle with `theme`; layouts and art always change) and prints a table of id, QA status, uniqueness and title.
+- Each product in a bundle keeps its own licence file. Copy the strictest wording into the listing.
+- The wizard and web UI do not have a bundle form yet; these are CLI only.
