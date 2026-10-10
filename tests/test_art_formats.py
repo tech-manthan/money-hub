@@ -410,6 +410,9 @@ def test_translations_cover_every_kids_figure_and_learning_word():
 
 
 def test_bilingual_workbook_and_montessori_cards_carry_the_translated_names():
+    from moneyhub import translations
+    for lg in ("es", "de"):
+        translations.approve(lg, "Test Reviewer")
     res = generate(Request("x", "montessori_cards", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
                            options={"no_research": True, "theme": "farm2", "language": "es", "count": 8}))
     assert not [c for c in res.checks if c.status == "fail"] and res.title.startswith("Spanish-English")
@@ -436,3 +439,32 @@ def test_wall_art_icon_motif_needs_an_installed_set_and_a_valid_icon():
     assert svg.startswith("<svg") and "<circle" in svg and art.is_wall_motif("icon:tiny2/star") and not art.is_wall_motif("icon:")
     res = generate(Request("x", "wall_art", providers=["builtin"], seed=2, with_video=False, with_images=False, options={"no_research": True, "motif": "icon:tiny2/star"}))
     assert not [c for c in res.checks if c.status == "fail"]
+
+
+def test_translation_guardrail_blocks_unreviewed_and_stale_word_lists():
+    from moneyhub import translations
+    st, msg = translations.review_status("es")
+    assert st == "fail" and "not been checked" in msg
+    assert translations.review_status("en")[0] == "pass"
+    translations.record_ai("es", {"checked": True, "issues": [{"english": "car", "given": "coche", "suggestion": "auto", "note": "regional"}], "source": "x", "words": 119})
+    st, msg = translations.review_status("es")
+    assert st == "fail" and "flagged 1" in msg
+    translations.record_ai("es", {"checked": True, "issues": [], "source": "x", "words": 119})
+    assert translations.review_status("es")[0] == "warn"   # an AI check alone is never a pass
+    translations.approve("es", "A. Native")
+    assert translations.review_status("es")[0] == "pass"
+    translations.TR["es"]["cat"] = "gata"   # editing the list cancels the sign-off
+    try:
+        assert translations.review_status("es")[0] == "fail"
+    finally:
+        translations.TR["es"]["cat"] = "gato"
+    assert translations.review_status("es")[0] == "pass"
+    with pytest.raises(ValueError):
+        translations.approve("es", "  ")
+
+
+def test_unreviewed_bilingual_product_is_not_marked_ready():
+    res = generate(Request("x", "montessori_cards", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "language": "fr", "count": 6}))
+    c = next(x for x in res.checks if x.name == "Translations reviewed")
+    assert c.status == "fail" and res.qa_status == "fail"

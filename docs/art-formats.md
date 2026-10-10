@@ -110,6 +110,10 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 
 ## Bilingual, Montessori and icon posters
 - **Bilingual workbook:** `learning_workbook --language es|fr|de`. Words (colours, days, seasons, feelings, opposites, word tracing) are in the language, instructions stay English. **Montessori three-part cards:** `montessori_cards --theme farm2 --language es --count 12` (control, picture and name cards, 4 pictures per sheet).
-- **Check translations before selling.** `translations.py` holds ~120 common words in Spanish, French and German written from general knowledge, not reviewed by a native speaker. Have one proofread them (accents, gender, regional words) and fix any in that one file.
+- **Translation guardrail (QA blocks unreviewed word lists).** A bilingual product shows a "Translations reviewed" QA check and cannot be "ready" until its word list was checked:
+  1. `moneyhub translations check --lang all` asks your AI helper (claude CLI or a key) to proofread each list. It reports problems and never edits the words. The first run caught real errors (lowercase seasons in Spanish and French, Spain-only words, "Krake" for octopus, "endormi" for sleepy), now fixed in `src/moneyhub/translations.py`.
+  2. An AI check alone gives a **warning**, not a pass: an AI is not a native speaker.
+  3. A person proofreads, then `moneyhub translations approve --lang es --by "Name"` records the sign-off and the check passes.
+  4. Any edit to the word list changes its fingerprint and cancels earlier reviews, so a changed list is blocked again until re-checked. `moneyhub translations status` shows where each language stands. Records are kept in `out/translations-review.json`.
 - **Icon posters:** `--motif icon:lucide` (random simple icon) or `--motif icon:tabler/home` draws one large open-source icon in the palette. The set must be installed first (`moneyhub assets fetch tabler --limit 5200` gets every Tabler icon). **Filled icon stickers:** `icon_pack --collection tabler-filled`.
 

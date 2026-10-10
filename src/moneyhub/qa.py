@@ -94,6 +94,11 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
     if "cut_roundtrip_problems" in build.meta:   # SVG and DXF read back the way Cricut / Silhouette software reads them
         bad = build.meta["cut_roundtrip_problems"]
         checks.append(Check("Opens in cutting software", "fail" if bad else "pass", "; ".join(bad) if bad else "SVG and DXF re-read cleanly: closed outlines, real inch size, same shape in both"))
+    lang = build.meta.get("language")
+    if lang and lang != "en":   # bilingual products: the word list must have been proofread
+        from .translations import review_status
+        st, msg = review_status(lang)
+        checks.append(Check("Translations reviewed", st, msg))
     if "seam_excess" in build.meta:   # seamless patterns: the join between opposite edges must look like any other join
         v = build.meta["seam_excess"]
         checks.append(Check("Seamless tiling", "pass" if v <= 12 else "warn", f"edge join {v:+.1f} vs neighbouring pixels (12 or less is clean)"))

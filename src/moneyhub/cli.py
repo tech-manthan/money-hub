@@ -273,6 +273,50 @@ def batch(
             typer.echo(f"  -> {res.title} [{res.qa_status}] {res.folder}")
 
 
+tr_app = typer.Typer(help="Proofreading guardrail for the Spanish / French / German word lists: AI check, human sign-off, status.", no_args_is_help=True)
+app.add_typer(tr_app, name="translations")
+
+
+@tr_app.command("status")
+def tr_status():
+    """Review status of each language (what the QA check will say)."""
+    from .translations import LANGS, review_status
+    for lang in ("es", "fr", "de"):
+        st, msg = review_status(lang)
+        typer.echo(f"  {st.upper():<5} {LANGS[lang]}: {msg}")
+
+
+@tr_app.command("check")
+def tr_check(lang: str = typer.Option("all", help="es, fr, de or all"), llm: str = typer.Option(None, help="Provider chain override, e.g. claude_cli")):
+    """Ask the AI helper to proofread the word list. Reports problems and records the result; it never edits the words."""
+    from .translations import LANGS, ai_check, record_ai
+    langs = ["es", "fr", "de"] if lang == "all" else [lang]
+    for lg in langs:
+        if lg not in ("es", "fr", "de"):
+            raise typer.BadParameter("choose es, fr, de or all", param_hint="--lang")
+        typer.echo(f"Checking {LANGS[lg]}...")
+        res = ai_check(lg, _csv(llm))
+        if not res["checked"]:
+            typer.echo(f"  not checked: {res['reason']}")
+            continue
+        record_ai(lg, res)
+        typer.echo(f"  {res['words']} words checked with {res['source']}: {len(res['issues'])} flagged")
+        for i in res["issues"]:
+            typer.echo(f"    {i['english']}: '{i['given']}' -> '{i.get('suggestion') or '?'}'  {i.get('note', '')}")
+    typer.echo("An AI check is a safety net, not a native speaker. Have a person review, then: moneyhub translations approve --lang es --by 'Name'")
+
+
+@tr_app.command("approve")
+def tr_approve(lang: str = typer.Option(..., help="es, fr or de"), by: str = typer.Option(..., help="Who reviewed the list")):
+    """Record that a person proofread the current word list (it stops counting if the words change)."""
+    from .translations import approve
+    try:
+        approve(lang, by)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    typer.echo(f"Signed off {lang} by {by}")
+
+
 assets_app = typer.Typer(help="Open-source SVG icon sets used as raw material (licence-checked): list, fetch tabler/lucide, add your own folder.", no_args_is_help=True)
 app.add_typer(assets_app, name="assets")
 

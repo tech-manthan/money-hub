@@ -12,9 +12,9 @@ owl|búho|hibou|Eule
 snail|caracol|escargot|Schnecke
 ladybug|mariquita|coccinelle|Marienkäfer
 whale|ballena|baleine|Wal
-octopus|pulpo|pieuvre|Krake
+octopus|pulpo|pieuvre|Oktopus
 rocket|cohete|fusée|Rakete
-car|coche|voiture|Auto
+car|auto|voiture|Auto
 robot|robot|robot|Roboter
 dinosaur|dinosaurio|dinosaure|Dinosaurier
 flower|flor|fleur|Blume
@@ -34,8 +34,8 @@ shark|tiburón|requin|Hai
 airplane|avión|avion|Flugzeug
 sailboat|velero|voilier|Segelboot
 train|tren|train|Zug
-cupcake|magdalena|cupcake|Cupcake
-mushroom|seta|champignon|Pilz
+cupcake|cupcake|cupcake|Cupcake
+mushroom|hongo|champignon|Pilz
 unicorn|unicornio|licorne|Einhorn
 pizza|pizza|pizza|Pizza
 apple|manzana|pomme|Apfel
@@ -99,15 +99,15 @@ Thursday|jueves|jeudi|Donnerstag
 Friday|viernes|vendredi|Freitag
 Saturday|sábado|samedi|Samstag
 Sunday|domingo|dimanche|Sonntag
-Spring|Primavera|Printemps|Frühling
-Summer|Verano|Été|Sommer
-Autumn|Otoño|Automne|Herbst
-Winter|Invierno|Hiver|Winter
+Spring|primavera|printemps|Frühling
+Summer|verano|été|Sommer
+Autumn|otoño|automne|Herbst
+Winter|invierno|hiver|Winter
 happy|feliz|heureux|glücklich
 sad|triste|triste|traurig
 angry|enojado|en colère|wütend
 surprised|sorprendido|surpris|überrascht
-sleepy|soñoliento|endormi|müde
+sleepy|soñoliento|fatigué|müde
 scared|asustado|effrayé|ängstlich
 big|grande|grand|groß
 small|pequeño|petit|klein
@@ -139,3 +139,103 @@ def check_lang(lang: str) -> str:
     if lang not in LANGS:
         raise ValueError(f"unknown language '{lang}'. Choose one of: {', '.join(LANGS)}")
     return lang
+
+
+# --------------------------------------------------------------------------- review guardrail
+# A bilingual product can only be marked ready when the word list has been checked: by an AI helper (shows as a warning, because an AI is not a native
+# speaker) or signed off by a person (passes). Any edit to the word list changes its fingerprint and cancels earlier reviews.
+import hashlib  # noqa: E402
+import json  # noqa: E402
+import time  # noqa: E402
+
+from pydantic import BaseModel, Field  # noqa: E402
+
+
+def fingerprint(lang: str) -> str:
+    items = sorted(TR.get(lang, {}).items())
+    return hashlib.sha1(json.dumps(items, ensure_ascii=False).encode()).hexdigest()[:12]
+
+
+def _review_file():
+    from .config import get_config
+    return get_config().output_dir / "translations-review.json"
+
+
+def load_reviews() -> dict:
+    f = _review_file()
+    try:
+        return json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _save(data: dict) -> None:
+    f = _review_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+class WordVerdict(BaseModel):
+    english: str
+    given: str
+    ok: bool
+    suggestion: str = Field(default="", description="The better word, only when ok is false")
+    note: str = Field(default="", description="One short reason, only when ok is false")
+
+
+class LangVerdicts(BaseModel):
+    verdicts: list[WordVerdict]
+
+
+def ai_check(lang: str, providers: list[str] | None = None) -> dict:
+    """Ask the configured AI helper to proofread one language's word list. Returns {'checked': bool, 'issues': [...], 'source': str}.
+    Nothing is changed in the word list; fixes are for you to apply."""
+    check_lang(lang)
+    from .llm import get_router
+    router = get_router()
+    pairs = [{"english": en, "given": t} for en, t in TR[lang].items()]
+    system = ("You are a careful native-level proofreader of children's early-learning vocabulary. Judge each translation for a picture-word card for ages 3-7: "
+              "correct meaning, standard spelling and accents, natural everyday word, no article needed (German nouns capitalised). Use neutral international "
+              f"{LANGS[lang]} (Latin American Spanish, France French, standard German). Be strict but do not invent problems: ok=true when a word is acceptable.")
+    prompt = f"Language: {LANGS[lang]}\nWords (English -> given):\n{json.dumps(pairs, ensure_ascii=False)}\nReturn one verdict per word, in the same order."
+    out = router.complete_json("research", system, prompt, LangVerdicts, providers=providers, max_tokens=12000)
+    if out is None:
+        return {"checked": False, "issues": [], "source": "", "reason": "no AI helper is available (log in to the claude CLI or add a key in Settings)"}
+    issues = [v.model_dump() for v in out.verdicts if not v.ok]
+    return {"checked": True, "issues": issues, "source": router.last_used or "ai", "words": len(out.verdicts)}
+
+
+def record_ai(lang: str, result: dict) -> None:
+    if not result.get("checked"):
+        return
+    data = load_reviews()
+    data[lang] = {"fingerprint": fingerprint(lang), "by": f"AI helper ({result.get('source')})", "kind": "ai", "date": time.strftime("%Y-%m-%d"),
+                  "words": result.get("words", 0), "issues": result.get("issues", [])}
+    _save(data)
+
+
+def approve(lang: str, by: str) -> None:
+    """Record that a person reviewed this exact word list."""
+    check_lang(lang)
+    if not by.strip():
+        raise ValueError("say who reviewed it (--by 'Name')")
+    data = load_reviews()
+    data[lang] = {"fingerprint": fingerprint(lang), "by": by.strip(), "kind": "human", "date": time.strftime("%Y-%m-%d"), "words": len(TR[lang]), "issues": []}
+    _save(data)
+
+
+def review_status(lang: str) -> tuple[str, str]:
+    """(status, message): status is 'pass' (a person signed off the current list), 'warn' (AI-checked with no issues) or 'fail' (not checked, changed since, or issues found)."""
+    if lang == "en":
+        return "pass", "English: no translation to check"
+    r = load_reviews().get(lang)
+    if not r:
+        return "fail", f"{LANGS[lang]} word list has not been checked. Run: moneyhub translations check --lang {lang}, then have a native speaker approve it"
+    if r.get("fingerprint") != fingerprint(lang):
+        return "fail", f"{LANGS[lang]} word list changed since it was reviewed ({r.get('by')}, {r.get('date')}). Check it again"
+    if r.get("kind") == "human":
+        return "pass", f"{LANGS[lang]} words signed off by {r.get('by')} on {r.get('date')}"
+    if r.get("issues"):
+        sample = "; ".join(f"{i['english']}: '{i['given']}' -> '{i.get('suggestion') or '?'}'" for i in r["issues"][:4])
+        return "fail", f"AI proofreading flagged {len(r['issues'])} {LANGS[lang]} words ({sample}). Fix them in translations.py, or approve after a native speaker agrees"
+    return "warn", f"{LANGS[lang]} words were AI-checked ({r.get('date')}), not by a native speaker. Ask one to approve: moneyhub translations approve --lang {lang} --by 'Name'"
