@@ -80,4 +80,4 @@ class MontessoriCards(ProductType[MontessoriContent]):
         features = [f"{len(items)} pictures, {len(items) * 3} cards (control, picture and name)", "Cut guides on every sheet",
                     *([f"Names in {LANGS[lang]} with the English name on the control card"] if lang != "en" else ["Lowercase names for early readers"]),
                     "Print on cardstock; laminate for lasting use", "Instant download - no physical item shipped"]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta={"pictures": len(items), "language": lang, "theme": theme})
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta={"pictures": len(items), "language": lang, "theme": theme, "signature": sorted({i["english"] for i in items})})

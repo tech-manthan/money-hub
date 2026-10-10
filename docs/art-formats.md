@@ -151,3 +151,6 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 - Cricut Design Space draws its own registration marks inside its print area, so the PNGs carry no marks. Upload as a Complex image, choose Print Then Cut, do not resize. The 6.75 x 9.25 in size matches the Letter print area Cricut has documented; confirm against Cricut's current help pages, since limits change.
 - The cut-line SVG is for Silhouette, Brother, Glowforge or a plotter, which you align yourself.
 - Needs a real check: a test print and cut on a real machine, to confirm size, offset and the 0.07 in white border.
+
+## Cross-type uniqueness
+Niche-free packs record a content signature in `spec.json` (palette, theme and the figures drawn: sticker names, Montessori pictures). When a new pack of a different type matches an existing one on 60% or more of it, QA adds an "Uniqueness across types" warning. Only sticker sheets and Montessori cards record figures so far; other types are compared by palette and theme only.

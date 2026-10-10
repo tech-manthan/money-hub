@@ -123,3 +123,21 @@ def test_failed_generation_leaves_no_empty_folder(monkeypatch):
         generate(Request("teacher", "card_deck", sizes=["letter"], providers=["builtin"], seed=3, with_images=False))
     products = get_config().output_dir / "products"
     assert not products.exists() or not any(products.iterdir())
+
+
+def test_cross_type_signature_matching():
+    from moneyhub.uniqueness import content_signature, cross_type_match
+    a = content_signature("sage", {"theme": "farm"}, {"signature": ["cat", "duck", "bee"]})
+    c = content_signature("rose", {"theme": "space"}, {"signature": ["rocket", "ufo"]})
+    assert cross_type_match(a, "kids_coloring", [(1, "A", "sticker_sheets", list(a))])[0] == 1.0
+    assert cross_type_match(a, "sticker_sheets", [(1, "A", "sticker_sheets", list(a))])[0] == 0.0   # same type: the normal check covers it
+    assert cross_type_match(a, "kids_coloring", [(2, "C", "sticker_sheets", c)])[0] < 0.6
+
+
+def test_pipeline_flags_a_cross_type_twin():
+    opts = {"no_research": True, "theme": "farm"}
+    generate(Request("x", "sticker_sheets", providers=["builtin"], palette="sage", seed=5, sizes=["letter"], with_images=False, with_video=False, options={**opts, "stickers": 12}))
+    twin = generate(Request("x", "montessori_cards", providers=["builtin"], palette="sage", seed=5, sizes=["letter"], with_images=False, with_video=False, options={**opts, "count": 12}))
+    spec = json.loads((twin.folder / "spec.json").read_text())
+    assert "palette:sage" in spec["signature"] and "theme:farm" in spec["signature"]
+    assert any(c.name == "Uniqueness across types" and c.status == "warn" for c in twin.checks), [c.detail if hasattr(c, "detail") else c for c in twin.checks]

@@ -40,3 +40,32 @@ def most_similar(fp: str, others: list[tuple[int, str, str]]) -> tuple[float, in
         if s > best[0]:
             best = (s, pid, title)
     return best
+
+
+CROSS_TYPE_THRESHOLD = 0.6
+
+
+def content_signature(palette: str, options: dict, meta: dict) -> list[str]:
+    """What a niche-free pack is made of, as comparable tokens: its colours, its theme and the figures / patterns it drew."""
+    toks = {f"palette:{palette}"}
+    if options.get("theme"):
+        toks.add(f"theme:{options['theme']}")
+    toks |= {f"item:{x}" for x in meta.get("signature", [])}
+    return sorted(toks)
+
+
+def signature_similarity(a: list[str], b: list[str]) -> float:
+    sa, sb = set(a), set(b)
+    return len(sa & sb) / len(sa | sb) if sa and sb else 0.0
+
+
+def cross_type_match(sig: list[str], ptype: str, others: list[tuple[int, str, str, list[str]]]) -> tuple[float, int | None, str, str]:
+    """Closest pack of a DIFFERENT type: (similarity, id, title, type). others = (id, title, type, signature)."""
+    best = (0.0, None, "", "")
+    for pid, title, otype, osig in others:
+        if otype == ptype or not osig:
+            continue
+        s = signature_similarity(sig, osig)
+        if s > best[0]:
+            best = (s, pid, title, otype)
+    return best

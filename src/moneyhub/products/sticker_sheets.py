@@ -145,4 +145,4 @@ class StickerSheets(ProductType[StickerContent]):
         features = [f"{n} colourful stickers on {sheets} printable sheets", "US Letter and A4 PDF sheets for sticker paper", f"{n} transparent PNG stickers for GoodNotes and digital planners",
                     "White die-cut border on every sticker", "Print as many sheets as you like for yourself", "Instant download - no physical item shipped"]
         tiles = mockups.save_tiles(art_dir, cut[::3], 4)
-        return BuildResult(content.title, content.subtitle, files, features, sheets, renderer, meta={"min_pages": 1, "min_px": 300, "stickers": n, "theme": theme, "mockup_tiles": tiles})
+        return BuildResult(content.title, content.subtitle, files, features, sheets, renderer, meta={"min_pages": 1, "min_px": 300, "stickers": n, "theme": theme, "mockup_tiles": tiles, "signature": sorted({n for n, _ in items})})

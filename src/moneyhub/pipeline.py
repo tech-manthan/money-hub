@@ -23,7 +23,7 @@ from . import risk as riskmod
 from .qa import Check, media_checks, run_checks, summarize
 from .startpage import build_start_page
 from .store import Store
-from .uniqueness import most_similar
+from .uniqueness import CROSS_TYPE_THRESHOLD, content_signature, cross_type_match, most_similar
 
 log = logging.getLogger("moneyhub.pipeline")
 
@@ -129,6 +129,12 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
             checks.append(Check("Uniqueness", "warn", f"{similar[0]:.0%} similar to existing product #{similar[1]} '{similar[2]}' - change niche angle or regenerate"))
         else:
             checks.append(Check("Uniqueness", "pass", f"closest existing product is {similar[0]:.0%} similar"))
+        sig = content_signature(style.palette.key, req.options, build.meta) if not ptype.niche_in_copy else []
+        if sig:
+            near = cross_type_match(sig, ptype.key, _signatures(store))
+            if near[0] >= CROSS_TYPE_THRESHOLD:
+                checks.append(Check("Uniqueness across types", "warn", f"{near[0]:.0%} of its colours, theme and pictures match {near[3]} #{near[1]} '{near[2]}': "
+                                    "buyers may see them as the same pack; change the theme or look"))
         findings = riskmod.scan_listing(json.loads(kit.model_dump_json()), content.model_dump_json(), req.niche)
         top = riskmod.status(findings)
         checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",
@@ -141,7 +147,7 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
 
         (folder / "spec.json").write_text(json.dumps({
             "request": {"niche": req.niche, "product_type": req.product_type, "sizes": sizes, "seed": seed, "options": req.options},
-            "style": style.describe(), "niche_source": niche_source, "content_source": content_source, "listing_source": kit.source,
+            "signature": sig, "style": style.describe(), "niche_source": niche_source, "content_source": content_source, "listing_source": kit.source,
             "content": json.loads(content.model_dump_json()),
         }, indent=2), encoding="utf-8")
 
@@ -157,6 +163,20 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     except BaseException:
         shutil.rmtree(folder, ignore_errors=True)  # a failed run must not leave an empty product folder
         raise
+
+
+def _signatures(store: Store) -> list[tuple[int, str, str, list[str]]]:
+    """(id, title, type, content signature) of catalogued products that recorded one."""
+    out = []
+    with store.conn() as c:
+        rows = c.execute("SELECT id, title, product_type, folder FROM products").fetchall()
+    for r in rows:
+        try:
+            sig = json.loads((Path(r["folder"]) / "spec.json").read_text(encoding="utf-8")).get("signature", [])
+        except (OSError, ValueError):
+            continue
+        out.append((r["id"], r["title"], r["product_type"], sig))
+    return out
 
 
 def delete_product(pid: int, store: Store | None = None) -> bool:
