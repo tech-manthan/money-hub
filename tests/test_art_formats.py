@@ -393,3 +393,46 @@ def test_icon_pack_builds_with_licence_notice_and_prefers_base_icons():
     assert "LICENSES.txt" in names and "MIT License" in z.read("LICENSES.txt").decode() and "Tiny Icons" in z.read("LICENSES.txt").decode()
     assert len([n for n in names if n.startswith("png/")]) == 12 and "png/heart-off.png" not in names   # the "-off" variant is last in line
     assert "MIT" in (res.folder / "listing" / "etsy-description.txt").read_text()
+
+
+# ------------------------------------------------------------------ filled icons, icon posters, bilingual workbook, Montessori cards
+def test_translations_cover_every_kids_figure_and_learning_word():
+    from moneyhub import kidsart, learning
+    from moneyhub.translations import TR, check_lang, tr
+    for lang in ("es", "fr", "de"):
+        missing = [n for n in kidsart.NAMES.values() if n not in TR[lang]]
+        assert not missing, (lang, missing)
+        for w in [c[0] for c in learning.COLOURS] + learning.DAYS + [s[0] for s in learning.SEASONS] + learning.FEELINGS + [x for p in learning.OPPOSITES for x in p]:
+            assert w in TR[lang], (lang, w)
+    assert tr("red", "es") == "rojo" and tr("red", "en") == "red" and tr("unknown-word", "fr") == "unknown-word"
+    with pytest.raises(ValueError):
+        check_lang("xx")
+
+
+def test_bilingual_workbook_and_montessori_cards_carry_the_translated_names():
+    res = generate(Request("x", "montessori_cards", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "theme": "farm2", "language": "es", "count": 8}))
+    assert not [c for c in res.checks if c.status == "fail"] and res.title.startswith("Spanish-English")
+    pdf = next((res.folder / "product").glob("*-letter.pdf"))
+    from pypdf import PdfReader
+    text = " ".join(p.extract_text() for p in PdfReader(str(pdf)).pages).lower()
+    assert any(w in text for w in ("vaca", "cerdo", "oveja", "caballo", "perro", "pollito", "tractor", "pato"))
+    assert pdf_page_count(pdf) == 2 + 2   # cover + guide + 8 pictures (4 per sheet)
+    res2 = generate(Request("x", "learning_workbook", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                            options={"no_research": True, "language": "de", "pages": 10}))
+    assert "German-English" in res2.title and not [c for c in res2.checks if c.status == "fail"]
+
+
+def test_wall_art_icon_motif_needs_an_installed_set_and_a_valid_icon():
+    from moneyhub import art, svgassets
+    with pytest.raises(ValueError):
+        art.check_icon_motif("icon:not-installed")
+    svgassets.install("tiny2", "Tiny Two", "ISC", "https://example.org", _fake_icons(), "ISC License\n", "1.0")
+    art.check_icon_motif("icon:tiny2")
+    art.check_icon_motif("icon:tiny2/star")
+    with pytest.raises(ValueError):
+        art.check_icon_motif("icon:tiny2/nope")
+    svg = art.motif_svg("icon:tiny2", PALETTES[0], 3)
+    assert svg.startswith("<svg") and "<circle" in svg and art.is_wall_motif("icon:tiny2/star") and not art.is_wall_motif("icon:")
+    res = generate(Request("x", "wall_art", providers=["builtin"], seed=2, with_video=False, with_images=False, options={"no_research": True, "motif": "icon:tiny2/star"}))
+    assert not [c for c in res.checks if c.status == "fail"]

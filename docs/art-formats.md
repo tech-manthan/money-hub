@@ -108,3 +108,8 @@ Notes: educational claims should stay modest ("practice", "ages 3-7"), never "wi
 | game-icons.net | mostly CC BY 3.0 (per author) | not built in; add per-author CC0 files yourself if you want them |
 What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, printable sheets, PNG, SVG). The icons are recoloured and cut, not resold as-is, and the pack is personal-use. Selling raw copies of someone else's icons as "your clipart" would be weak product and may break marketplace originality rules, so MoneyHub does not do that. Check each marketplace's current rules on third-party and open-source assets before listing. Attribution licences (CC BY) need the credit kept in the listing text as well.
 
+## Bilingual, Montessori and icon posters
+- **Bilingual workbook:** `learning_workbook --language es|fr|de`. Words (colours, days, seasons, feelings, opposites, word tracing) are in the language, instructions stay English. **Montessori three-part cards:** `montessori_cards --theme farm2 --language es --count 12` (control, picture and name cards, 4 pictures per sheet).
+- **Check translations before selling.** `translations.py` holds ~120 common words in Spanish, French and German written from general knowledge, not reviewed by a native speaker. Have one proofread them (accents, gender, regional words) and fix any in that one file.
+- **Icon posters:** `--motif icon:lucide` (random simple icon) or `--motif icon:tabler/home` draws one large open-source icon in the palette. The set must be installed first (`moneyhub assets fetch tabler --limit 5200` gets every Tabler icon). **Filled icon stickers:** `icon_pack --collection tabler-filled`.
+

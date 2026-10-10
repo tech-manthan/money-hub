@@ -7,6 +7,7 @@ import random
 
 from . import kidsart
 from .activities import FONT, INK, _dashed, _wrap
+from .translations import tr
 
 COLOURS = [("red", "#e53935"), ("blue", "#1e88e5"), ("yellow", "#fdd835"), ("green", "#43a047"), ("orange", "#fb8c00"), ("purple", "#8e24aa"),
            ("pink", "#ec407a"), ("brown", "#6d4c41")]
@@ -49,17 +50,17 @@ def _shape(name: str, cx: float, cy: float, r: float, fill: str = "#ffffff") -> 
 
 
 # --------------------------------------------------------------------------- pages
-def colour_page(i: int, seed: int) -> tuple[str, str]:
+def colour_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     name, hexv = COLOURS[i % len(COLOURS)]
     kinds = OBJECTS[name]
-    out = [f"<circle cx='500' cy='190' r='110' fill='{hexv}' stroke='{INK}' stroke-width='9'/>", _text(name.upper(), 500, 400, 120)]
+    out = [f"<circle cx='500' cy='190' r='110' fill='{hexv}' stroke='{INK}' stroke-width='9'/>", _text(tr(name, lang).upper(), 500, 400, 120 if len(tr(name, lang)) < 9 else 90)]
     for k, kind in enumerate(kinds):
         out.append(_fig(kind, 190 + k * 310, 640, 290, seed + k, 12))
-    out.append(_text(f"Color the {name} things {name}!", 500, 900, 52))
-    return _wrap("".join(out)), f"This is {name}. Color the {name} things!"
+    out.append(_text(f"Color the {name} things {name}!" if lang == "en" else f"{tr(name, lang)} = {name}", 500, 900, 52))
+    return _wrap("".join(out)), f"This is {name}" + (f" ({tr(name, lang)})" if lang != "en" else "") + f". Color the {name} things!"
 
 
-def opposite_page(i: int, seed: int) -> tuple[str, str]:
+def opposite_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     a, b = OPPOSITES[i % len(OPPOSITES)]
     pool = ["bear", "cat", "house", "tree", "dog", "elephant", "owl"]
     kind = pool[(seed + i) % len(pool)]
@@ -80,31 +81,31 @@ def opposite_page(i: int, seed: int) -> tuple[str, str]:
         out = [_fig("house", 290, 520, 400, seed), _fig("castle", 770, 520, 400, seed)]
     else:
         out = [_fig("car", 290, 520, 400, seed), _fig("snail", 770, 600, 330, seed)]
-    out += [_text(a.upper(), 290, 880, 78), _text(b.upper(), 770, 880, 78), "<line x1='500' y1='160' x2='500' y2='940' stroke='#222' stroke-width='5' stroke-dasharray='4 14' stroke-linecap='round'/>"]
-    return _wrap("".join(out)), f"{a.capitalize()} and {b}: trace the words and color!"
+    out += [_text(tr(a, lang).upper(), 290, 880, 78 if len(tr(a, lang)) < 9 else 58), _text(tr(b, lang).upper(), 770, 880, 78 if len(tr(b, lang)) < 9 else 58), "<line x1='500' y1='160' x2='500' y2='940' stroke='#222' stroke-width='5' stroke-dasharray='4 14' stroke-linecap='round'/>"]
+    return _wrap("".join(out)), f"{a.capitalize()} and {b}" + (f" ({tr(a, lang)} / {tr(b, lang)})" if lang != "en" else "") + ": trace the words and color!"
 
 
-def days_page(i: int, seed: int) -> tuple[str, str]:
+def days_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     out = []
     for k, d in enumerate(DAYS):
         y = 90 + k * 125
         out.append(f"<rect x='60' y='{y}' width='880' height='105' rx='20' fill='#fff' stroke='{INK}' stroke-width='6'/>")
-        out.append(_dashed(d, 110, y + 76, 66, 3, "start"))
+        out.append(_dashed(tr(d, lang), 110, y + 76, 66, 3, "start"))
         out.append(_fig(["sunface", "moonface", "rainbowcloud", "umbrella", "kite", "flower", "heartface"][k], 850, y + 52, 90, seed + k, 5))
     return _wrap("".join(out)), "Days of the week: trace each day!"
 
 
-def seasons_page(i: int, seed: int) -> tuple[str, str]:
+def seasons_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     out = []
     for k, (name, kind) in enumerate(SEASONS):
         x, y = 280 + (k % 2) * 440, 270 + (k // 2) * 440
         out.append(f"<rect x='{x - 205}' y='{y - 215}' width='410' height='430' rx='30' fill='#fff' stroke='{INK}' stroke-width='6'/>")
         out.append(_fig(kind, x, y - 25, 250, seed + k, 10))
-        out.append(_dashed(name, x, y + 175, 66, 3))
+        out.append(_dashed(tr(name, lang), x, y + 175, 60, 3))
     return _wrap("".join(out)), "Four seasons: trace each name and color the picture!"
 
 
-def feelings_page(i: int, seed: int) -> tuple[str, str]:
+def feelings_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     out = []
     for k, f in enumerate(FEELINGS):
         cx, cy = 190 + (k % 3) * 310, 260 + (k // 3) * 440
@@ -126,11 +127,11 @@ def feelings_page(i: int, seed: int) -> tuple[str, str]:
             out.append(f"<path d='{mouth}' fill='none' stroke='{INK}' stroke-width='8' stroke-linecap='round'/>")
         else:
             out.append(f"<ellipse cx='{cx}' cy='{cy + 62}' rx='24' ry='30' fill='#fff' stroke='{INK}' stroke-width='7'/>")
-        out.append(_dashed(f, cx, cy + 235, 56, 3))
+        out.append(_dashed(tr(f, lang), cx, cy + 235, 52 if len(tr(f, lang)) < 10 else 40, 3))
     return _wrap("".join(out)), "How do you feel? Trace the word and color the face!"
 
 
-def clock_page(i: int, seed: int) -> tuple[str, str]:
+def clock_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     rng = random.Random(seed)
     out = []
     hours = [rng.randrange(1, 13) for _ in range(4)]
@@ -147,7 +148,7 @@ def clock_page(i: int, seed: int) -> tuple[str, str]:
     return _wrap("".join(out)), "What time is it? Write the hour!"
 
 
-def count_chart_page(i: int, seed: int) -> tuple[str, str]:
+def count_chart_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     start = 1 + (i % 2) * 10
     out = []
     kind = kidsart.THEMES["mixed"][1][(seed + i) % 16]
@@ -160,7 +161,7 @@ def count_chart_page(i: int, seed: int) -> tuple[str, str]:
     return _wrap("".join(out)), f"Count and color the dots: {start} to {start + 9}!"
 
 
-def shadow_page(i: int, seed: int) -> tuple[str, str]:
+def shadow_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     rng = random.Random(seed)
     kinds = rng.sample(kidsart.KINDS[:38], 4)
     shadows = kinds[:]
@@ -174,7 +175,7 @@ def shadow_page(i: int, seed: int) -> tuple[str, str]:
     return _wrap("".join(out)), "Draw a line from each picture to its shadow!"
 
 
-def pattern_page(i: int, seed: int) -> tuple[str, str]:
+def pattern_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     rng = random.Random(seed)
     out = []
     for r in range(4):
@@ -188,16 +189,16 @@ def pattern_page(i: int, seed: int) -> tuple[str, str]:
     return _wrap("".join(out)), "What comes next? Draw the shape!"
 
 
-def word_page(i: int, seed: int) -> tuple[str, str]:
+def word_page(i: int, seed: int, lang: str = "en") -> tuple[str, str]:
     kinds = list(WORDS)
     kind = kinds[i % len(kinds)]
-    w = WORDS[kind]
+    w = tr(WORDS[kind], lang)
     out = [_fig(kind, 500, 290, 420, seed, 12)]
     out.append(_dashed(w, 500, 640, 190 if len(w) <= 4 else 150, 6))
     for k in range(2):
         out.append(_dashed(w, 500, 790 + k * 130, 100, 4))
         out.append(f"<line x1='90' y1='{805 + k * 130}' x2='910' y2='{805 + k * 130}' stroke='{INK}' stroke-width='3'/>")
-    return _wrap("".join(out)), f"Trace the word: {w}!"
+    return _wrap("".join(out)), f"Trace the word: {w}!" + (f" ({WORDS[kind]})" if lang != "en" else "")
 
 
 PAGES = {"colours": colour_page, "opposites": opposite_page, "days": days_page, "seasons": seasons_page, "feelings": feelings_page, "time": clock_page,
@@ -212,9 +213,9 @@ FOCUS = {
 }
 
 
-def page_art(i: int, seed: int, focus: str = "mixed") -> tuple[str, str, str]:
+def page_art(i: int, seed: int, focus: str = "mixed", lang: str = "en") -> tuple[str, str, str]:
     plan = FOCUS.get(focus, FOCUS["mixed"])
     kind = plan[i % len(plan)]
     n = sum(1 for j in range(i) if plan[j % len(plan)] == kind)
-    svg, cap = PAGES[kind](n, seed * 1009 + i * 17)
+    svg, cap = PAGES[kind](n, seed * 1009 + i * 17, lang)
     return kind, svg, cap

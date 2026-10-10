@@ -35,8 +35,46 @@ from .art_scenes import SCENES   # noqa: E402
 WALL_MOTIFS = [*MOTIFS, *(f"scene-{s}" for s in SCENES), *(f"window-{s}" for s in WINDOW_SYMBOLS), *(f"nursery-{k}" for k in NURSERY), *(f"pattern-{k}" for k in PATTERN_PANELS)]
 
 
+def is_wall_motif(kind: str) -> bool:
+    """A built-in background, or `icon:<set>` / `icon:<set>/<name>` for a large icon from an installed open-source set."""
+    return kind in WALL_MOTIFS or (kind.startswith("icon:") and len(kind) > 5)
+
+
+def _icon_motif(spec: str, p: Palette, seed: int, on_dark: bool) -> str:
+    """One big icon from an installed set (a random one for `icon:<set>`), drawn in the palette over a soft disc."""
+    from . import svgassets
+    coll, _, name = spec.partition("/")
+    meta, icons = svgassets.load(coll)
+    if not name:
+        plain = sorted(n for n in icons if n.count("-") == 0) or sorted(icons)
+        name = random.Random(seed).choice(plain)
+    if name not in icons:
+        raise ValueError(f"icon '{name}' is not in set '{coll}'")
+    ink = p.paper if on_dark else p.ink
+    filled = meta.get("style") == "filled"
+    disc = p.accent2 if on_dark else p.soft
+    return (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'><circle cx='500' cy='500' r='400' fill='{disc}'/>"
+            f"<g transform='translate(190 190) scale(26)' fill='{ink if filled else 'none'}' stroke='{'none' if filled else ink}' stroke-width='1.4' stroke-linecap='round' "
+            f"stroke-linejoin='round'>{icons[name].replace('currentColor', ink)}</g></svg>")
+
+
+def check_icon_motif(kind: str) -> None:
+    """Raise a friendly ValueError (before any work starts) if an `icon:` motif names a set or icon that is not installed."""
+    if not kind.startswith("icon:"):
+        return
+    from . import svgassets
+    coll, _, name = kind[5:].partition("/")
+    meta, icons = svgassets.load(coll)
+    if name and name not in icons:
+        close = [n for n in icons if name in n][:6]
+        raise ValueError(f"icon '{name}' is not in the installed '{coll}' set ({len(icons)} icons)" + (f"; similar: {', '.join(close)}" if close else "; fetch more with --limit")
+                         + f". Try: moneyhub assets fetch {coll} --limit 5000")
+
+
 def _extra_motif(kind: str, p: Palette, seed: int, on_dark: bool) -> str | None:
-    """SVG for the window-*, nursery-* and pattern-* motif families (None if `kind` is not one of them)."""
+    """SVG for the scene-*, window-*, nursery-*, pattern-* and icon:* motif families (None if `kind` is not one of them)."""
+    if kind.startswith("icon:"):
+        return _icon_motif(kind[5:], p, seed, on_dark)
     family, _, name = kind.partition("-")
     if family == "scene" and name in SCENES:
         from .art_scenes import scene_svg

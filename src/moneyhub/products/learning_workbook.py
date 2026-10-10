@@ -7,6 +7,7 @@ import random
 from pydantic import BaseModel, Field
 
 from .. import learning
+from ..translations import LANGS, check_lang
 from ..niches import NicheProfile
 from ..render.raster import pdf_page_count
 from .base import BuildContext, BuildResult, ProductFile, ProductType
@@ -49,7 +50,9 @@ class LearningWorkbook(ProductType[LearningContent]):
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> LearningContent:
         n = max(10, min(int(options.get("pages", 24)), 48))
-        return LearningContent(title=f"{FOCUS_TITLES[_focus(options)]} Workbook for Kids", subtitle=f"{n} printable worksheets for ages 3-7",
+        lang = check_lang(str(options.get("language") or "en"))
+        pre = "" if lang == "en" else f"{LANGS[lang]}-English "
+        return LearningContent(title=f"{pre}{FOCUS_TITLES[_focus(options)]} Workbook for Kids", subtitle=f"{n} printable worksheets for ages 3-7",
                                tagline="Colors, counting, words and more, one page at a time.", pages=n)
 
     def llm_brief(self, niche: NicheProfile, options: dict) -> str:
@@ -58,11 +61,12 @@ class LearningWorkbook(ProductType[LearningContent]):
 
     def build(self, ctx: BuildContext, content: LearningContent) -> BuildResult:
         focus = _focus(ctx.options)
+        lang = check_lang(str(ctx.options.get("language") or "en"))
         content = content.model_copy(update={"title": self.unique_title(ctx, content.title)})
         slug = self.slug(content.title)
         n = max(10, min(int(ctx.options.get("pages", content.pages)), 48))
         kdp = bool(ctx.options.get("kdp"))
-        plan = [learning.page_art(i, ctx.seed, focus) for i in range(n)]
+        plan = [learning.page_art(i, ctx.seed, focus, lang) for i in range(n)]
         kinds, arts, captions = (list(x) for x in zip(*plan))
         margin = ctx.options.get("margin_em", 3.0)
         jobs = []
@@ -82,6 +86,6 @@ class LearningWorkbook(ProductType[LearningContent]):
         topics = sorted({k for k in kinds})
         nice = {"colours": "colors", "opposites": "opposites", "days": "days of the week", "seasons": "seasons", "feelings": "feelings", "time": "telling time",
                 "counting": "counting", "shadows": "shadow matching", "patterns": "patterns", "words": "word tracing"}
-        features = [f"{n} printable learning worksheets for ages 3-7", "Topics: " + ", ".join(nice[t] for t in topics), "Big pictures and bold lines for little hands",
+        features = [f"{n} printable learning worksheets for ages 3-7", "Topics: " + ", ".join(nice[t] for t in topics), "Big pictures and bold lines for little hands", *([f"Bilingual: {LANGS[lang]} words with English instructions"] if lang != "en" else []),
                     "US Letter and A4 PDF", "Print as many copies as you like for your family or classroom", "Instant download - no physical item shipped"]
-        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta={"pages": n, "focus": focus, "kinds": kinds})
+        return BuildResult(content.title, content.subtitle, files, features, pages, renderer, meta={"pages": n, "focus": focus, "language": lang, "kinds": kinds})

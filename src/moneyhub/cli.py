@@ -49,7 +49,7 @@ def make(
     header: str = typer.Option(None, help=f"Page header style: {', '.join(HEADERS)}"),
     radius: int = typer.Option(None, help=f"Card corner radius in px: {', '.join(map(str, RADII))}"),
     grid: str = typer.Option(None, help=f"Grid line style: {', '.join(GRIDS)}"),
-    motif: str = typer.Option(None, help="Wall art: background motif (see `moneyhub styles`); default varies per poster"),
+    motif: str = typer.Option(None, help="Wall art: background motif (see `moneyhub styles`), or icon:<set> / icon:<set>/<name> for a big open-source icon; default varies per poster"),
     layout: int = typer.Option(None, hidden=True, help="Old wall-art layout number 0-4; use --page-layout instead"),
     art_provider: str = typer.Option(None, help="AI art provider chain, e.g. 'claude_svg' (Claude draws vector art) or 'huggingface,together' (implies --ai-art)"),
     marketplaces: str = typer.Option(None, help="Guides to write: etsy,gumroad,payhip,kofi,pinterest (default all)"),
@@ -61,6 +61,7 @@ def make(
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     pages: int = typer.Option(None, help="Coloring books: number of pages (10-40)"),
+    language: str = typer.Option(None, help="Learning workbook and Montessori cards: en (default), es, fr or de (names in that language, English instructions)"),
     level: str = typer.Option(None, help="Kids activity book: toddler, kids or big (maze size, dots, line thickness)"),
     focus: str = typer.Option(None, help="Kids learning workbook: mixed, colours, words, numbers, time or feelings"),
     deck: str = typer.Option(None, help="Oracle deck: 'oracle' (gentle message cards, default) or 'tarot' (22 archetype cards)"),
@@ -85,10 +86,10 @@ def make(
         brand, palette = brand or palette, None
     _check(palette, palette_keys(), "--palette"), _check(fonts, font_keys(), "--fonts"), _check(header, HEADERS, "--header")
     from . import kidsart
-    _check(level, ["toddler", "kids", "big"], "--level"), _check(focus, ["mixed", "colours", "words", "numbers", "time", "feelings"], "--focus")
+    _check(language, ["en", "es", "fr", "de"], "--language"), _check(level, ["toddler", "kids", "big"], "--level"), _check(focus, ["mixed", "colours", "words", "numbers", "time", "feelings"], "--focus")
     _check(deck, ["oracle", "tarot"], "--deck"), _check(card_size, ["tall", "poker"], "--card-size")
     _check(theme, list(kidsart.THEMES), "--theme"), _check(age, list(kidsart.AGES), "--age")
-    _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
+    _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif if not (motif or "").startswith("icon:") else None, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
         from .layouts import ART_PRESETS
         page_layout = list(ART_PRESETS)[layout]
@@ -109,6 +110,12 @@ def make(
         spec_obj, how = _lay.spec_from_text(product, layout_prompt, get_router(), _csv(llm))
         layout_spec = spec_obj.model_dump()
         typer.echo(f"Layout '{spec_obj.name}' ({'designed by your AI helper' if how == 'ai' else 'generated; no AI helper was available'}): {spec_obj.model_dump_json()}")
+    if motif and motif.startswith("icon:"):
+        from .art import check_icon_motif
+        try:
+            check_icon_motif(motif)
+        except ValueError as e:
+            raise typer.BadParameter(str(e), param_hint="--motif")
     art_chain = _csv(art_provider)
     for a in art_chain or []:
         _check(a, __import__("moneyhub.art", fromlist=["ALL_ART_PROVIDERS"]).ALL_ART_PROVIDERS, "--art-provider")
@@ -121,7 +128,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "language": language, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,

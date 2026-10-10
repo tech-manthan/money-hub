@@ -1,0 +1,33 @@
+{% from '_macros.html.j2' import header, footer, cover_page %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, [items|length ~ ' pictures', (items|length * 3) ~ ' cards', 'Cut & match']) }}
+<section class="page" style="padding:2.6em 2.8em;">
+  {{ header(style, 'How to use these cards', 'Match, read, check') }}
+  <div style="margin-top:1.2em;">
+    <div class="card"><div class="label">Three kinds of card</div><p>Each picture comes as a <b>control card</b> (picture with its name underneath), a <b>picture card</b> and a <b>name card</b>. Keep the control cards in an envelope or on the back of the tray.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Match</div><p>Lay out a few picture cards. Hand the child the name cards one at a time to read and place under the right picture. Start with three or four pictures and add more.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Check</div><p>When every name sits under a picture, the child compares with the control cards to check their own work.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Printing</div><p>Print on cardstock at Actual size (not "fit to page") and cut along the dashed lines. Laminating makes them last. Personal and classroom use only.</p></div>
+  </div>
+  {{ footer(content.title, false, 'Guide') }}
+</section>
+{% for start in range(0, items|length, 4) %}
+<section class="page" style="padding:.3in 0;">
+  <div class="mgrid">
+    {% for it in items[start:start+4] %}
+    <div class="mc ctrl"><div class="mp">{{ it.svg|safe }}</div><div class="mn">{{ it.name }}{% if bilingual %}<span class="me">{{ it.english }}</span>{% endif %}</div></div>
+    <div class="mc"><div class="mp full">{{ it.svg|safe }}</div></div>
+    <div class="mc"><div class="mn big">{{ it.name }}</div></div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<style>
+.mgrid { display:grid; justify-content:center; align-content:center; flex:1; grid-template-columns:repeat(3, 2.45in); grid-auto-rows:2.2in; }
+.mc { box-sizing:border-box; border:1px dashed var(--muted); background:var(--paper); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.08in; overflow:hidden; }
+.mc.ctrl { background:var(--soft); }
+.mp { flex:1; min-height:0; width:100%; position:relative; }
+.mp svg { position:absolute; left:0; top:0; width:100%; height:100%; }
+.mn { font-size:14pt; font-weight:700; text-align:center; padding-top:.04in; line-height:1.1; text-transform:lowercase; }
+.mn.big { font-size:24pt; }
+.me { display:block; font-size:8pt; font-weight:400; opacity:.7; }
+</style>
