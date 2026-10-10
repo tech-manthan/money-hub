@@ -124,3 +124,10 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 - Calendars are undated on purpose so one pack lasts every year. The charts are one-child-each; print as many as needed.
 - Listed without the niche word (`niche_in_copy = False`), like the other kids products. No KDP export (these are cut-and-use sheets, not a book).
 - Needs a real-printer check: tag and plate sizes were laid out for 8.5 x 11 in and A4 at Actual size, with about 0.4 in clear margin; confirm your printer does not clip the dashed cut lines.
+
+## Visual schedules
+`moneyhub make x visual_schedule --theme treats` makes a 12-page Letter/A4 PDF: a daily routine board (two strips of four steps plus "All done!"), first-then boards (three per page), now / next / later boards, a choice board (one "I want" space plus nine choices), a feelings board, 24 routine picture cards, 15 choice cards (kids-library pictures, `--theme`), 12 feelings cards and a sheet of blank cards.
+- Pictograms are drawn in `schedules.py` (flat, soft colours, always the same drawing so a card keeps its meaning). Add a routine step by writing one drawing function and adding it to `ROUTINE`.
+- Board spaces and cards are the same size (2.3 x 1.85 in, 15 per sheet). Each has a dashed circle where a small hook-and-loop dot goes (about 3/8 in / 10 mm). The word "Velcro" is a trademark and is flagged by `risk.py`, so listings say "hook-and-loop".
+- Wording stays plain: picture cards and boards, no therapy, diagnosis or outcome claims (and no condition names in tags).
+- Needs a real check: print, cut and laminate a sheet, fit dots, and confirm the dashed circle sits where a dot fits on your printer's actual-size output.

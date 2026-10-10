@@ -503,3 +503,33 @@ def test_classroom_pack_option_validation_in_cli_and_web():
     from moneyhub.web.app import app
     bad = TestClient(app).post("/api/jobs", data={"niche": "x", "product_type": "classroom_pack", "llm": "builtin", "names": ",".join(f"n{i}" for i in range(31))})
     assert bad.status_code == 422
+
+
+def test_schedule_pictograms_all_draw_and_are_distinct():
+    from moneyhub import schedules
+    drawn = {}
+    for k in schedules.ROUTINE:
+        label, svg = schedules.routine_card(k)
+        assert label and svg.startswith("<svg") and svg.count("<") > 4, k
+        drawn[k] = svg
+    for k in schedules.FEELINGS:
+        label, svg = schedules.feeling_card(k)
+        assert label and svg.startswith("<svg"), k
+        drawn[k] = svg
+    assert len(set(drawn.values())) == len(drawn)   # no two cards look the same
+
+
+def test_visual_schedule_builds_with_every_board_and_card_set():
+    from pypdf import PdfReader
+    res = generate(Request("x", "visual_schedule", providers=["builtin"], seed=4, sizes=["letter", "a4"], with_video=False, with_images=False,
+                           options={"no_research": True, "theme": "farm"}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    for size in ("letter", "a4"):
+        pdf = next((res.folder / "product").glob(f"*-{size}.pdf"))
+        assert pdf_page_count(pdf) == 12   # cover, guide, 5 boards, 2 routine + 1 choice + 1 feelings + 1 blank sheets
+    text = " ".join(p.extract_text() for p in PdfReader(str(pdf)).pages)
+    for w in ("Brush teeth", "First", "Then", "Now", "Next", "Later", "I choose", "How do I feel?", "Happy", "Worried", "Go to school"):
+        assert w in text, w
+    listing = (res.folder / "listing" / "listing.json").read_text().lower()
+    assert "velcro" not in listing and "autis" not in listing and "therap" not in listing
+    assert any("schedule" in t.lower() for t in (res.folder / "listing" / "etsy-tags.txt").read_text().split(","))

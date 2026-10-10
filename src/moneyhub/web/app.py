@@ -315,7 +315,7 @@ async def upload_edits(pid: int, request: Request):
 
 def _export_kinds(ptype: str) -> list[str]:
     from ..exports import kdp, notion
-    pdf_types = {"weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "budget_tracker", "card_deck", "coloring_pages", "kids_coloring", "activity_book", "learning_workbook", "classroom_pack"}
+    pdf_types = {"weekly_planner", "daily_planner", "guided_journal", "checklist_pack", "worksheet_pack", "ebook_guide", "habit_tracker", "budget_tracker", "card_deck", "coloring_pages", "kids_coloring", "activity_book", "learning_workbook", "classroom_pack", "visual_schedule"}
     return [k for k, ok in (("kdp", ptype in kdp.SUPPORTED), ("notion", ptype in notion.SUPPORTED), ("canva", ptype in pdf_types)) if ok]
 
 

@@ -34,8 +34,8 @@
     $('#lang-wrap').hidden = !['learning_workbook', 'montessori_cards'].includes(val('product_type'));
     $('#level-wrap').hidden = val('product_type') !== 'activity_book'; $('#focus-wrap').hidden = val('product_type') !== 'learning_workbook';
     $('#oracle-opts').hidden = val('product_type') !== 'oracle_deck';
-    $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'montessori_cards', 'classroom_pack'].includes(val('product_type'));
-    const themeOnly = ['montessori_cards', 'classroom_pack'].includes(val('product_type'));
+    $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
+    const themeOnly = ['montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
     $('#age-wrap').hidden = themeOnly; $('#pages-wrap').hidden = themeOnly;
     $('#class-opts').hidden = val('product_type') !== 'classroom_pack';
     const r = $(`input[name="product_type"]:checked`);
@@ -158,6 +158,7 @@
     if (val('product_type') === 'activity_book') { o.level = $('#level').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
     if (val('product_type') === 'montessori_cards') { o.language = $('#language').value; o.theme = $('#theme').value; if ($('#pages2').value) o.count = $('#pages2').value; }
     if (val('product_type') === 'learning_workbook') { o.language = $('#language').value; o.focus = $('#focus').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
+    if (val('product_type') === 'visual_schedule') { o.theme = $('#theme').value; }
     if (val('product_type') === 'classroom_pack') { o.theme = $('#theme').value; if ($('#names').value.trim()) o.names = $('#names').value.trim(); }
     if (val('product_type') === 'oracle_deck') { o.deck = $('#deck').value; o.card_size = $('#card_size').value; }
     if (val('product_type') === 'character_clipart') { o.theme = $('#theme').value; if ($('#pages').value) o.count = $('#pages').value; }

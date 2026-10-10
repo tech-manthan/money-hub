@@ -1,0 +1,71 @@
+{% from '_macros.html.j2' import header, footer, cover_page %}
+{% macro card(it) %}<div class="vc{% if it.blank %} blank{% endif %}"><i class="dotg"></i>{% if it.svg %}<div class="vp">{{ it.svg|safe }}</div><div class="vl">{{ it.label }}</div>{% else %}<div class="vl wl"></div>{% endif %}</div>{% endmacro %}
+{% macro slot(label='', n='') %}<div class="vs"><i class="dotg"></i>{% if n %}<b class="num">{{ n }}</b>{% endif %}{% if label %}<span class="sl">{{ label }}</span>{% endif %}</div>{% endmacro %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, chips) }}
+<section class="page vsch" style="padding:2.6em 2.8em;">
+  {{ header(style, 'Using these cards', 'Build the day together') }}
+  <div style="margin-top:1.2em;">
+    <div class="card"><div class="label">Get ready</div><p>Print on cardstock at Actual size. Cut out the cards along the dashed lines (laminate them if you like). Stick a soft (loop) hook-and-loop dot on the back of each card at the dashed circle, and a rough (hook) dot on each board space where its dashed circle is. Small dots (about 3/8 in or 10 mm) fit.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Boards</div><p><b>Daily routine</b> lines up the steps of a day. <b>First / then</b> shows one thing and what comes after. <b>Now / next / later</b> shows three steps. The <b>choice board</b> offers up to nine options, and the <b>feelings board</b> lets someone point to or place how they feel.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Cards</div><p>Routine, choice and feelings cards each come in a sheet of 15, with blank cards to draw or write your own. Keep the cards in a small zip bag or envelope, and put each one back on the board edge when it is finished.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Good to know</div><p>These are printable picture cards and boards, not a programme or a treatment. Use them in the way that works for your family or classroom. Personal and classroom use only; please do not resell or share the files.</p></div>
+  </div>
+  {{ footer(content.title, false, 'Guide') }}
+</section>
+
+<section class="page vsch">
+  {{ header(style, 'My day', 'Daily routine boards') }}
+  <div class="strips">{% for s in range(2) %}<div class="strip"><div class="stripl">Today</div>
+    {% for n in range(1, 5) %}{{ slot('', n) }}{% endfor %}{{ slot('All done!', '') }}</div>{% endfor %}</div>
+  {{ footer(content.title, false, 'Routine board') }}
+</section>
+<section class="page vsch">
+  {{ header(style, 'First, then', 'First-then boards') }}
+  <div class="rows">{% for s in range(3) %}<div class="row3"><div class="col"><div class="cap">First</div>{{ slot() }}</div><svg class='arrow' viewBox='0 0 60 40'><path d='M6 20 H44 M32 8 L48 20 L32 32' fill='none' stroke='currentColor' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg><div class="col"><div class="cap">Then</div>{{ slot() }}</div></div>{% endfor %}</div>
+  {{ footer(content.title, false, 'First-then') }}
+</section>
+<section class="page vsch">
+  {{ header(style, 'Now, next, later', 'Three-step boards') }}
+  <div class="strips">{% for s in range(2) %}<div class="strip">
+    {% for cap in ['Now', 'Next', 'Later'] %}<div class="cap">{{ cap }}</div>{{ slot() }}{% endfor %}</div>{% endfor %}</div>
+  {{ footer(content.title, false, 'Now-next-later') }}
+</section>
+<section class="page vsch">
+  {{ header(style, 'I choose', 'Choice board') }}
+  <div class="want"><div class="col"><div class="cap">I want</div>{{ slot() }}</div></div>
+  <div class="cgrid">{% for i in range(9) %}{{ slot() }}{% endfor %}</div>
+  {{ footer(content.title, false, 'Choice board') }}
+</section>
+<section class="page vsch">
+  {{ header(style, 'How do I feel?', 'Feelings board') }}
+  <div class="want"><div class="col"><div class="cap">I feel</div>{{ slot() }}</div></div>
+  <div class="cgrid">{% for i in range(9) %}{{ slot() }}{% endfor %}</div>
+  {{ footer(content.title, false, 'Feelings board') }}
+</section>
+{% for name, sheet in card_sets %}
+<section class="page vsch"><div class="sheetname">{{ name }}</div><div class="vgrid">{% for it in sheet %}{{ card(it) }}{% endfor %}</div></section>
+{% endfor %}
+<style>
+.vsch { padding:.3in .4in .4in; }
+.dotg { position:absolute; right:.1in; top:.1in; width:.38in; height:.38in; border:1.5px dashed var(--muted); border-radius:50%; }
+.vgrid { display:grid; grid-template-columns:repeat(3, 2.3in); grid-auto-rows:1.85in; justify-content:center; align-content:center; flex:1; }
+.sheetname { text-align:center; font-size:.7em; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+.vc { position:relative; border:1px dashed var(--muted); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:.08in .1in; }
+.vp { width:1.15in; height:1.15in; margin-bottom:.04in; }
+.vp svg { width:100%; height:100%; }
+.vl { font-size:1.45em; font-weight:700; text-align:center; line-height:1.1; min-height:1.2em; }
+.vl.wl { border-bottom:1.5px solid var(--line); width:80%; height:.3in; margin-bottom:.15in; }
+.vs { position:relative; width:2.3in; height:1.85in; border:2px solid var(--accent); border-radius:var(--radius); background:var(--soft); display:flex; align-items:center; justify-content:center; }
+.num { font-size:2.6em; color:var(--accent); }
+.sl { font-size:1.4em; font-weight:700; color:var(--accent); }
+.strips { display:flex; justify-content:space-around; flex:1; gap:.3in; }
+.strip { display:flex; flex-direction:column; gap:.05in; align-items:center; }
+.stripl { font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-size:.8em; }
+.rows { flex:1; display:flex; flex-direction:column; justify-content:space-around; }
+.row3 { display:flex; align-items:flex-end; justify-content:center; gap:.2in; }
+.col { display:flex; flex-direction:column; align-items:center; width:2.3in; flex:none; }
+.cap { font-weight:700; font-size:1.3em; color:var(--accent); }
+.arrow { width:.7in; height:.5in; flex:none; color:var(--accent2); margin-bottom:.6in; }
+.want { display:flex; justify-content:center; margin-bottom:.2in; }
+.cgrid { display:grid; grid-template-columns:repeat(3, 2.3in); gap:.15in; justify-content:center; flex:1; align-content:space-around; }
+</style>
