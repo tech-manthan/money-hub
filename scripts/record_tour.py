@@ -103,6 +103,10 @@ SPOKEN = {
     "Happy with it? Press Approve.": "If you are happy with it, press Approve.",
     "Download the upload package: your files, ready to upload.": "Then download the upload package. It has everything you need, ready to upload.",
     "Then follow the upload guide for your shop. It tells you what goes where.": "Finally, follow the guide for your shop. It tells you which file goes where, and gives you the title and description to copy. And that is it. You have just made a product.",
+    "Optional: second-opinion tools.": "One optional extra. In Settings, there are second opinion tools.",
+    "They open your finished files and tell you if anything cannot be read. All off until you switch them on.": "They open your finished files, and tell you if anything cannot be read. They are all off, until you switch them on.",
+    "Switch them on, and choose which ones to use.": "Switch them on, then choose which ones you want to use. For example, one for PDFs, one for spreadsheets, and one to even out the sound.",
+    "Save. A tool that is missing or fails is skipped, so a product never breaks.": "Press save. If a tool is missing, or fails, it is simply skipped, so your products never break.",
 }
 
 
@@ -241,6 +245,23 @@ def tour(page: Page, voice=None, audio_dir: Path | None = None) -> Tour:
     page.locator("text=Upload guides").first.scroll_into_view_if_needed()
     t.cap("Then follow the upload guide for your shop. It tells you what goes where.", 3.4)
     t.mark("publish1")
+
+    # ---- optional second-opinion tools (Settings). Switched on and saved in the throwaway instance only.
+    t.mark("tools0")
+    page.goto(BASE + "/settings"); page.wait_for_load_state("networkidle")
+    page.locator("#craft-form").scroll_into_view_if_needed()
+    t.cap("Optional: second-opinion tools.", 2.6)
+    t.hover('#craft-form label:has-text("Use them")', 0.5)
+    t.cap("They open your finished files and tell you if anything cannot be read. All off until you switch them on.", 3.6)
+    t.click('#craft-form label:has-text("Use them")', 0.6)
+    t.click('#craft-form label:has-text("Check every new product")', 0.6)
+    t.cap("Switch them on, and choose which ones to use.", 2.4)
+    t.click('#craft-form label:has-text("pdfcraft")', 0.5)
+    t.click('#craft-form label:has-text("gridcraft")', 0.5)
+    t.click('#craft-form label:has-text("soundcraft")', 0.5)
+    t.click('#craft-form button[type="submit"]', 1.0)
+    t.cap("Save. A tool that is missing or fails is skipped, so a product never breaks.", 3.4)
+    t.mark("tools1")
     t.cap("", 0.2)
     return t
 
@@ -292,6 +313,12 @@ def mux_audio(video: Path, events: list, cuts: list, clip_start: float):
     with wave.open(str(wav_out), "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
         w.writeframes((np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
+    try:   # optional: level the narration with soundcraft when it is switched on in Settings (off by default, never fatal)
+        from moneyhub.crafttools import polish_wav
+        if polish_wav(wav_out, SR):
+            print("  narration levelled with soundcraft")
+    except ImportError:
+        pass
     tmp = video.with_suffix(".av.mp4")
     run(["ffmpeg", "-y", "-i", str(video), "-i", str(wav_out), "-c:v", "copy", "-c:a", "aac", "-b:a", "96k", "-t", f"{dur:.2f}", "-movflags", "+faststart", str(tmp)])
     tmp.replace(video)
@@ -338,7 +365,7 @@ def main():
         m = t.marks
         wait = (m["wait0"], m["wait1"])
         encode(raw, MEDIA / "tour.mp4", fast=wait, events=t.events)
-        for name in ("idea", "look", "make", "publish"):
+        for name in ("idea", "look", "make", "publish", "tools"):
             encode(raw, MEDIA / f"{name}.mp4", m[f"{name}0"], m[f"{name}1"] + 0.3, fast=wait if name == "make" else None, events=t.events)
         samples(tmp)
     finally:

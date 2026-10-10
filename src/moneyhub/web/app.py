@@ -102,7 +102,8 @@ MEDIA = HERE / "static" / "media"
 CLIPS = [("idea", "1. Pick an idea", "Choose who you want to help and what to make for them."),
          ("look", "2. Pick a look", "Let MoneyHub choose, or pick colours and fonts yourself."),
          ("make", "3. Make it", "Review your choices and watch it being made."),
-         ("publish", "4. Check and publish", "Approve it, download the upload package and follow the guide.")]
+         ("publish", "4. Check and publish", "Approve it, download the upload package and follow the guide."),
+         ("tools", "Optional: second-opinion tools", "Switch on extra programs that open your finished files and tell you if anything cannot be read.")]
 
 
 def _media() -> dict:

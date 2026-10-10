@@ -158,6 +158,43 @@ def verify_product(folder: Path, timeout: float = 90.0, only: list[str] | None =
     return out
 
 
+def polish_wav(wav: Path, rate: int | None = None, headroom: float = 0.9, timeout: float = 120.0) -> bool:
+    """Level a narration WAV with soundcraft (`convert --normalize`) and replace it in place. Only when the master switch and the
+    soundcraft switch are both on; returns True when the file was replaced. Any problem (tool missing, failed, silent or much
+    shorter output) leaves the original file untouched. The result is scaled back to `headroom` so the AAC encode cannot clip."""
+    import wave
+    try:
+        if not is_enabled("soundcraft") or find_tool("soundcraft") is None:
+            return False
+        wav = Path(wav)
+        out = wav.with_suffix(".polished.wav")
+        args = ["convert", str(wav), str(out), "--bit-depth", "16", "--normalize"] + (["--rate", str(rate)] if rate else [])
+        r = run("soundcraft", args, timeout)
+        if not (r.ok and out.exists() and out.stat().st_size > 1000):
+            out.unlink(missing_ok=True)
+            return False
+        with wave.open(str(wav)) as a, wave.open(str(out)) as b:
+            if b.getsampwidth() != 2 or b.getnframes() < 0.95 * a.getnframes() * b.getframerate() / a.getframerate():
+                out.unlink(missing_ok=True)
+                return False
+            params, frames = b.getparams(), b.readframes(b.getnframes())
+        import numpy as np
+        x = np.frombuffer(frames, dtype="<i2").astype(np.float32)
+        peak = float(np.abs(x).max()) / 32768 if len(x) else 0.0
+        if peak < 0.01:   # silence: do not replace good narration with nothing
+            out.unlink(missing_ok=True)
+            return False
+        if peak > headroom:
+            x *= headroom / peak
+        with wave.open(str(out), "wb") as w:
+            w.setparams(params)
+            w.writeframes(np.clip(x, -32768, 32767).astype("<i2").tobytes())
+        out.replace(wav)
+        return True
+    except Exception:   # noqa: BLE001 - an optional polish step must never break the caller
+        return False
+
+
 def second_opinion(folder: Path):
     """The automatic quality check run after a product is made, or None when the integration is off or nothing was checked.
     Warn-only by design: it can never fail a product, and any error inside it is swallowed."""

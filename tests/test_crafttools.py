@@ -179,6 +179,53 @@ def test_settings_roundtrip_cli_and_web(tmp_path, monkeypatch):
         config.reload_config()
 
 
+def _write_wav(path, amp, seconds=0.5, rate=24000):
+    import wave
+
+    import numpy as np
+    t = np.arange(int(seconds * rate)) / rate
+    x = (np.sin(2 * np.pi * 220 * t) * amp * 32767).astype("<i2")
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(x.tobytes())
+
+
+def _peak(path):
+    import wave
+
+    import numpy as np
+    with wave.open(str(path)) as w:
+        return float(np.abs(np.frombuffer(w.readframes(w.getnframes()), dtype="<i2")).max()) / 32768
+
+
+def test_polish_wav_levels_narration_only_when_switched_on_and_never_harms_it(tmp_path, monkeypatch):
+    tools = tmp_path / "tools"
+    monkeypatch.setenv("MONEYHUB_CRAFT_DIR", str(tools))
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    wav = tmp_path / "mix.wav"
+    _write_wav(wav, 0.2)
+    # a stand-in "normalize": writes a full-scale copy of the audio, like a peak normalise would
+    loud = tmp_path / "loud.wav"
+    _write_wav(loud, 1.0)
+    _fake(tools, "soundcraft", f'cp {loud} "$3"\n')
+    _settings(monkeypatch)   # off: nothing happens
+    assert crafttools.polish_wav(wav, 24000) is False and abs(_peak(wav) - 0.2) < 0.01
+    _settings(monkeypatch, enabled=True, tools={"soundcraft": True})
+    assert crafttools.polish_wav(wav, 24000) is True
+    assert 0.85 < _peak(wav) <= 0.91   # louder than before, with headroom kept
+    # a tool that fails, or returns silence, leaves the file as it was
+    wav2 = tmp_path / "b.wav"
+    _write_wav(wav2, 0.2)
+    _fake(tools, "soundcraft", "exit 2\n")
+    assert crafttools.polish_wav(wav2, 24000) is False and abs(_peak(wav2) - 0.2) < 0.01
+    silent = tmp_path / "silent.wav"
+    _write_wav(silent, 0.0)
+    _fake(tools, "soundcraft", f'cp {silent} "$3"\n')
+    assert crafttools.polish_wav(wav2, 24000) is False and abs(_peak(wav2) - 0.2) < 0.01
+
+
 def test_settings_page_shows_the_craft_panel_switched_off_by_default():
     from fastapi.testclient import TestClient
     from moneyhub.web.app import app

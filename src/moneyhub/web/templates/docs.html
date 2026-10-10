@@ -39,6 +39,11 @@
     <li>You see a one-line summary of what will be made. Check it, then press <b>Make my product</b>.</li>
     <li>It usually takes 20 seconds to 3 minutes. Progress shows as a checklist. You can leave the page open.</li>
     <li>"Show the matching command" prints the same request for a terminal.</li></ul>
+  {% elif key == 'tools' %}<ul>
+    <li>Open <a href="/settings">Settings</a> and find <b>Second-opinion tools</b>. Everything is <b>off</b> until you switch it on.</li>
+    <li>Tick <b>Use them</b>, then the tools you want. Tick <b>Check every new product</b> to add one extra line to the quality checks.</li>
+    <li>A tool that is not installed, is slow or fails is skipped. It can only add a warning, never stop a product.</li>
+    <li>Install the tools with <code>bash scripts/install_craft_tools.sh</code>. The full guide is <code>docs/craft-tools.md</code>.</li></ul>
   {% else %}<ul>
     <li>Open the product and look through the preview pages and images.</li>
     <li>Read the <b>quality checks</b>. Fix anything marked ✗ before selling (use "Make a new variation" if needed).</li>
