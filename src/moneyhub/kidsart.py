@@ -44,13 +44,13 @@ class Pen:
     def _attrs(self, fill: str = "#ffffff") -> str:
         return f"fill='{fill}' stroke='{INK}' stroke-width='{self.w}' stroke-linejoin='round' stroke-linecap='round'"
 
-    def e(self, cx, cy, rx, ry=None, rot=0):
+    def e(self, cx, cy, rx, ry=None, rot=0, fill="#ffffff"):
         ry = rx if ry is None else ry
         t = f" transform='rotate({rot} {cx:.0f} {cy:.0f})'" if rot else ""
-        self.parts.append(f"<ellipse cx='{cx:.1f}' cy='{cy:.1f}' rx='{rx:.1f}' ry='{ry:.1f}' {self._attrs()}{t}/>")
+        self.parts.append(f"<ellipse cx='{cx:.1f}' cy='{cy:.1f}' rx='{rx:.1f}' ry='{ry:.1f}' {self._attrs(fill)}{t}/>")
 
-    def poly(self, pts):
-        self.parts.append(f"<polygon points='{' '.join(f'{x:.1f},{y:.1f}' for x, y in pts)}' {self._attrs()}/>")
+    def poly(self, pts, fill="#ffffff"):
+        self.parts.append(f"<polygon points='{' '.join(f'{x:.1f},{y:.1f}' for x, y in pts)}' {self._attrs(fill)}/>")
 
     def path(self, d, fill="#ffffff"):
         self.parts.append(f"<path d='{d}' {self._attrs(fill)}/>")
@@ -61,8 +61,8 @@ class Pen:
     def dot(self, cx, cy, r=None):
         self.parts.append(f"<circle cx='{cx:.1f}' cy='{cy:.1f}' r='{r or self.w * 1.6:.1f}' fill='{INK}'/>")
 
-    def rect(self, x, y, w, h, r=0):
-        self.parts.append(f"<rect x='{x:.1f}' y='{y:.1f}' width='{w:.1f}' height='{h:.1f}' rx='{r}' {self._attrs()}/>")
+    def rect(self, x, y, w, h, r=0, fill="#ffffff"):
+        self.parts.append(f"<rect x='{x:.1f}' y='{y:.1f}' width='{w:.1f}' height='{h:.1f}' rx='{r}' {self._attrs(fill)}/>")
 
     def band(self, d, width):
         """A thick curved limb: an ink outline with a white core."""
@@ -970,3 +970,6 @@ def page_art(i: int, seed: int, theme: str = "mixed", age: str = "kids") -> tupl
         which = rng.sample(SHAPES, 4 if simple else 6)
         return "shapes", shapes_page(seed * 977 + i, width, which), "Color the shape friends!"
     return "trace", trace_page(seed * 977 + i, width), "Trace the dots, then color!"
+
+
+from . import kidsart_extra  # noqa: E402,F401  (registers the extra figures and themes)

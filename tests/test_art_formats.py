@@ -282,7 +282,7 @@ def test_digital_paper_packs_use_a_seeded_selection_and_coloring_books_walk_thro
 # ------------------------------------------------------------------ bigger libraries: kids figures and wall-art backgrounds
 def test_every_kids_figure_theme_and_wall_background_draws():
     from moneyhub import art, kidsart
-    assert len(kidsart.KINDS) == 38 and set(kidsart.KINDS) == set(kidsart._FIGURES) == set(kidsart.NAMES)
+    assert len(kidsart.KINDS) >= 80 and set(kidsart.KINDS) == set(kidsart._FIGURES) == set(kidsart.NAMES) and len(kidsart.THEMES) >= 20
     for theme, (_, pool) in kidsart.THEMES.items():
         assert pool and all(k in kidsart._FIGURES for k in pool), theme
     pal = PALETTES[4]
