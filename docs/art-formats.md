@@ -145,3 +145,9 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 - `moneyhub make-many x sticker_sheets --count 10 --vary look,theme` makes 10 variations (palette and fonts cycle with `look`, kids themes cycle with `theme`; layouts and art always change) and prints a table of id, QA status, uniqueness and title.
 - Each product in a bundle keeps its own licence file. Copy the strictest wording into the listing.
 - The wizard and web UI do not have a bundle form yet; these are CLI only.
+
+## Print-then-cut sticker sheets
+`moneyhub make x sticker_sheets --print-then-cut` adds `...-print-then-cut.zip`: per sheet a transparent 6.75 x 9.25 in PNG (300 DPI, 9 stickers) and a cut-line SVG in the same positions (hairline red, inches), plus a README.
+- Cricut Design Space draws its own registration marks inside its print area, so the PNGs carry no marks. Upload as a Complex image, choose Print Then Cut, do not resize. The 6.75 x 9.25 in size matches the Letter print area Cricut has documented; confirm against Cricut's current help pages, since limits change.
+- The cut-line SVG is for Silhouette, Brother, Glowforge or a plotter, which you align yourself.
+- Needs a real check: a test print and cut on a real machine, to confirm size, offset and the 0.07 in white border.

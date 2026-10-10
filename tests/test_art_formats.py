@@ -588,3 +588,32 @@ def test_new_learning_focuses_are_english_only_and_validated():
     base = {"niche": "x", "product_type": "learning_workbook", "llm": "builtin"}
     assert c.post("/api/jobs", data={**base, "focus": "cursive", "language": "fr"}).status_code == 422
     assert c.post("/api/jobs", data={**base, "focus": "sightwords", "grade": "12"}).status_code == 422
+
+
+def test_outline_tracing_and_cut_paths_follow_the_sticker_shape():
+    import numpy as np
+    from PIL import Image, ImageDraw
+    from moneyhub import stickers
+    m = np.zeros((10, 10), bool)
+    m[2:7, 2:8] = True
+    ring = stickers.trace_outline(m)
+    assert len(ring) == 18 and set(ring) <= {(x, y) for x in range(2, 8) for y in range(2, 7)}
+    im = Image.new("RGBA", (300, 240), (0, 0, 0, 0))
+    ImageDraw.Draw(im).ellipse((20, 20, 200, 200), fill=(255, 0, 0, 255))
+    paths = stickers.cut_paths(im, 300, 600, 300, 240, 300)   # placed at (1 in, 2 in)
+    assert len(paths) == 1
+    pts = [tuple(map(float, q.split())) for q in paths[0][1:-2].split(" L")]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    assert 1.05 < min(xs) < 1.1 and 1.55 < max(xs) < 1.7 and 2.05 < min(ys) < 2.1 and 2.6 < max(ys) < 2.75
+
+
+def test_sticker_sheets_print_then_cut_zip_has_png_and_cut_lines():
+    res = generate(Request("x", "sticker_sheets", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                           options={"no_research": True, "stickers": 12, "print_then_cut": True}))
+    assert not [c for c in res.checks if c.status == "fail"]
+    z = zipfile.ZipFile(next((res.folder / "product").glob("*print-then-cut.zip")))
+    names = z.namelist()
+    assert "sheet-01-print.png" in names and "sheet-02-cut-lines.svg" in names and "READ-ME-print-then-cut.txt" in names
+    assert z.read("sheet-01-cut-lines.svg").count(b" Z") >= 9
+    plain = generate(Request("x", "sticker_sheets", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False, options={"no_research": True}))
+    assert not list((plain.folder / "product").glob("*print-then-cut.zip"))
