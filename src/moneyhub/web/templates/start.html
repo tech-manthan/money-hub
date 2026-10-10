@@ -92,8 +92,8 @@
     </div>
     <div class="row" id="kids-opts" hidden>
       <div><label for="theme">Picture theme (kids books and stickers)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
-      <div><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
-      <div><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
+      <div id="age-wrap"><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
+      <div id="pages-wrap"><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
     </div>
     <div class="row" id="icon-opts" hidden>
       <div><label for="collection">Icon set</label><select id="collection" name="collection">{% for c in icon_sets %}<option value="{{ c.key }}">{{ c.name }} ({{ c.license }}, {{ c.icons }} icons)</option>{% else %}<option value="">None installed: run "moneyhub assets fetch tabler"</option>{% endfor %}</select></div>
@@ -105,6 +105,9 @@
       <div id="level-wrap"><label for="level">Difficulty (activity book)</label><select id="level" name="level"><option value="kids">Kids (ages 4-7)</option><option value="toddler">Toddler (ages 2-4, easy)</option><option value="big">Big kids (ages 6-9, harder)</option></select></div>
       <div id="focus-wrap"><label for="focus">Focus (learning workbook)</label><select id="focus" name="focus"><option value="mixed">Mixed preschool topics</option><option value="colours">Colors and shapes</option><option value="words">First words tracing</option><option value="numbers">Counting and numbers</option><option value="time">Time, days and seasons</option><option value="feelings">Feelings and opposites</option></select></div>
       <div><label for="pages2">Pages</label><input type="number" id="pages2" min="10" max="48" placeholder="24"></div>
+    </div>
+    <div class="row" id="class-opts" hidden>
+      <div style="flex:2 1 20em;"><label for="names">Student names (optional, comma separated, up to 30)</label><textarea id="names" name="names" rows="2" placeholder="Ava, Ben, Chloe. Leave empty for blank name lines."></textarea></div>
     </div>
     <div class="row" id="oracle-opts" hidden>
       <div><label for="deck">Kind of deck</label><select id="deck" name="deck"><option value="oracle">Oracle: gentle message cards</option><option value="tarot">Tarot-style: 22 archetype cards</option></select></div>

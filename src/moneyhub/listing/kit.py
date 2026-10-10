@@ -81,6 +81,7 @@ _TYPE_WORDS = {
     "digital_paper": ["digital paper", "seamless pattern", "scrapbook paper", "digital paper pack", "seamless digital paper", "patterns jpg"],
     "cut_files": ["svg cut files", "cricut svg", "silhouette cut files", "svg bundle", "boho svg", "dxf cut files"],
     "coloring_pages": ["coloring pages", "mandala coloring", "printable coloring", "adult coloring pages", "coloring sheets", "coloring book pdf"],
+    "classroom_pack": ["classroom printables", "teacher printables", "name tags", "desk name plates", "reward chart", "classroom decor", "behavior chart"],
     "montessori_cards": ["montessori cards", "three part cards", "montessori printables", "bilingual flashcards", "homeschool matching cards", "nomenclature cards"],
     "icon_pack": ["planner icon stickers", "goodnotes icons", "digital planner stickers", "icon sticker sheets", "printable planner icons", "planner icons png"],
     "character_clipart": ["character clipart", "animal clipart", "cute clipart bundle", "commercial use clipart", "kids clipart png", "teacher clipart"],

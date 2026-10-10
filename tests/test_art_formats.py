@@ -468,3 +468,38 @@ def test_unreviewed_bilingual_product_is_not_marked_ready():
                            options={"no_research": True, "language": "fr", "count": 6}))
     c = next(x for x in res.checks if x.name == "Translations reviewed")
     assert c.status == "fail" and res.qa_status == "fail"
+
+
+def test_classroom_pack_prints_names_and_leaves_blanks(tmp_path):
+    from pypdf import PdfReader
+    from moneyhub.products.classroom_pack import MAX_NAMES, parse_names
+    assert parse_names(" Ava,Ben;\nAva ,  Cy  Lee ") == ["Ava", "Ben", "Cy Lee"]
+    assert parse_names("") == [] and parse_names(None) == []
+    with pytest.raises(ValueError):
+        parse_names(",".join(f"n{i}" for i in range(MAX_NAMES + 1)))
+    named = generate(Request("x", "classroom_pack", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                             options={"no_research": True, "theme": "farm", "names": "Zara, Quinn, Mateo"}))
+    assert not [c for c in named.checks if c.status == "fail"] and named.title.endswith("Classroom Printables")
+    pdf = next((named.folder / "product").glob("*-letter.pdf"))
+    text = " ".join(p.extract_text() for p in PdfReader(str(pdf)).pages)
+    assert all(n in text for n in ("Zara", "Quinn", "Mateo")) and "Star of the Week" in text and "January" in text and "December" in text
+    named_pages = pdf_page_count(pdf)
+    blank = generate(Request("x", "classroom_pack", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
+                             options={"no_research": True, "theme": "space"}))
+    assert not [c for c in blank.checks if c.status == "fail"]
+    bpdf = next((blank.folder / "product").glob("*-letter.pdf"))
+    assert "Zara" not in " ".join(p.extract_text() for p in PdfReader(str(bpdf)).pages)
+    assert pdf_page_count(bpdf) > named_pages   # 24 blank tags + 4 plates vs 3 names
+    listing = (blank.folder / "listing" / "listing.json").read_text().lower()
+    assert "classroom" in listing
+
+
+def test_classroom_pack_option_validation_in_cli_and_web():
+    from typer.testing import CliRunner
+    from moneyhub.cli import app as cli
+    r = CliRunner().invoke(cli, ["make", "x", "classroom_pack", "--names", ",".join(f"n{i}" for i in range(31)), "--llm", "builtin"])
+    assert r.exit_code != 0
+    from fastapi.testclient import TestClient
+    from moneyhub.web.app import app
+    bad = TestClient(app).post("/api/jobs", data={"niche": "x", "product_type": "classroom_pack", "llm": "builtin", "names": ",".join(f"n{i}" for i in range(31))})
+    assert bad.status_code == 422

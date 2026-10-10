@@ -1,0 +1,149 @@
+{% from '_macros.html.j2' import header, footer, cover_page %}
+{% macro big(svg) %}<div class="pic">{{ svg|safe }}</div>{% endmacro %}
+{{ cover_page(style, page, content.title, content.subtitle, content.tagline, chips) }}
+<section class="page cr" style="padding:2.6em 2.8em;">
+  {{ header(style, 'Using this pack', 'Print, cut, write, display') }}
+  <div style="margin-top:1.2em;">
+    <div class="card"><div class="label">Name tags and desk plates</div><p>{% if named %}Your class names are already printed. Print on cardstock, cut along the dashed lines and fold each desk plate along the dotted centre line so it stands like a tent.{% else %}Write each name on the line with a marker. Print on cardstock, cut along the dashed lines and fold each desk plate along the dotted centre line so it stands like a tent.{% endif %}</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Charts</div><p>Reward, behaviour and chore charts are for one child each. Print one per child, write the name at the top and use stickers, stars or a pencil to mark the boxes. Slip a chart in a clear sleeve and use a dry-erase marker to reuse it.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Calendar and posters</div><p>The calendar pages are undated: write the month's date numbers into the grid. Colour the pictures in if you like. The birthday chart and the star-of-the-week posters work well on a wall.</p></div>
+    <div class="card" style="margin-top:1.2em;"><div class="label">Printing</div><p>Print at Actual size (not "fit to page"). Personal and classroom use only; please do not resell or share the files.</p></div>
+  </div>
+  {{ footer(content.title, false, 'Guide') }}
+</section>
+{% for s in sheets %}
+{% if s.kind == 'tags' %}
+<section class="page cr"><div class="tgrid">
+  {% for it in s['items'] %}<div class="tag"><div class="tp">{{ it.svg|safe }}</div><div class="tt"><div class="hello">Hello, my name is</div>
+    {% if it.name %}<div class="nm script">{{ it.name }}</div>{% else %}<div class="ln"></div>{% endif %}</div></div>{% endfor %}
+</div></section>
+{% elif s.kind == 'plates' %}
+<section class="page cr"><div class="pgrid">
+  {% for it in s['items'] %}<div class="plate"><div class="fold"></div>
+    <div class="half flip"><div class="pp">{{ it.svg|safe }}</div><div class="pn">{% if it.name %}<span class="nm script">{{ it.name }}</span>{% else %}<span class="ln"></span>{% endif %}</div></div>
+    <div class="half"><div class="pp">{{ it.svg|safe }}</div><div class="pn">{% if it.name %}<span class="nm script">{{ it.name }}</span>{% else %}<span class="ln"></span>{% endif %}</div></div></div>{% endfor %}
+</div></section>
+{% elif s.kind == 'reward' %}
+<section class="page cr">
+  {{ header(style, 'I am a star!', 'Reward chart') }}
+  <div class="who"><span>Name</span><i class="ln"></i><div class="pic sm">{{ s.svg|safe }}</div></div>
+  {% if s.variant == 'stars' %}<div class="rgrid">{% for i in range(20) %}<div class="rc star">&#9734;</div>{% endfor %}</div>
+  {% elif s.variant == 'steps' %}<div class="rgrid">{% for i in range(1, 21) %}<div class="rc"><b>{{ i }}</b></div>{% endfor %}</div>
+  {% elif s.variant == 'grid' %}<div class="rgrid big">{% for i in range(12) %}<div class="rc"></div>{% endfor %}</div>
+  {% else %}<div class="tally">{% for i in range(6) %}<div><span>Goal</span><i class="ln"></i><div class="dots5">{% for j in range(10) %}<em></em>{% endfor %}</div></div>{% endfor %}</div>{% endif %}
+  <div class="prize"><b>My prize:</b><i class="ln"></i></div>
+  {{ footer(content.title, false, 'Reward chart') }}
+</section>
+{% elif s.kind == 'behaviour' %}
+<section class="page cr">
+  {{ header(style, 'My week', 'Behaviour chart') }}
+  <div class="who"><span>Name</span><i class="ln"></i><div class="pic sm">{{ s.svg|safe }}</div></div>
+  <table class="chart tall"><tr><th>My goals</th>{% for d in days %}<th>{{ d }}</th>{% endfor %}</tr>
+    {% for r in range(5) %}<tr><td class="goal"><i class="ln"></i></td>{% for d in days %}<td><span class="traffic"><u class="g"></u><u class="y"></u><u class="r"></u></span></td>{% endfor %}</tr>{% endfor %}</table>
+  <p class="key"><span class="g"></span> great &nbsp; <span class="y"></span> okay &nbsp; <span class="r"></span> tricky. Circle one colour each day.</p>
+  {{ footer(content.title, false, 'Behaviour chart') }}
+</section>
+{% elif s.kind == 'faces' %}
+<section class="page cr">
+  {{ header(style, 'How was my day?', 'Faces chart') }}
+  <div class="who"><span>Name</span><i class="ln"></i><div class="pic sm">{{ s.svg|safe }}</div></div>
+  <table class="chart tall"><tr><th>Day</th>{% for f in faces %}<th><div class="face">{{ f|safe }}</div></th>{% endfor %}<th>Note</th></tr>
+    {% for d in weekdays[:5] %}<tr><td class="day">{{ d }}</td>{% for f in faces %}<td><span class="ring"></span></td>{% endfor %}<td></td></tr>{% endfor %}</table>
+  {{ footer(content.title, false, 'Faces chart') }}
+</section>
+{% elif s.kind == 'chores' %}
+<section class="page cr">
+  {{ header(style, 'My jobs', 'Chore chart') }}
+  <div class="who"><span>Name</span><i class="ln"></i><div class="pic sm">{{ s.svg|safe }}</div></div>
+  <table class="chart"><tr><th>Job</th>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr>
+    {% for r in range(8) %}<tr><td class="goal"><i class="ln"></i></td>{% for d in weekdays %}<td><span class="ring"></span></td>{% endfor %}</tr>{% endfor %}</table>
+  {{ footer(content.title, false, 'Chore chart') }}
+</section>
+{% elif s.kind == 'calendar' %}
+<section class="page cr">
+  <div class="calhead"><div class="pic sm">{{ s.svg|safe }}</div><div><h2>{{ s.month }}</h2><div class="muted">Year <i class="ln short"></i></div></div></div>
+  <table class="cal"><tr>{% for d in weekdays %}<th>{{ d }}</th>{% endfor %}</tr>
+    {% for r in range(6) %}<tr>{% for d in weekdays %}<td></td>{% endfor %}</tr>{% endfor %}</table>
+  {{ footer(content.title, false, s.month) }}
+</section>
+{% elif s.kind == 'birthday' %}
+<section class="page cr">
+  {{ header(style, 'Our birthdays', 'Birthday chart') }}
+  <div class="bgrid">{% for m in range(12) %}<div class="bm"><b>{{ ['January','February','March','April','May','June','July','August','September','October','November','December'][m] }}</b>{% for l in range(4) %}<i class="ln"></i>{% endfor %}</div>{% endfor %}</div>
+  {{ footer(content.title, false, 'Birthdays') }}
+</section>
+{% elif s.kind == 'star' %}
+<section class="page cr">
+  <div class="starhead"><div class="label">This week's</div><h1 style="font-size:3em;">Star of the Week</h1></div>
+  <div class="starname"><i class="ln"></i></div>
+  <div class="starbody"><div class="frame">{{ s.svg|safe }}</div>
+    <div class="starcards">{% for t in ['My favourite things', 'My family', 'I love to', 'When I grow up'] %}<div class="card"><div class="label">{{ t }}</div><i class="ln"></i><i class="ln"></i><i class="ln"></i></div>{% endfor %}</div></div>
+  {{ footer(content.title, false, 'Star of the week') }}
+</section>
+{% endif %}
+{% endfor %}
+<style>
+.cr { padding:.4in; }
+.ln { display:block; border-bottom:1.5px solid var(--ink); height:1.6em; }
+span > .ln, .who > .ln, .prize > .ln { flex:1; }
+.pic svg { width:100%; height:100%; display:block; }
+.pic.sm { width:1in; height:1in; flex:none; }
+.tgrid { display:grid; grid-template-columns:repeat(2, 3.6in); grid-auto-rows:2.45in; justify-content:center; align-content:center; flex:1; }
+.tag { border:1px dashed var(--muted); display:flex; align-items:center; gap:.12in; padding:.15in; }
+.tp { width:1.1in; height:1.1in; flex:none; }
+.tp svg { width:100%; height:100%; }
+.tt { flex:1; text-align:center; min-width:0; }
+.hello { font-size:.8em; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:.4em; }
+.nm { font-size:2.3em; line-height:1.1; overflow-wrap:anywhere; }
+.pgrid { display:flex; flex-direction:column; justify-content:center; gap:.4in; flex:1; align-items:center; }
+.plate { width:7.2in; height:4.4in; border:1px dashed var(--muted); display:flex; flex-direction:column; position:relative; }
+.plate .fold { position:absolute; left:0; right:0; top:50%; border-top:1px dotted var(--muted); }
+.half { flex:1; display:flex; align-items:center; gap:.3in; padding:.15in .3in; }
+.half.flip { transform:rotate(180deg); }
+.pp { width:1.5in; height:1.5in; flex:none; }
+.pp svg { width:100%; height:100%; }
+.pn { flex:1; text-align:center; }
+.pn .nm { font-size:3.4em; }
+.pn .ln { display:block; }
+.who { display:flex; align-items:flex-end; gap:.15in; margin:.1in 0 .25in; font-weight:700; }
+.rgrid { display:grid; grid-template-columns:repeat(4, 1fr); gap:.14in; flex:1; margin-bottom:.2in; }
+.rgrid.big { grid-template-columns:repeat(3, 1fr); }
+.rc { border:2px solid var(--accent); border-radius:var(--radius); display:flex; align-items:center; justify-content:center; font-size:2em; color:var(--muted); background:var(--paper); }
+.rc.star { font-size:3em; color:var(--line); }
+.tally { flex:1; display:flex; flex-direction:column; justify-content:space-around; margin-bottom:.2in; }
+.tally > div { display:flex; align-items:flex-end; gap:.1in; flex-wrap:wrap; }
+.tally > div > .ln { flex:1; }
+.dots5 { width:100%; display:flex; gap:.18in; }
+.dots5 em { width:.42in; height:.42in; border:2px solid var(--accent); border-radius:50%; }
+.prize { display:flex; align-items:flex-end; gap:.15in; border:2px dashed var(--accent2); border-radius:var(--radius); padding:.15in .2in; background:var(--soft); }
+.chart { width:100%; border-collapse:collapse; flex:1; }
+.chart th { background:var(--accent); color:var(--accent-ink); padding:.08in; font-size:.9em; }
+.chart td { border:1.5px solid var(--line); text-align:center; height:.85in; }
+.chart.tall td { height:1.15in; }
+.chart td.goal { text-align:left; padding:0 .1in; }
+.chart td.goal .ln { margin-top:.5in; }
+.chart td.day { font-weight:700; width:1in; }
+.face { width:.7in; height:.7in; margin:0 auto; }
+.face svg { width:100%; height:100%; }
+.ring { display:inline-block; width:.4in; height:.4in; border:2px solid var(--accent); border-radius:50%; }
+.traffic u { display:inline-block; width:.2in; height:.2in; border-radius:50%; margin:0 .02in; border:2px solid #222; }
+.g { background:#8fd18f; } .y { background:#f4de6b; } .r { background:#ef8f8f; }
+.key { font-size:.85em; margin-top:.12in; text-align:center; }
+.key span { display:inline-block; width:.18in; height:.18in; border-radius:50%; border:2px solid #222; vertical-align:-.03in; }
+.calhead { display:flex; align-items:center; gap:.25in; margin-bottom:.2in; }
+.calhead h2 { font-size:2.6em; }
+.calhead .ln.short { display:inline-block; width:1in; height:1em; }
+.cal { width:100%; border-collapse:collapse; flex:1; table-layout:fixed; }
+.cal th { background:var(--accent); color:var(--accent-ink); padding:.08in; }
+.cal td { border:1.5px solid var(--line); height:1.2in; vertical-align:top; }
+.bgrid { display:grid; grid-template-columns:repeat(3, 1fr); gap:.14in; flex:1; margin-bottom:.1in; }
+.bm { border:1.5px solid var(--line); border-radius:var(--radius); padding:.1in; display:flex; flex-direction:column; justify-content:space-around; }
+.bm b { color:var(--accent); }
+.starhead { text-align:center; }
+.starname { margin:.3in 1in .25in; }
+.starbody { flex:1; display:flex; flex-direction:column; gap:.2in; min-height:0; }
+.frame { height:3.6in; border:3px solid var(--accent); border-radius:var(--radius); padding:.15in; background:var(--paper); }
+.frame svg { width:100%; height:100%; }
+.starcards { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:.15in; min-height:0; }
+.starcards .card { justify-content:space-around; }
+</style>

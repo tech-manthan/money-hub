@@ -26,6 +26,7 @@ PRODUCT_PLAIN = {
     "wall_art": "A set of printable quote posters in several print sizes (JPG).",
     "clipart_pack": "Abstract boho clipart: transparent PNGs, SVG vectors and a commercial licence.",
     "cut_files": "Clean cut-file shapes for Cricut and Silhouette: SVG, DXF, EPS and PNG, with a commercial licence.",
+    "classroom_pack": "Name tags, desk plates, reward, behaviour and chore charts, a calendar, birthday chart and star-of-the-week posters; names printed or written in (PDF).",
     "montessori_cards": "Three-part Montessori matching cards (control, picture, name), English or bilingual Spanish / French / German (PDF).",
     "icon_pack": "Planner icon stickers from open-source line icons (MIT/ISC): printable sheets, PNG and SVG, licence notice included.",
     "character_clipart": "Cute colored character clipart (animals, vehicles, seasonal, fantasy): transparent PNG, SVG and a commercial licence.",

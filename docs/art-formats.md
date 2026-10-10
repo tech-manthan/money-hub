@@ -117,3 +117,10 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
   4. Any edit to the word list changes its fingerprint and cancels earlier reviews, so a changed list is blocked again until re-checked. `moneyhub translations status` shows where each language stands. Records are kept in `out/translations-review.json`.
 - **Icon posters:** `--motif icon:lucide` (random simple icon) or `--motif icon:tabler/home` draws one large open-source icon in the palette. The set must be installed first (`moneyhub assets fetch tabler --limit 5200` gets every Tabler icon). **Filled icon stickers:** `icon_pack --collection tabler-filled`.
 
+
+## Classroom printables
+`moneyhub make x classroom_pack --theme farm --names "Ava, Ben, Chloe"` makes one Letter/A4 PDF: name tags (8 per sheet) and fold-over desk plates, four reward charts (stars, numbered steps, sticker boxes, goal tallies), a weekly behaviour chart (traffic-light circles), a faces chart, a chore chart, 12 undated calendar pages, a birthday chart and two star-of-the-week posters. Pictures come from the kids library (`--theme`).
+- `--names` (up to 30, comma or new-line separated; the UI has a box) prints each name on a tag and a desk plate. Without names you get 24 blank tags and 4 blank plates with write-in lines. Names are trimmed to 20 characters.
+- Calendars are undated on purpose so one pack lasts every year. The charts are one-child-each; print as many as needed.
+- Listed without the niche word (`niche_in_copy = False`), like the other kids products. No KDP export (these are cut-and-use sheets, not a book).
+- Needs a real-printer check: tag and plate sizes were laid out for 8.5 x 11 in and A4 at Actual size, with about 0.4 in clear margin; confirm your printer does not clip the dashed cut lines.

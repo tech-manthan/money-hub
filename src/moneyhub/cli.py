@@ -74,6 +74,7 @@ def make(
     stickers: int = typer.Option(None, help="Sticker sheets: number of stickers (12-48)"),
     theme: str = typer.Option(None, help="Kids coloring book and sticker sheets: picture theme (mixed, animals, ocean, garden, vehicles, dinosaurs, treats)"),
     age: str = typer.Option(None, help="Kids coloring book: 'kids' (ages 4-8) or 'toddler' (thicker, simpler lines)"),
+    names: str = typer.Option(None, help="Classroom printables: student names to print on tags and desk plates, comma separated (up to 30); blank lines to write in when omitted"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
 ):
@@ -89,6 +90,12 @@ def make(
     _check(language, ["en", "es", "fr", "de"], "--language"), _check(level, ["toddler", "kids", "big"], "--level"), _check(focus, ["mixed", "colours", "words", "numbers", "time", "feelings"], "--focus")
     _check(deck, ["oracle", "tarot"], "--deck"), _check(card_size, ["tall", "poker"], "--card-size")
     _check(theme, list(kidsart.THEMES), "--theme"), _check(age, list(kidsart.AGES), "--age")
+    if names:
+        from .products.classroom_pack import parse_names
+        try:
+            names = ", ".join(parse_names(names))
+        except ValueError as e:
+            raise typer.BadParameter(str(e), param_hint="--names")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif if not (motif or "").startswith("icon:") else None, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
         from .layouts import ART_PRESETS
@@ -128,7 +135,7 @@ def make(
         if not usable:
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
-    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "language": language, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
+    opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "language": language, "names": names, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
                               "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
