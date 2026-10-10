@@ -239,7 +239,7 @@ def test_all_pattern_kinds_draw_and_scatter_patterns_wrap_seamlessly():
 
     from moneyhub import patterns
     from moneyhub.products.digital_paper import PATTERN_NAMES, SEAM_CHECKED
-    assert len(patterns.KINDS) == 24 and set(PATTERN_NAMES) == set(patterns.KINDS)
+    assert len(patterns.KINDS) >= 36 and set(PATTERN_NAMES) == set(patterns.KINDS)
     assert set(SEAM_CHECKED) | set(patterns.HARD_EDGE) == set(patterns.KINDS)
     pal = PALETTES[4]
     for kind in patterns.KINDS:
@@ -251,7 +251,7 @@ def test_all_pattern_kinds_draw_and_scatter_patterns_wrap_seamlessly():
     from moneyhub.render.pdf import render_pdf
     import tempfile
     from pathlib import Path
-    for kind in [k for k in SEAM_CHECKED if k in patterns.KINDS[12:]]:
+    for kind in [k for k in SEAM_CHECKED if k in patterns.KINDS[12:]]:   # all the newer, non-banded patterns
         with tempfile.TemporaryDirectory() as t:
             html = f"<style>@page{{size:6in 6in;margin:0}}body{{margin:0}}svg{{width:6in;height:6in;display:block}}</style>{patterns.paper_svg(kind, pal, 3, 0, 1)}"
             render_pdf(html, Path(t) / "a.pdf", page_css_size="6in 6in")
@@ -276,7 +276,7 @@ def test_digital_paper_packs_use_a_seeded_selection_and_coloring_books_walk_thro
         kinds_seen.add(kind)
     assert kinds_seen == {"mandala", "pattern", "motif", "special"}
     order = lambda s: sorted(coloring.PATTERN_KINDS, key=lambda k: random.Random(f"{s}-{k}").random())   # noqa: E731
-    assert order(7) != order(8) and len(coloring.PATTERN_KINDS) == 20
+    assert order(7) != order(8) and len(coloring.PATTERN_KINDS) >= 30
 
 
 # ------------------------------------------------------------------ bigger libraries: kids figures and wall-art backgrounds

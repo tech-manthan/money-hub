@@ -14,9 +14,9 @@ from .patterns import pattern_tile
 INK = "#222222"
 STROKE = 5
 PATTERN_KINDS = ["scallops", "daisies", "arches", "leaves", "diamonds", "waves", "dots", "sparkles", "hearts", "stars", "ditsy", "paisley", "hexagons", "rainbows", "celestial",
-                 "blobs", "memphis", "chevron", "zigzag", "plaid"]
+                 "blobs", "memphis", "chevron", "zigzag", "plaid", "quatrefoil", "triangles", "ogee", "snowflakes", "cherries", "lemons", "tropical", "argyle", "houndstooth", "leopard"]
 DENSE = ("daisies", "leaves", "sparkles", "dots")
-ZOOM = {"hearts": 1.35, "stars": 1.35, "ditsy": 1.5, "paisley": 1.3, "rainbows": 1.4, "celestial": 1.4, "blobs": 1.15, "memphis": 1.4}   # small scatter shapes, enlarged so they are big enough to colour   # scatter patterns drawn 2 x 2 so the page is full enough to colour
+ZOOM = {"hearts": 1.35, "stars": 1.35, "ditsy": 1.5, "paisley": 1.3, "rainbows": 1.4, "celestial": 1.4, "blobs": 1.15, "memphis": 1.4, "snowflakes": 1.4, "cherries": 1.4, "lemons": 1.35, "tropical": 1.25, "leopard": 1.35}   # small scatter shapes, enlarged so they are big enough to colour   # scatter patterns drawn 2 x 2 so the page is full enough to colour
 LINE_MOTIFS = [m for m in MOTIFS if m not in ("terrazzo",)]
 _TAG = re.compile(r"<(path|circle|ellipse|rect|polygon|line|polyline)\b([^>]*?)(/?)>")
 

@@ -23,7 +23,9 @@ from .wall_art import JPEG_BUDGET, srgb_profile
 PATTERN_NAMES = {"dots": "Polka dots", "gingham": "Gingham", "stripes": "Candy stripes", "waves": "Wavy lines", "scallops": "Scallop scales", "arches": "Boho arches",
                  "terrazzo": "Terrazzo", "sparkles": "Sparkles", "leaves": "Leaf scatter", "diamonds": "Harlequin diamonds", "daisies": "Daisy meadow", "checks": "Checkerboard",
                  "plaid": "Cozy plaid", "chevron": "Chevron", "hearts": "Scattered hearts", "stars": "Star scatter", "ditsy": "Ditsy florals", "paisley": "Paisley",
-                 "hexagons": "Honeycomb", "rainbows": "Mini rainbows", "celestial": "Moons and stars", "blobs": "Cut-out blobs", "memphis": "Retro confetti", "zigzag": "Zig-zag lines"}
+                 "hexagons": "Honeycomb", "rainbows": "Mini rainbows", "celestial": "Moons and stars", "blobs": "Cut-out blobs", "memphis": "Retro confetti", "zigzag": "Zig-zag lines",
+                 "houndstooth": "Tooth check", "argyle": "Argyle", "leopard": "Leopard spots", "quatrefoil": "Quatrefoil", "ogee": "Ring lattice", "snowflakes": "Snowflakes",
+                 "cherries": "Cherries", "lemons": "Lemons", "tropical": "Tropical leaves", "triangles": "Triangle mosaic", "brushstrokes": "Brush strokes", "confetti": "Dot confetti"}
 SEAM_CHECKED = tuple(k for k in KINDS if k not in HARD_EDGE)   # straight bands (stripes, gingham, checks, plaid, chevron, zig-zag) meet the tile border by design
 MIN_PAPERS = 12   # a pack shows a seeded selection of the patterns, so every pack is different
 PX = 3600   # 12 in at 300 DPI
