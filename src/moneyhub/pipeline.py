@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import random
+import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -87,76 +88,79 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
     pdir = folder / "product"
     pdir.mkdir(parents=True, exist_ok=True)
 
-    ctx = BuildContext(niche=niche, style=style, out_dir=pdir, sizes=sizes, seed=seed, router=router,
-                       providers=req.providers, options=req.options,
-                       taken_titles=frozenset(t.lower() for _, t, _ in store.fingerprints()))
-    say(f"Writing content ({'LLM' if router.status() else 'offline'} chain)")
-    content, content_source = ptype.generate_content(ctx)
-    say(f"Content from {content_source}; rendering files")
-    build: BuildResult = ptype.build(ctx, content)
+    try:
+        ctx = BuildContext(niche=niche, style=style, out_dir=pdir, sizes=sizes, seed=seed, router=router,
+                           providers=req.providers, options=req.options,
+                           taken_titles=frozenset(t.lower() for _, t, _ in store.fingerprints()))
+        say(f"Writing content ({'LLM' if router.status() else 'offline'} chain)")
+        content, content_source = ptype.generate_content(ctx)
+        say(f"Content from {content_source}; rendering files")
+        build: BuildResult = ptype.build(ctx, content)
 
-    start = build_start_page(build, style, pdir, ptype.key, niche.key, req.options.get("gsheet_url"))
-    if start:
-        build.files.insert(0, start)
+        start = build_start_page(build, style, pdir, ptype.key, niche.key, req.options.get("gsheet_url"))
+        if start:
+            build.files.insert(0, start)
 
-    say("Checking for similar existing products")
-    fp = ptype.fingerprint(ctx, content)
-    similar = most_similar(fp, store.fingerprints())
+        say("Checking for similar existing products")
+        fp = ptype.fingerprint(ctx, content)
+        similar = most_similar(fp, store.fingerprints())
 
-    say("Writing listing copy")
-    kit: ListingKit = make_kit(niche, ptype, build, router, random.Random(seed), providers=req.providers)
-    labels = [ptype.size_label(s) for s in sizes]
-    images: dict[str, list[Path]] = {}
-    if req.with_images:
-        say("Creating listing images and pins")
-        images = make_images(build, style, folder, ptype.key, kit.copy_, labels, router=router, niche=niche,
-                             providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)),
-                             motion_engines=req.motion, marketplaces=req.marketplaces)
-    say("Writing marketplace guides")
-    render_guides(folder, kit, build, images, style.palette.key, req.marketplaces)
-    (folder / "listing").mkdir(exist_ok=True)
-    (folder / "listing" / "listing.json").write_text(kit.model_dump_json(indent=2), encoding="utf-8")
-    (folder / "listing" / "etsy-description.txt").write_text(kit.description, encoding="utf-8")
-    (folder / "listing" / "etsy-tags.txt").write_text(", ".join(kit.copy_.tags), encoding="utf-8")
-    pins = [{"title": t, "headline": h} for t, h in zip(kit.copy_.pin_titles, kit.copy_.pin_headlines)]
-    (folder / "listing" / "pins.json").write_text(json.dumps({"description": kit.copy_.pin_description, "pins": pins}, indent=2), encoding="utf-8")
+        say("Writing listing copy")
+        kit: ListingKit = make_kit(niche, ptype, build, router, random.Random(seed), providers=req.providers)
+        labels = [ptype.size_label(s) for s in sizes]
+        images: dict[str, list[Path]] = {}
+        if req.with_images:
+            say("Creating listing images and pins")
+            images = make_images(build, style, folder, ptype.key, kit.copy_, labels, router=router, niche=niche,
+                                 providers=req.providers, videos=req.with_video and bool(cfg.get("render.videos", True)),
+                                 motion_engines=req.motion, marketplaces=req.marketplaces)
+        say("Writing marketplace guides")
+        render_guides(folder, kit, build, images, style.palette.key, req.marketplaces)
+        (folder / "listing").mkdir(exist_ok=True)
+        (folder / "listing" / "listing.json").write_text(kit.model_dump_json(indent=2), encoding="utf-8")
+        (folder / "listing" / "etsy-description.txt").write_text(kit.description, encoding="utf-8")
+        (folder / "listing" / "etsy-tags.txt").write_text(", ".join(kit.copy_.tags), encoding="utf-8")
+        pins = [{"title": t, "headline": h} for t, h in zip(kit.copy_.pin_titles, kit.copy_.pin_headlines)]
+        (folder / "listing" / "pins.json").write_text(json.dumps({"description": kit.copy_.pin_description, "pins": pins}, indent=2), encoding="utf-8")
 
-    say("Running quality checks")
-    checks = run_checks(build, style, sizes) + media_checks(folder)
-    if similar[0] >= 0.6:
-        checks.append(Check("Uniqueness", "warn", f"{similar[0]:.0%} similar to existing product #{similar[1]} '{similar[2]}' - change niche angle or regenerate"))
-    else:
-        checks.append(Check("Uniqueness", "pass", f"closest existing product is {similar[0]:.0%} similar"))
-    findings = riskmod.scan_listing(json.loads(kit.model_dump_json()), content.model_dump_json(), req.niche)
-    top = riskmod.status(findings)
-    checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",
-                        "nothing on the watch list" if not findings else "; ".join(f"{f.where}: '{f.term}' ({f.severity})" for f in findings[:6])))
-    from .spellcheck import spelling_check
-    checks.append(spelling_check(content.model_dump_json(), json.loads(kit.model_dump_json()), niche))
-    if findings:
-        (folder / "listing" / "risk.json").write_text(json.dumps([f.to_dict() for f in findings], indent=2), encoding="utf-8")
-    qa_status = summarize(checks)
+        say("Running quality checks")
+        checks = run_checks(build, style, sizes) + media_checks(folder)
+        if similar[0] >= 0.6:
+            checks.append(Check("Uniqueness", "warn", f"{similar[0]:.0%} similar to existing product #{similar[1]} '{similar[2]}' - change niche angle or regenerate"))
+        else:
+            checks.append(Check("Uniqueness", "pass", f"closest existing product is {similar[0]:.0%} similar"))
+        findings = riskmod.scan_listing(json.loads(kit.model_dump_json()), content.model_dump_json(), req.niche)
+        top = riskmod.status(findings)
+        checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",
+                            "nothing on the watch list" if not findings else "; ".join(f"{f.where}: '{f.term}' ({f.severity})" for f in findings[:6])))
+        from .spellcheck import spelling_check
+        checks.append(spelling_check(content.model_dump_json(), json.loads(kit.model_dump_json()), niche))
+        if findings:
+            (folder / "listing" / "risk.json").write_text(json.dumps([f.to_dict() for f in findings], indent=2), encoding="utf-8")
+        qa_status = summarize(checks)
 
-    (folder / "spec.json").write_text(json.dumps({
-        "request": {"niche": req.niche, "product_type": req.product_type, "sizes": sizes, "seed": seed, "options": req.options},
-        "style": style.describe(), "niche_source": niche_source, "content_source": content_source, "listing_source": kit.source,
-        "content": json.loads(content.model_dump_json()),
-    }, indent=2), encoding="utf-8")
+        (folder / "spec.json").write_text(json.dumps({
+            "request": {"niche": req.niche, "product_type": req.product_type, "sizes": sizes, "seed": seed, "options": req.options},
+            "style": style.describe(), "niche_source": niche_source, "content_source": content_source, "listing_source": kit.source,
+            "content": json.loads(content.model_dump_json()),
+        }, indent=2), encoding="utf-8")
 
-    pid = store.add_product(
-        slug=folder.name, title=build.title, niche=niche.key, niche_name=niche.name, product_type=ptype.key,
-        style=style.key, status="draft", folder=str(folder), price=kit.price, qa=[c.to_dict() for c in checks],
-        fingerprint=fp, content_source=content_source, listing_source=kit.source,
-        spec=json.dumps({"seed": seed, "sizes": sizes, "style": style.describe()}),
-    )
-    make_package(folder)
-    say("Done")
-    return Result(pid, folder, build.title, qa_status, checks, similar, content_source, kit.source)
+        pid = store.add_product(
+            slug=folder.name, title=build.title, niche=niche.key, niche_name=niche.name, product_type=ptype.key,
+            style=style.key, status="draft", folder=str(folder), price=kit.price, qa=[c.to_dict() for c in checks],
+            fingerprint=fp, content_source=content_source, listing_source=kit.source,
+            spec=json.dumps({"seed": seed, "sizes": sizes, "style": style.describe()}),
+        )
+        make_package(folder)
+        say("Done")
+        return Result(pid, folder, build.title, qa_status, checks, similar, content_source, kit.source)
+    except BaseException:
+        shutil.rmtree(folder, ignore_errors=True)  # a failed run must not leave an empty product folder
+        raise
 
 
 def delete_product(pid: int, store: Store | None = None) -> bool:
     """Remove a product from the catalogue and delete its folder, but only a folder inside the output directory."""
-    import shutil
     st = store or Store()
     p = st.product(pid)
     if not p:

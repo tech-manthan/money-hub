@@ -69,6 +69,9 @@ def test_hyperframes_composition_has_every_scene_and_a_registered_timeline():
 
 @pytest.mark.skipif(not ENGINES["hyperframes"].available(), reason="HyperFrames not installed (moneyhub engines install hyperframes)")
 def test_hyperframes_renders_a_video(tmp_path):
+    import shutil
+    if shutil.disk_usage(tmp_path).free < 10**9:
+        pytest.skip("less than 1 GB free disk; the HyperFrames render needs scratch space")
     from PIL import Image
     from moneyhub.render import graphics as g
     plan = MotionPlan(scenes=[Scene(kind="title", text="Hello", seconds=1.0), Scene(kind="page", text="Look", seconds=1.0),

@@ -42,14 +42,23 @@ Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `cla
 
 - **Added Oct 2026**: `kids_coloring` (`kidsart.py`), `sticker_sheets` (`stickers.py`), `oracle_deck` (`oracle_art.py`; tarot-style or oracle); in-use mockups for every product family (`render/mockups.py`: `product_scene`, `scenes_for`; products put single designs in `meta["mockup_tiles"]`); niche-free products use design fingerprints and "Vol. N" titles (`ProductType.unique_title`/`fingerprint`); cut files have a round-trip check (`cutfiles.validate_exports`, QA "Opens in cutting software") and the DXF declares inches. Options added to the CLI and UI: `--pages`, `--theme`, `--age`, `--stickers`, `--deck`, `--card-size`, `--cards`. Inkscape (brew cask) is installed on the dev Mac; one test renders a cut SVG with it and skips if it is missing.
 
+## Newer products and tooling (22 product types)
+- Added since the first list: `activity_book` (`activities.py`: mazes with answers, dot-to-dot, tracing, odd-one-out), `learning_workbook` (`learning.py`: 10 worksheet types, 6 focuses, bilingual), `character_clipart`, `icon_pack`, `montessori_cards` (three-part cards). Kids art lives in `kidsart.py` + `kidsart_extra.py` (80 figures, 26 themes).
+- **Translations** (`translations.py`): es/fr/de word lists are guarded. QA fails until `moneyhub translations check` (AI proofread) and a human `moneyhub translations approve`. New translated words go in `translations.py` only.
+- **SVG assets** (`svgassets.py`, `moneyhub assets ...`): licence-checked Tabler/Lucide fetcher plus your own folder. Accepts MIT/ISC/Apache/CC0/PD/CC-BY 4.0; refuses CC-BY-SA, NC, GPL. Wall art can use `icon:<set>` motifs; `docs/licenses.md` has the detail.
+- **Mockups** (`render/mockups.py`): in-use scenes for every family (`FAMILIES`); products put single designs in `meta["mockup_tiles"]` via `mockups.save_tiles`.
+- **Platform packs** (`listing/platforms.py`): Etsy/Gumroad/Payhip/Ko-fi zips via `moneyhub export pack <id> <platform>`.
+- A failed generation now removes its folder (`pipeline.generate`), so no empty folders appear in `out/products`.
+- Tests: ~565, about 8 minutes. Use `pytest -q --basetemp=<scratch dir>` and delete it afterwards; the data volume runs near full. The HyperFrames render test skips below 1 GB free disk.
+
+## New product type checklist
+1. `products/<key>.py` subclass, `@register`, import in `products/registry.py` `_load_all`; templates in `products/templates/` (reuse `coloring.html.j2` or `oracle.html.j2`/`montessori.html.j2`).
+2. Niche-free products: `niche_in_copy = False`, `copy_audience`, `title_suffix`, `how_steps`, `self.unique_title(ctx, name)`.
+3. `listing/kit.py` `_TYPE_WORDS`, `web/guide.py` entry, `exports/kdp.py` SUPPORTED / `web/app.py` `pdf_types` for print books, `render/mockups.py` FAMILIES.
+4. CLI option in `cli.py make()`, web field in `web/app.py create_job` + `start.html` + `start.js` (+ classic `index.html`/`app.js`); validate in both CLI and web.
+5. Tests in `tests/test_art_formats.py`, docs in `docs/art-formats.md`, re-run `scripts/record_tour.py` if the wizard changed.
+
 ## Pending work (start here in a new session)
-Do these in order; commit each with tests; no pushes unless the owner asks (3+ commits are local and unpushed at the time of writing).
-1. ~~Wall-art motifs~~ done (scallop/topo/bouquet/retro redrawn; test covers every motif).
-2. ~~Wall-art page layouts~~ done: `WallArtSpec` in `layouts.py` (presets stacked/headline/framed/poster/divided + `mixed`, `auto:N`, described); `art_boxes()` is the one geometry source for the page template and the editable SVG; `--layout 0-4` is a hidden alias for the first five presets. Default is now `stacked` (was mixed).
-3. ~~Layouts for the other product types~~ done: habit tracker, guided journal, checklist pack, worksheet pack, card deck, ebook guide, budget tracker each have a spec + presets + `random_*_spec` in `layouts.py`; templates read `spec`, CSS comes from a `_css(spec, page)` helper, and `ProductType.render_layout()`/`render_fitted()` re-render with the first preset when a layout overflows (page-count check). Card deck layouts change card size/fill/border (mini 12, poker 9, large 4 per sheet).
-4. ~~KDP export~~ done: card deck skipped on purpose; export now also makes a finished full-wrap cover PDF (`-cover-<trim>.pdf`, designed from the palette) plus the guide-line template, accepts `--cover-image` / `--no-cover-text` (CLI) and a file box on the product page, and checks cover size and image sharpness. Journal, guide and habit tracker were already in `kdp.SUPPORTED`.
-5. **Verify on real platforms** (needs the owner; step-by-step in `docs/owner-verification.md`): import the Notion zip into Notion, the Canva PDF into Canva, the KDP interior/cover in KDP's previewer, the e-ink PDFs on a device, GoodNotes links, xlsx in Excel/Numbers. Fix what breaks and add tests.
-6. **CI**: push the branch (owner's call) and fix whatever the GitHub macOS/Linux matrix reports.
-7. **Image-AI providers** (Hugging Face / Together / OpenAI) are untested: needs a key from the owner; test via Settings > Test, then a wall-art build with `--art-provider huggingface`.
-8. **Penpot**: try importing an `editable/*.svg` into a real Penpot and fix import problems.
-9. After UI changes, re-run `python scripts/record_tour.py` (about 6 minutes) and re-run the full test suite.
+Commit each with tests; no pushes unless the owner asks (~40 commits are local).
+1. Classroom printables (`classroom_pack`). 2. Visual schedules (`visual_schedule`). 3. More learning niches (handwriting, sight words, STEM shapes). 4. Seasonal bundles. 5. Starter-kit bundle + `make-many` (a `bundle` command already exists: extend it). 6. Cricut print-then-cut marks. 7. Cross-type uniqueness warning. 8. Cut files from kids figures (needs a silhouette union, likely shapely).
+Owner-side checks (needs the owner, see `docs/owner-verification.md`): Notion/Canva/KDP imports, e-ink devices, GoodNotes links, xlsx in Excel/Numbers, test cuts, paper printing, a native speaker approving translations, image-AI provider keys, Penpot import, pushing the branch so CI runs.

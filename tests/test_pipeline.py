@@ -113,3 +113,13 @@ def test_delete_returns_to_my_products_with_a_toast_message_and_uses_the_confirm
     r = c.post(f"/product/{res.product_id}/delete", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"].startswith("/products?deleted=")
     assert Store().product(res.product_id) is None
+
+
+def test_failed_generation_leaves_no_empty_folder(monkeypatch):
+    from moneyhub.config import get_config
+    from moneyhub.products.card_deck import CardDeck
+    monkeypatch.setattr(CardDeck, "build", lambda self, ctx, content: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pytest.raises(RuntimeError):
+        generate(Request("teacher", "card_deck", sizes=["letter"], providers=["builtin"], seed=3, with_images=False))
+    products = get_config().output_dir / "products"
+    assert not products.exists() or not any(products.iterdir())
