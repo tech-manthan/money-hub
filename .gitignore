@@ -9,3 +9,4 @@ moneyhub.local.yaml
 node_modules/
 engines/remotion/out/
 tools/
+.DS_Store

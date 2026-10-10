@@ -80,6 +80,20 @@ def test_editable_export_is_valid_layered_svg(wall):
     assert "Palette" in (out / "BRIEF.md").read_text() and list((out / "fonts").glob("*.ttf"))
 
 
+def test_every_named_object_is_its_own_layer_group(wall):
+    """So design apps and PSD export get one layer per object instead of one flat layer."""
+    from moneyhub.editable import export_editable
+    out = export_editable(wall.folder, wall.product_id)
+    pin = minidom.parseString((out / "pins" / "pin-01.svg").read_text()).documentElement
+    top = [n for n in pin.childNodes if n.nodeType == n.ELEMENT_NODE]
+    groups = [n for n in top if n.tagName == "g" and n.getAttribute("id").startswith("layer-")]
+    assert len(groups) >= 6
+    for gp in groups:   # each group holds exactly the object it names, with its id unchanged
+        inner = [n for n in gp.childNodes if n.nodeType == n.ELEMENT_NODE]
+        assert len(inner) == 1 and gp.getAttribute("id") == "layer-" + inner[0].getAttribute("id")
+    assert any(g.getAttribute("id") == "layer-headline" for g in groups)
+
+
 def test_import_edits_replaces_images_backs_up_and_rebuilds_zip(wall, tmp_path):
     from moneyhub.editable import export_editable, import_edits
     export_editable(wall.folder, wall.product_id)

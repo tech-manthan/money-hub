@@ -85,9 +85,15 @@ class _Svg:
     def raw(self, s: str):
         self.parts.append(s)
 
+    @staticmethod
+    def _layer(part: str) -> str:
+        """Put every named object in its own group, so design apps (and PSD export) get one layer per object, not one flat layer."""
+        m = re.match(r'<(?:rect|ellipse|image|text)\b[^>]*?\sid="([^"]+)"', part)
+        return f'<g id="layer-{m.group(1)}">{part}</g>' if m else part
+
     def render(self) -> str:
         return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{self.w}" height="{self.h}" '
-                f'viewBox="0 0 {self.w} {self.h}">' + "".join(self.parts) + "</svg>")
+                f'viewBox="0 0 {self.w} {self.h}">' + "".join(self._layer(p) for p in self.parts) + "</svg>")
 
 
 # ----------------------------------------------------------------------------- pins
