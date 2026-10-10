@@ -274,7 +274,7 @@ def test_digital_paper_packs_use_a_seeded_selection_and_coloring_books_walk_thro
         kind, svg, *_ = (*coloring.page_art(i, 7, PALETTES[0]), None)
         assert svg.startswith("<svg") and "NaN" not in svg
         kinds_seen.add(kind)
-    assert kinds_seen == {"mandala", "pattern", "motif"}
+    assert kinds_seen == {"mandala", "pattern", "motif", "special"}
     order = lambda s: sorted(coloring.PATTERN_KINDS, key=lambda k: random.Random(f"{s}-{k}").random())   # noqa: E731
     assert order(7) != order(8) and len(coloring.PATTERN_KINDS) == 20
 
@@ -332,3 +332,14 @@ def test_activity_book_has_answer_pages_and_learning_workbook_is_niche_free():
     res2 = generate(Request("nurse", "learning_workbook", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False,
                             options={"no_research": True, "pages": 10, "focus": "numbers"}))
     assert not [c for c in res2.checks if c.status == "fail"] and "nurse" not in (res2.folder / "listing" / "etsy-description.txt").read_text().lower()
+
+
+def test_every_special_coloring_style_draws_and_books_walk_through_them():
+    from moneyhub import coloring
+    for name, fn in coloring.SPECIALS:
+        svg = fn(3)
+        assert svg.startswith("<svg") and "NaN" not in svg and len(svg) > 500, name
+    seen = {coloring.page_art(i, 4, PALETTES[0])[0] for i in range(60)}
+    assert "special" in seen
+    from moneyhub.coloring import SPECIALS
+    assert len(SPECIALS) >= 7
