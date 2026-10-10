@@ -86,6 +86,8 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
             checks.append(Check(f"{f.path.name}: internal links", "pass" if links else "fail", f"{links} link annotations on first pages"))
     for f in [x for x in build.files if x.kind == "xlsx"]:
         checks += _xlsx_checks(f.path)
+    for f in [x for x in build.files if x.kind == "pptx"]:
+        checks += _pptx_checks(f.path, build.meta.get("slides", 0))
     for f in [x for x in build.files if x.kind == "zip"]:
         checks += _zip_checks(f.path, build.meta.get("min_px", 2000))
     if "cut_min_gap_mm" in build.meta:   # cut files: the thinnest bridge between two cuts must survive a real cutting mat
@@ -103,6 +105,23 @@ def run_checks(build: BuildResult, style: Style, expected_sizes: list[str], spec
         v = build.meta["seam_excess"]
         checks.append(Check("Seamless tiling", "pass" if v <= 12 else "warn", f"edge join {v:+.1f} vs neighbouring pixels (12 or less is clean)"))
     return checks
+
+
+def _pptx_checks(path: Path, slides: int) -> list[Check]:
+    import re
+    import zipfile
+
+    size_mb = path.stat().st_size / 1e6
+    out = [Check(f"{path.name}: size", "pass" if size_mb < 20 else "fail", f"{size_mb:.1f} MB (Etsy limit 20 MB per file)")]
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = z.namelist()
+            n = len([x for x in names if re.fullmatch(r"ppt/slides/slide\d+\.xml", x)])
+            ok = "ppt/presentation.xml" in names and n >= 1 and (not slides or n == slides)
+            out.append(Check(f"{path.name}: slides", "pass" if ok else "fail", f"{n} slides" + ("" if ok else f" (expected {slides}) or missing presentation.xml")))
+    except (zipfile.BadZipFile, OSError) as e:
+        out.append(Check(f"{path.name}: opens", "fail", f"not a valid .pptx package: {e}"))
+    return out
 
 
 def _zip_checks(path: Path, min_px: int = 2000) -> list[Check]:

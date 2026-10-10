@@ -57,6 +57,8 @@ Penpot SVG import, live image-AI providers (Hugging Face, Together, OpenAI; `cla
 - A failed generation now removes its folder (`pipeline.generate`), so no empty folders appear in `out/products`.
 - Tests: ~565, about 8 minutes. Use `pytest -q --basetemp=<scratch dir>` and delete it afterwards; the data volume runs near full. The HyperFrames render test skips below 1 GB free disk.
 
+- **`presentation_template`** (`products/presentation_template.py`, `presentations.py`): 12-slide editable `.pptx` built with the deckcraft tool (needs it installed; the craft switches do not matter), PDF preview, one editing-guide PDF (the generic Start-Here is skipped for this type). Niche-free ("<Palette> Clean ... Presentation Template"), pseudo size `deck`. Listing photos come from portrait overview sheets (`art_previews`). New hooks: `ProductType.use_faq`, `ProductType.extra_tags`, `meta["etsy_category"]`, QA `_pptx_checks`. Real font family names go through `presentations.family`. `docs/what-to-upload.md` lists what to upload on each platform. Not checked in real PowerPoint/Keynote/Google Slides.
+
 ## New product type checklist
 1. `products/<key>.py` subclass, `@register`, import in `products/registry.py` `_load_all`; templates in `products/templates/` (reuse `coloring.html.j2` or `oracle.html.j2`/`montessori.html.j2`).
 2. Niche-free products: `niche_in_copy = False`, `copy_audience`, `title_suffix`, `how_steps`, `self.unique_title(ctx, name)`.

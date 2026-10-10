@@ -1,0 +1,26 @@
+{% from '_macros.html.j2' import header, footer %}
+<section class="page">
+  {{ header(style, 'Editing guide', title) }}
+  <div class="card soft" style="margin:1em 0;padding:1.2em 1.6em">
+    <div class="label">What you get</div>
+    <div>An editable slide deck with {{ slides }} widescreen (16:9) slides: {{ names }}. Every object is a normal text box or shape: click it to retype, recolour or move it.</div>
+  </div>
+  <div class="card" style="padding:1.2em 1.6em">
+    <div class="label">How to use it</div>
+    <div class="steps">
+      <div>1. Install the free fonts below (otherwise your software shows a replacement font).</div>
+      <div>2. Open the .pptx file in PowerPoint, Keynote, Google Slides or LibreOffice Impress. In Google Slides use File, Open, Upload.</div>
+      <div>3. Replace the sample text and pictures. Duplicate or delete slides as you like. Slide 8 and 10 have shapes to drop your own pictures onto.</div>
+      <div>4. Change colours with the colour pickers, or recolour the whole deck in the theme colours.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1em;padding:1.2em 1.6em">
+    <div class="label">Fonts</div>
+    <div class="small">Headings: {{ heading }}. Text: {{ body }}. Both are free Google Fonts. The fonts are not included in the download.</div>
+  </div>
+  <div class="card" style="margin-top:1em;padding:1.2em 1.6em">
+    <div class="label">Licence</div>
+    <div class="small">Use the template for your own presentations, for yourself or your own business. You may not resell, share or give away the template file or edited copies of it as a template. The slide design was made with software, including AI-assisted tools. {% if shop.name or shop.email %}Questions: {{ shop.name }}{% if shop.email %} - {{ shop.email }}{% endif %}.{% else %}Questions? Message the seller through the marketplace you bought from.{% endif %}</div>
+  </div>
+  {{ footer(title, false, 'Thank you for your purchase') }}
+</section>

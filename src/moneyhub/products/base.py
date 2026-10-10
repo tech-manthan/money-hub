@@ -81,6 +81,8 @@ class ProductType(ABC, Generic[C]):
     title_suffix: ClassVar[str] = ""     # trailing words of the title dropped to get the short name used in listing copy
     license_terms: ClassVar[str] = ""
     license_faq: ClassVar[str] = ""
+    extra_tags: ClassVar[tuple[str, ...]] = ()   # replaces the generic filler tags (gift idea, relaxation...) in niche-free listings
+    use_faq: ClassVar[str] = ""          # replaces the generic "how many times can I print / which apps" Q&A in niche-free listings
     how_steps: ClassVar[tuple[str, ...]] = ()
     layout_preview_page: ClassVar[int] = 0   # PDF page (0-based) shown in the thumbnail when layout_marker is empty or not found
     auto_layout: ClassVar[bool] = False   # also accepts "auto" / "auto:<number>" (generated) and an explicit layout_spec option

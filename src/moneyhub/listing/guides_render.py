@@ -24,7 +24,7 @@ def render_guides(out_dir: Path, kit: ListingKit, build, images: dict[str, list[
             continue
         ctx = dict(common)
         if m == "etsy":
-            ctx.update(video=[rel(p) for p in images.get("video", []) if "listing" in p.name], images=[rel(p) for p in images.get("etsy", [])], has_xlsx=any(f.kind == "xlsx" for f in build.files), colour=style_palette)
+            ctx.update(video=[rel(p) for p in images.get("video", []) if "listing" in p.name], images=[rel(p) for p in images.get("etsy", [])], has_xlsx=any(f.kind == "xlsx" for f in build.files), colour=style_palette, category=build.meta.get("etsy_category", ""))
         elif m in ("gumroad",):
             gi = images.get("gumroad", [])
             ctx.update(cover=rel(gi[0]) if gi else "", thumb=rel(gi[1]) if len(gi) > 1 else "")

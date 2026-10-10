@@ -92,6 +92,7 @@ _TYPE_WORDS = {
     "sticker_sheets": ["sticker sheets", "printable stickers", "goodnotes stickers", "digital stickers", "planner stickers", "cute stickers"],
     "kids_coloring": ["kids coloring pages", "coloring book for kids", "printable coloring", "toddler coloring pages", "preschool printables", "animal coloring pages"],
     "clipart_pack": ["clipart bundle", "boho clipart", "commercial use clipart", "png clipart", "svg clipart", "abstract shapes clipart"],
+    "presentation_template": ["presentation template", "pptx template", "slide deck template", "editable slides", "business presentation", "minimal slides"],
     "ebook_guide": ["printable guide", "beginner guide pdf", "digital guide", "how to guide", "starter guide", "cheat sheet pdf"],
 }
 
@@ -105,7 +106,7 @@ def _generic_copy(ptype: ProductType, build: BuildResult, words: list[str]) -> L
     tags: list[str] = []
     commercial = "commercial" in ptype.license_terms.lower()
     for kw in [*words, "instant download", "digital download", f"{nm.lower()} {ptype.label.lower()}", "digital art", "craft supplies", "printable art",
-               *(["commercial use", "design resources", "small business"] if commercial else ["gift idea", "relaxation", "mindfulness"])]:
+               *(["commercial use", "design resources", "small business"] if commercial else list(ptype.extra_tags or ["gift idea", "relaxation", "mindfulness"]))]:
         kw = kw.lower().strip()
         if 3 <= len(kw) <= ETSY_TAG_MAX_LEN and kw not in tags:
             tags.append(kw)
@@ -116,7 +117,7 @@ def _generic_copy(ptype: ProductType, build: BuildResult, words: list[str]) -> L
         faq=["Q: How do I receive the files? A: Instantly after purchase - you get a download link by email and on your purchases page.",
              ptype.license_faq or "Q: Can I resell or share the files? A: No - personal use only. Please do not redistribute or resell.",
              "Q: Which apps can I use? A: Any app that opens PNG, JPG or SVG files: Canva, Procreate, Photoshop, Affinity, Cricut Design Space and more."
-             if commercial else "Q: Can I print it more than once? A: Yes. Print as many copies as you like for yourself or your classroom."],
+             if commercial else ptype.use_faq or "Q: Can I print it more than once? A: Yes. Print as many copies as you like for yourself or your classroom."],
         pin_titles=[f"{nm} {ptype.label}: {words[0]}", f"{words[1 % len(words)].title()} - {nm}", f"{nm} {words[0]} (instant download)",
                     f"{words[2 % len(words)].title()} for {aud}"[:100], f"New: {nm} {words[0]}", f"Best {words[0]} for your next project"],
         pin_headlines=[nm, f"{nm} {ptype.label}", "Instant download", f"For {aud}"[:40], "Commercial use included" if commercial else "Print as often as you like", "Made to create with"],

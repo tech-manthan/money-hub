@@ -37,6 +37,7 @@ PRODUCT_PLAIN = {
     "sticker_sheets": "Colourful stickers with a die-cut border: printable sheets plus transparent PNGs for digital planners.",
     "kids_coloring": "Children's coloring pages: friendly animals, vehicles and treats plus shape, counting and tracing pages (PDF). New figures every time.",
     "coloring_pages": "Printable mandala and pattern coloring pages as clean line art (PDF).",
+    "presentation_template": "Editable 12-slide widescreen deck (.pptx) with a PDF preview and an editing guide. Needs the deckcraft tool installed.",
     "digital_paper": "Seamless 12 x 12 in patterns as JPG papers, with a commercial licence.",
 }
 
