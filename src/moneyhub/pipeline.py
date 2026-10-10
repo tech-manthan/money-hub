@@ -135,6 +135,10 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
             if near[0] >= CROSS_TYPE_THRESHOLD:
                 checks.append(Check("Uniqueness across types", "warn", f"{near[0]:.0%} of its colours, theme and pictures match {near[3]} #{near[1]} '{near[2]}': "
                                     "buyers may see them as the same pack; change the theme or look"))
+        from .crafttools import second_opinion
+        opinion = second_opinion(folder)
+        if opinion is not None:
+            checks.append(opinion)
         findings = riskmod.scan_listing(json.loads(kit.model_dump_json()), content.model_dump_json(), req.niche)
         top = riskmod.status(findings)
         checks.append(Check("Risk check (brands, claims, rights language)", top if top != "pass" else "pass",

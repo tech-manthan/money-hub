@@ -52,6 +52,23 @@ render:
   # remotion_browser: /path/to/chrome-headless-shell   # optional; Remotion downloads its own if unset
   # manim_command: /path/to/manim
 
+# Optional third-party craft tools (pdfcraft, gridcraft, vectorcraft ... installed by scripts/install_craft_tools.sh).
+# Everything is OFF by default, so MoneyHub behaves exactly as before. When on, a tool is only a second opinion: a missing,
+# slow or failing tool is skipped and never fails a product. Change these in Settings or with `moneyhub tools --enable pdfcraft`.
+craft:
+  enabled: false            # master switch
+  verify_after_make: false  # add a "Second opinion" line to every new product's quality checks
+  timeout: 90               # seconds per tool call
+  tools:
+    vectorcraft: false
+    pdfcraft: false
+    gridcraft: false
+    photocraft: false
+    wordcraft: false
+    deckcraft: false
+    soundcraft: false
+    cadcraft: false
+
 # Printed on the 'Start Here' page of every download (all optional).
 shop:
   name: ""

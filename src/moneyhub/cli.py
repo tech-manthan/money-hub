@@ -719,11 +719,31 @@ def engines_test(name: str = typer.Argument("pillow"), out: Path = typer.Option(
 
 
 @app.command()
-def tools():
-    """Which storytold craft tools (pdfcraft, gridcraft, vectorcraft ...) are installed and their versions."""
-    from .crafttools import status
+def tools(enable: str = typer.Option(None, help="Switch these tools on for automatic checks (comma list, or 'all')"),
+          disable: str = typer.Option(None, help="Switch these tools off (comma list, or 'all')"),
+          master: bool = typer.Option(None, "--master/--no-master", help="Master switch for every automatic use of the craft tools"),
+          verify_after_make: bool = typer.Option(None, "--verify-after-make/--no-verify-after-make",
+                                                 help="Add a warn-only 'Second opinion' check to every new product")):
+    """Which storytold craft tools are installed, and which ones MoneyHub uses automatically (everything is off by default)."""
+    from .crafttools import CHECKERS, save_settings, settings_view, status
+    changes = {}
+    for names, on in ((enable, True), (disable, False)):
+        if names:
+            for n in (CHECKERS if names.strip() == "all" else [x.strip() for x in names.split(",") if x.strip()]):
+                changes[n] = on
+    if changes or master is not None or verify_after_make is not None:
+        try:
+            save_settings(master, verify_after_make, changes)
+        except ValueError as e:
+            raise typer.BadParameter(str(e))
+    view = settings_view()
+    on = {t["tool"]: t["enabled"] for t in view["tools"]}
+    typer.echo(f"Craft tools: {'ON' if view['enabled'] else 'off'} (master)   verify after make: {'on' if view['verify_after_make'] else 'off'}\n")
     for t in status():
-        typer.echo(f"{'ok ' if t['path'] else '-- '}{t['tool']:<12} {t['version'] or '':<10} {t['path'] or 'not installed (scripts/install_craft_tools.sh)'}")
+        flag = "auto " if on.get(t["tool"]) else "     "
+        typer.echo(f"{'ok ' if t['path'] else '-- '}{flag}{t['tool']:<12} {t['version'] or '':<10} {t['path'] or 'not installed (scripts/install_craft_tools.sh)'}")
+    if not view["enabled"]:
+        typer.echo("\nOff means MoneyHub behaves exactly as before. Turn on: moneyhub tools --master --enable pdfcraft,gridcraft --verify-after-make")
 
 
 @app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})

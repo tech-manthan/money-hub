@@ -441,11 +441,23 @@ def settings_art(request: Request, providers: list[str] = Form(default=[])):
     return {"ok": True, "providers": chosen}
 
 
+@app.post("/api/settings/craft")
+def settings_craft(request: Request, enabled: str = Form(""), verify_after_make: str = Form(""), tools: list[str] = Form(default=[])):
+    _local_only(request)
+    from ..crafttools import CHECKERS, save_settings
+    try:
+        view = save_settings(bool(enabled), bool(verify_after_make), {t: t in tools for t in CHECKERS})
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    return {"ok": True, **view}
+
+
 @app.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     cfg = get_config()
+    from ..crafttools import settings_view
     return templates.TemplateResponse(request, "settings.html", _ctx(
-        request, providers=get_router().status(), tasks=cfg.get("llm.tasks") or {}, out=str(cfg.output_dir),
+        request, craft=settings_view(), providers=get_router().status(), tasks=cfg.get("llm.tasks") or {}, out=str(cfg.output_dir),
         renderers=cfg.get("render.pdf") or ["weasyprint"], art=art_status(), keys=keystore.status(), env_file=str(keystore.env_path())))
 
 

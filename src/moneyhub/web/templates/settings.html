@@ -38,6 +38,17 @@
   {% for k in keys if k.group == 'art' %}{{ keyrow(k) }}{% endfor %}
 </div>
 
+<div class="panel" style="margin-top:16px"><h2 style="margin-top:0">Second-opinion tools (optional)</h2>
+  <p class="meta">Third-party programs that open your finished files and say whether they read cleanly. <b>Off by default</b>, so MoneyHub works exactly as before. When on, a missing, slow or failing tool is skipped and never stops a product. Install them with <code>scripts/install_craft_tools.sh</code>.</p>
+  <form id="craft-form">
+    <label class="artopt"><input type="checkbox" name="enabled" value="1" {{ 'checked' if craft.enabled }}> <b>Use them</b> (master switch)</label>
+    <label class="artopt"><input type="checkbox" name="verify_after_make" value="1" {{ 'checked' if craft.verify_after_make }}> <b>Check every new product</b> and add a warning line if one cannot be opened</label>
+    {% for t in craft.tools %}<label class="artopt"><input type="checkbox" name="tools" value="{{ t.tool }}" {{ 'checked' if t.enabled }}> <b>{{ t.tool }}</b>
+      <span class="badge {{ 'pass' if t.installed else 'warn' }}">{{ t.version or 'ready' if t.installed else 'not installed' }}</span></label>{% endfor %}
+    <button type="submit" class="sm">Save choices</button> <span id="craft-msg" class="meta" role="status"></span>
+  </form>
+</div>
+
 <details class="panel" style="margin-top:16px"><summary><b>Advanced: which helper runs which task</b></summary>
 <table>{% for k, v in tasks.items() %}<tr><td>{{ k }}</td><td class="meta">{{ v|join(' → ') }}</td></tr>{% endfor %}</table>
 <p class="meta">Each task tries helpers in order. To change the order, edit <code>moneyhub.local.yaml</code> (hidden from git).</p></details>
@@ -54,6 +65,13 @@
       else if (b.dataset.remove) { if (!(await confirmDialog({ icon: '🔑', title: 'Remove this key?', message: 'It is deleted from this computer. You can add it again later.', confirm: 'Remove key' }))) return; await post('/api/settings/key/remove', { name: b.dataset.remove }); location.reload(); }
       else if (b.dataset.test) { say(b, 'Testing…', true); b.disabled = true; const r = await post('/api/settings/test', { provider: b.dataset.test }); say(b, r.message, r.ok); b.disabled = false; }
     } catch (err) { b.disabled = false; say(b, err.message, false); }
+  });
+  document.getElementById('craft-form').addEventListener('submit', async e => {
+    e.preventDefault(); const f = new FormData(e.target); const body = new URLSearchParams();
+    ['enabled', 'verify_after_make'].forEach(k => { if (f.get(k)) body.append(k, '1'); }); f.getAll('tools').forEach(v => body.append('tools', v));
+    const m = document.getElementById('craft-msg');
+    try { const r = await fetch('/api/settings/craft', { method: 'POST', body }); if (!r.ok) throw new Error((await r.json()).detail); m.textContent = 'Saved.'; }
+    catch (err) { m.textContent = err.message; }
   });
   document.getElementById('art-form').addEventListener('submit', async e => {
     e.preventDefault(); const f = new FormData(e.target); const body = new URLSearchParams(); f.getAll('providers').forEach(v => body.append('providers', v));
