@@ -31,12 +31,16 @@ NURSERY = ["cat", "fish", "butterfly", "turtle", "owl", "snail", "ladybug", "wha
            "penguin", "duck", "elephant", "giraffe", "lion", "bee", "crab", "shark", "airplane", "sailboat", "cupcake", "mushroom", "unicorn", "balloons", "planet"]
 PATTERN_PANELS = ["ditsy", "rainbows", "celestial", "hearts", "stars", "paisley", "hexagons", "blobs", "memphis", "plaid"]
 # every background style a wall-art poster can use with no AI key: the 13 drawn motifs, arched-window symbols, nursery figures (colour filled) and pattern panels
-WALL_MOTIFS = [*MOTIFS, *(f"window-{s}" for s in WINDOW_SYMBOLS), *(f"nursery-{k}" for k in NURSERY), *(f"pattern-{k}" for k in PATTERN_PANELS)]
+from .art_scenes import SCENES   # noqa: E402
+WALL_MOTIFS = [*MOTIFS, *(f"scene-{s}" for s in SCENES), *(f"window-{s}" for s in WINDOW_SYMBOLS), *(f"nursery-{k}" for k in NURSERY), *(f"pattern-{k}" for k in PATTERN_PANELS)]
 
 
 def _extra_motif(kind: str, p: Palette, seed: int, on_dark: bool) -> str | None:
     """SVG for the window-*, nursery-* and pattern-* motif families (None if `kind` is not one of them)."""
     family, _, name = kind.partition("-")
+    if family == "scene" and name in SCENES:
+        from .art_scenes import scene_svg
+        return scene_svg(name, p, seed, on_dark)
     if family == "window" and name in WINDOW_SYMBOLS:
         from .oracle_art import card_art
         pal = p if not on_dark else dataclasses_replace(p)
