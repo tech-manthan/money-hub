@@ -186,6 +186,30 @@ export_app = typer.Typer(help="Export a finished product for another platform: k
 app.add_typer(export_app, name="export")
 
 
+@export_app.command("craft")
+def export_craft(product_id: int, kinds: str = typer.Option("vectors,sheets,pdfs", help="vectors (AI/EPS/PDF/PSD copies of poster designs), "
+                                                                                  "sheets (CSV/HTML copies of spreadsheets), pdfs (title/author metadata)")):
+    """Build extra editable files for a product with the craft tools. Needs the tools installed; ignores the on/off switches because you asked."""
+    from . import craftbuild
+    from .store import Store
+    p = Store().product(product_id)
+    if not p:
+        raise typer.BadParameter(f"no product #{product_id}", param_hint="product_id")
+    want = [k.strip() for k in kinds.split(",") if k.strip()]
+    bad = [k for k in want if k not in craftbuild.KINDS]
+    if bad:
+        raise typer.BadParameter(f"unknown kind(s): {', '.join(bad)}. Choose from: {', '.join(craftbuild.KINDS)}", param_hint="--kinds")
+    rows = craftbuild.build(Path(p["folder"]), product_id, want, force=True)
+    if not rows:
+        typer.echo("Nothing built: the tool is not installed, or the product has nothing of that kind (poster designs, xlsx files).")
+        return
+    for r in rows:
+        typer.echo(f"{'ok  ' if r['ok'] else 'SKIP'} {r['kind']:<8} {r['file']:<44} {r['detail']}" + (f"   [{r['warn']}]" if r['warn'] else ""))
+    typer.echo(f"Report: {Path(p['folder']) / 'craft-build.json'}\nFiles: {Path(p['folder']) / 'product' / craftbuild.FOLDER}")
+    if any(not r["ok"] for r in rows):
+        raise typer.Exit(1)
+
+
 @export_app.command("kdp")
 def export_kdp_cmd(product_id: int, trim: str = typer.Option("6x9", help="5.5x8.5, 6x9, 7x10, 8x10 or 8.5x11 (inches)"),
                    paper: str = typer.Option("white", help="white, cream or color"),
@@ -723,7 +747,10 @@ def tools(enable: str = typer.Option(None, help="Switch these tools on for autom
           disable: str = typer.Option(None, help="Switch these tools off (comma list, or 'all')"),
           master: bool = typer.Option(None, "--master/--no-master", help="Master switch for every automatic use of the craft tools"),
           verify_after_make: bool = typer.Option(None, "--verify-after-make/--no-verify-after-make",
-                                                 help="Add a warn-only 'Second opinion' check to every new product")):
+                                                 help="Add a warn-only 'Second opinion' check to every new product"),
+          outputs: str = typer.Option(None, help="Extra file kinds to build: vectors, sheets, pdfs (comma list, 'all' or 'none')"),
+          outputs_after_make: bool = typer.Option(None, "--outputs-after-make/--no-outputs-after-make",
+                                                  help="Build the switched-on extra files automatically for every new product")):
     """Which storytold craft tools are installed, and which ones MoneyHub uses automatically (everything is off by default)."""
     from .crafttools import CHECKERS, save_settings, settings_view, status
     changes = {}
@@ -734,6 +761,17 @@ def tools(enable: str = typer.Option(None, help="Switch these tools on for autom
     if changes or master is not None or verify_after_make is not None:
         try:
             save_settings(master, verify_after_make, changes)
+        except ValueError as e:
+            raise typer.BadParameter(str(e))
+    if outputs is not None or outputs_after_make is not None:
+        from . import craftbuild
+        asked = [x.strip() for x in (outputs or "").split(",") if x.strip()]
+        unknown = [x for x in asked if x not in (*craftbuild.KINDS, "all", "none")]
+        if unknown:
+            raise typer.BadParameter(f"unknown output(s): {', '.join(unknown)}. Choose from: {', '.join(craftbuild.KINDS)}, all, none", param_hint="--outputs")
+        picked = {} if outputs is None else {k: ("all" in asked or k in asked) for k in craftbuild.KINDS}
+        try:
+            craftbuild.save_outputs(picked, outputs_after_make)
         except ValueError as e:
             raise typer.BadParameter(str(e))
     view = settings_view()

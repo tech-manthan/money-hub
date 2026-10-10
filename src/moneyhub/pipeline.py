@@ -155,6 +155,12 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
             "content": json.loads(content.model_dump_json()),
         }, indent=2), encoding="utf-8")
 
+        from .craftbuild import after_make
+        extras = after_make(folder)   # optional extra file formats; None unless switched on in settings
+        if extras is not None:
+            checks.append(extras)
+            qa_status = summarize(checks)
+
         pid = store.add_product(
             slug=folder.name, title=build.title, niche=niche.key, niche_name=niche.name, product_type=ptype.key,
             style=style.key, status="draft", folder=str(folder), price=kit.price, qa=[c.to_dict() for c in checks],

@@ -80,18 +80,60 @@ def test_editable_export_is_valid_layered_svg(wall):
     assert "Palette" in (out / "BRIEF.md").read_text() and list((out / "fonts").glob("*.ttf"))
 
 
+def test_poster_motif_is_split_into_one_layer_per_art_piece():
+    from moneyhub.editable import MAX_MOTIF_LAYERS, _split_motif, poster_svg
+    parts = _split_motif("<circle cx='5' cy='5' r='3' fill='#f00'/><path d='M0 0 L9 9' stroke='#000'/><rect width='4' height='4'/>")
+    assert len(parts) == 3 and parts[0].startswith("<circle") and "xmlns" not in parts[0]
+    assert _split_motif("<circle r='3'/>") == []                                           # one shape stays one group
+    assert _split_motif("<defs><linearGradient id='a'/></defs><rect fill='url(#a)'/><rect/>") == []   # shared definitions: keep together
+    assert _split_motif("".join("<circle r='1'/>" for _ in range(MAX_MOTIF_LAYERS + 1))) == []
+    assert _split_motif("<circle") == []
+    one = {"svg": "<svg viewBox='0 0 1000 1000'><circle r='3'/></svg>", "fg": "#111", "bg": "#fff", "fs": 6, "text": "Hi", "text_top": 70, "small": "",
+           "b": {"frame": False, "motif": {"l": 10, "t": 10, "w": 80, "h": 50}, "rule": None, "margin": 8, "align": "center", "small": None}}
+    assert 'id="Motif"' in poster_svg(one, "#111") and 'id="motif"' not in poster_svg(one, "#111")   # a single shape keeps one, consistently named, layer
+    d = {"svg": "<svg viewBox='0 0 1000 1000'><circle cx='5' cy='5' r='3'/><path d='M0 0 L9 9'/></svg>", "fg": "#111", "bg": "#fff", "fs": 6,
+         "text": "Hello there", "text_top": 70, "small": "",
+         "b": {"frame": False, "motif": {"l": 10, "t": 10, "w": 80, "h": 50}, "rule": None, "margin": 8, "align": "center", "small": None}}
+    svg = minidom.parseString(poster_svg(d, "#111")).documentElement
+    ids = [n.getAttribute("id") for n in svg.childNodes if n.nodeType == n.ELEMENT_NODE]
+    assert ids[:3] == ["Background", "Motif-1", "Motif-2"] and "Quote" in ids
+
+
+def test_every_top_level_poster_object_is_a_layer_group():
+    from moneyhub.editable import poster_svg
+    d = {"svg": "<svg viewBox='0 0 1000 1000'><circle r='3'/><path d='M0 0 L9 9'/></svg>", "fg": "#111", "bg": "#fff", "fs": 6,
+         "text": "Hello there", "text_top": 70, "small": "by me",
+         "b": {"frame": True, "motif": {"l": 10, "t": 10, "w": 80, "h": 50}, "rule": 60, "margin": 8, "align": "center", "small": 5}}
+    root = minidom.parseString(poster_svg(d, "#111", heading="Poppins", script="Caveat")).documentElement
+    top = [n for n in root.childNodes if n.nodeType == n.ELEMENT_NODE]
+    assert top and all(n.tagName == "g" for n in top), [n.tagName for n in top]   # nothing loose at the top level
+    ids = [n.getAttribute("id") for n in top]
+    assert ids[0] == "Background" and "Frame" in ids and "Rule" in ids and "Quote" in ids and "Small-Text" in ids
+    assert sum(i.startswith("Motif-") for i in ids) == 2
+
+
+def test_poster_text_uses_the_style_fonts_not_a_generic_family():
+    from moneyhub.editable import poster_svg
+    d = {"svg": "<svg viewBox='0 0 1000 1000'><circle r='3'/><path d='M0 0 L9 9'/></svg>", "fg": "#111", "bg": "#fff", "fs": 6,
+         "text": "Hello there", "text_top": 70, "small": "by me",
+         "b": {"frame": False, "motif": {"l": 10, "t": 10, "w": 80, "h": 50}, "rule": None, "margin": 8, "align": "center", "small": 5}}
+    svg = poster_svg(d, "#111", heading="Poppins", script="Caveat")
+    assert 'id="quote"' in svg and 'font-family="Poppins"' in svg and 'font-family="Caveat"' in svg and "sans-serif" not in svg
+    assert 'font-family="sans-serif"' in poster_svg(d, "#111")   # without fonts it stays generic
+
+
 def test_every_named_object_is_its_own_layer_group(wall):
     """So design apps and PSD export get one layer per object instead of one flat layer."""
     from moneyhub.editable import export_editable
     out = export_editable(wall.folder, wall.product_id)
     pin = minidom.parseString((out / "pins" / "pin-01.svg").read_text()).documentElement
     top = [n for n in pin.childNodes if n.nodeType == n.ELEMENT_NODE]
-    groups = [n for n in top if n.tagName == "g" and n.getAttribute("id").startswith("layer-")]
+    groups = [n for n in top if n.tagName == "g"]
     assert len(groups) >= 6
     for gp in groups:   # each group holds exactly the object it names, with its id unchanged
         inner = [n for n in gp.childNodes if n.nodeType == n.ELEMENT_NODE]
-        assert len(inner) == 1 and gp.getAttribute("id") == "layer-" + inner[0].getAttribute("id")
-    assert any(g.getAttribute("id") == "layer-headline" for g in groups)
+        assert len(inner) == 1 and gp.getAttribute("id") == inner[0].getAttribute("id").title()
+    assert any(g.getAttribute("id") == "Headline" for g in groups)
 
 
 def test_import_edits_replaces_images_backs_up_and_rebuilds_zip(wall, tmp_path):

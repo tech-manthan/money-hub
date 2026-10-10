@@ -45,6 +45,12 @@
     <label class="artopt"><input type="checkbox" name="verify_after_make" value="1" {{ 'checked' if craft.verify_after_make }}> <b>Check every new product</b> and add a warning line if one cannot be opened</label>
     {% for t in craft.tools %}<label class="artopt"><input type="checkbox" name="tools" value="{{ t.tool }}" {{ 'checked' if t.enabled }}> <b>{{ t.tool }}</b>
       <span class="badge {{ 'pass' if t.installed else 'warn' }}">{{ t.version or 'ready' if t.installed else 'not installed' }}</span></label>{% endfor %}
+    <h3 style="margin:14px 0 4px">Extra files to build</h3>
+    <p class="meta">Editable and extra file formats made with the tools above. Each one is re-opened and checked before it is kept; anything that fails is dropped.</p>
+    {% for o in craft_outputs.kinds %}<label class="artopt"><input type="checkbox" name="outputs" value="{{ o.kind }}" {{ 'checked' if o.enabled }}>
+      <b>{{ {'vectors': 'Editable poster files (AI, EPS, PDF, layered PSD)', 'sheets': 'Spreadsheet copies (CSV, HTML)', 'pdfs': 'Title and author on PDFs'}[o.kind] }}</b>
+      <span class="badge {{ 'pass' if o.installed else 'warn' }}">{{ o.tool }}{{ '' if o.installed else ' not installed' }}</span></label>{% endfor %}
+    <label class="artopt"><input type="checkbox" name="outputs_after_make" value="1" {{ 'checked' if craft_outputs.after_make }}> <b>Build them automatically</b> for every new product (or run <code>moneyhub export craft &lt;id&gt;</code>)</label>
     <button type="submit" class="sm">Save choices</button> <span id="craft-msg" class="meta" role="status"></span>
   </form>
 </div>
@@ -68,7 +74,7 @@
   });
   document.getElementById('craft-form').addEventListener('submit', async e => {
     e.preventDefault(); const f = new FormData(e.target); const body = new URLSearchParams();
-    ['enabled', 'verify_after_make'].forEach(k => { if (f.get(k)) body.append(k, '1'); }); f.getAll('tools').forEach(v => body.append('tools', v));
+    ['enabled', 'verify_after_make', 'outputs_after_make'].forEach(k => { if (f.get(k)) body.append(k, '1'); }); f.getAll('tools').forEach(v => body.append('tools', v)); f.getAll('outputs').forEach(v => body.append('outputs', v));
     const m = document.getElementById('craft-msg');
     try { const r = await fetch('/api/settings/craft', { method: 'POST', body }); if (!r.ok) throw new Error((await r.json()).detail); m.textContent = 'Saved.'; }
     catch (err) { m.textContent = err.message; }

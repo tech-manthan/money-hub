@@ -443,11 +443,14 @@ def settings_art(request: Request, providers: list[str] = Form(default=[])):
 
 
 @app.post("/api/settings/craft")
-def settings_craft(request: Request, enabled: str = Form(""), verify_after_make: str = Form(""), tools: list[str] = Form(default=[])):
+def settings_craft(request: Request, enabled: str = Form(""), verify_after_make: str = Form(""), tools: list[str] = Form(default=[]),
+                   outputs: list[str] = Form(default=[]), outputs_after_make: str = Form("")):
     _local_only(request)
+    from ..craftbuild import KINDS, save_outputs
     from ..crafttools import CHECKERS, save_settings
     try:
         view = save_settings(bool(enabled), bool(verify_after_make), {t: t in tools for t in CHECKERS})
+        save_outputs({k: k in outputs for k in KINDS}, bool(outputs_after_make))
     except ValueError as e:
         raise HTTPException(422, str(e))
     return {"ok": True, **view}
@@ -456,9 +459,10 @@ def settings_craft(request: Request, enabled: str = Form(""), verify_after_make:
 @app.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     cfg = get_config()
+    from ..craftbuild import outputs_view
     from ..crafttools import settings_view
     return templates.TemplateResponse(request, "settings.html", _ctx(
-        request, craft=settings_view(), providers=get_router().status(), tasks=cfg.get("llm.tasks") or {}, out=str(cfg.output_dir),
+        request, craft=settings_view(), craft_outputs=outputs_view(), providers=get_router().status(), tasks=cfg.get("llm.tasks") or {}, out=str(cfg.output_dir),
         renderers=cfg.get("render.pdf") or ["weasyprint"], art=art_status(), keys=keystore.status(), env_file=str(keystore.env_path())))
 
 

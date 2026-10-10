@@ -38,6 +38,12 @@ def _layers(page: Image.Image, height: int) -> tuple[str, str, int, int, int]:
     return _b64(p), _b64(sh), p.width, p.height, pad
 
 
+def _layer_name(object_id: str) -> str:
+    """The layer name design apps show for an object: 'small-text' -> 'Small-Text', 'motif-3' -> 'Motif-3'. Differs from the object's own id
+    (which stays lower case), so ids remain unique."""
+    return object_id.title()
+
+
 class _Svg:
     def __init__(self, w: int, h: int, brush: g.Brush):
         self.w, self.h, self.b = w, h, brush
@@ -89,7 +95,7 @@ class _Svg:
     def _layer(part: str) -> str:
         """Put every named object in its own group, so design apps (and PSD export) get one layer per object, not one flat layer."""
         m = re.match(r'<(?:rect|ellipse|image|text)\b[^>]*?\sid="([^"]+)"', part)
-        return f'<g id="layer-{m.group(1)}">{part}</g>' if m else part
+        return f'<g id="{_layer_name(m.group(1))}">{part}</g>' if m else part
 
     def render(self) -> str:
         return (f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{self.w}" height="{self.h}" '
@@ -156,26 +162,68 @@ def hero_svg(pages: list[Image.Image], title: str, subtitle: str, badges: list[s
 
 
 # ----------------------------------------------------------------------------- wall art posters
-def poster_svg(d: dict, palette_ink: str, w: int = 1000, h: int = 1250) -> str:
-    """One poster design as editable SVG. `d` is the design dict used by the wall-art product."""
+MAX_MOTIF_LAYERS = 40
+_SHARED = {"defs", "style", "lineargradient", "radialgradient", "clippath", "mask", "pattern", "symbol", "filter", "use"}
+
+
+def _split_motif(inner: str) -> list[str]:
+    """The top-level shapes of a motif as separate SVG strings, or [] when it should stay one group (a single shape, too many shapes,
+    or shapes that share definitions such as gradients and clip paths, which cannot be moved apart safely)."""
+    from xml.etree import ElementTree as ET
+    try:
+        root = ET.fromstring(f'<g xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">{inner}</g>')
+    except ET.ParseError:
+        return []
+    kids = list(root)
+    if not 2 <= len(kids) <= MAX_MOTIF_LAYERS:
+        return []
+    names = {k.tag.split("}")[-1].lower() for k in kids}
+    if names & _SHARED or any(k.tag.split("}")[-1].lower() == "g" and any(x.tag.split("}")[-1].lower() in _SHARED for x in k.iter()) for k in kids):
+        return []
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
+    out = []
+    for k in kids:
+        s = ET.tostring(k, encoding="unicode")
+        out.append(s.replace(' xmlns="http://www.w3.org/2000/svg"', "").replace(' xmlns:xlink="http://www.w3.org/1999/xlink"', ""))
+    return out
+
+
+def _family(font: Path) -> str:
+    """The family name the editable SVGs use for a font file (Poppins-Bold.ttf -> Poppins), matching the pins and the hero."""
+    return font.stem.split("-")[0]
+
+
+def poster_svg(d: dict, palette_ink: str, w: int = 1000, h: int = 1250, heading: str | None = None, script: str | None = None) -> str:
+    """One poster design as editable SVG. `d` is the design dict used by the wall-art product. `heading` and `script` are the style's font
+    families, so the text uses the same fonts as the printed poster (generic sans-serif when not given)."""
     def box(l, t, bw, bh):
         return l * w, t * h, bw * w, bh * h
 
     def motif(x, y, bw, bh):
         inner = re.sub(r"^<svg[^>]*>|</svg>$", "", d["svg"].strip())
         sc = min(bw, bh) / 1000
-        return f'<g id="motif" transform="translate({x + (bw - 1000 * sc) / 2:.1f} {y + (bh - 1000 * sc) / 2:.1f}) scale({sc:.4f})">{inner}</g>'
+        tf = f"translate({x + (bw - 1000 * sc) / 2:.1f} {y + (bh - 1000 * sc) / 2:.1f}) scale({sc:.4f})"
+        parts = _split_motif(inner)
+        if parts:   # one layer per art piece, so design apps and PSD export can move each one
+            return "".join(f'<g id="{_layer_name(f"motif-{i}")}" transform="{tf}">{p}</g>' for i, p in enumerate(parts, 1))
+        return f'<g id="{_layer_name("motif")}" transform="{tf}">{inner}</g>'
 
     fg, bg = d["fg"], d["bg"]
-    fam = "sans-serif"
+    hfont = FONT_DIR / font_file(heading, 700) if heading else None
+    sfont = FONT_DIR / font_file(script, 400) if script else None
+    hfont = hfont if hfont and hfont.exists() else None
+    sfont = sfont if sfont and sfont.exists() else None
+    fam = _family(hfont) if hfont else "sans-serif"
+    script_fam = _family(sfont) if sfont else "Caveat"
     size = round(d["fs"] * 0.01634 * w)
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
            f'<rect id="background" width="{w}" height="{h}" fill="{bg}"/>']
     probe = ImageDraw.Draw(Image.new("RGB", (4, 4)))
-    ft = ImageFont.truetype(str(FONT_DIR / "Nunito-700.ttf"), size)
+    measure = str(hfont or FONT_DIR / "Nunito-700.ttf")
+    ft = ImageFont.truetype(measure, size)
 
     def text(x, top, width, anchor="middle", fsz=size, fill=fg, content=None, ident="quote", family=None):
-        lines = g.wrap(probe, content or d["text"], ft if fsz == size else ImageFont.truetype(str(FONT_DIR / "Nunito-700.ttf"), fsz), int(width))
+        lines = g.wrap(probe, content or d["text"], ft if fsz == size else ImageFont.truetype(measure, fsz), int(width))
         tsp = "".join(f'<tspan x="{x}" dy="{0 if i == 0 else fsz * 1.14:.1f}">{escape(l)}</tspan>' for i, l in enumerate(lines))
         return (f'<text id="{ident}" x="{x}" y="{top + fsz * .85:.1f}" font-family="{family or fam}" font-weight="700" font-size="{fsz}" '
                 f'fill="{fill}" text-anchor="{anchor}">{tsp}</text>')
@@ -185,7 +233,7 @@ def poster_svg(d: dict, palette_ink: str, w: int = 1000, h: int = 1250) -> str:
     ssz = round(3 * 0.01634 * w)
 
     def small_t(top):
-        return text(w / 2, top, w * .7, fsz=ssz, content=small, ident="small-text", family="Caveat") if small else ""
+        return text(w / 2, top, w * .7, fsz=ssz, content=small, ident="small-text", family=script_fam) if small else ""
 
     if b["frame"]:
         out.append(f'<rect id="frame" x="{w * .06}" y="{h * .045}" width="{w * .88}" height="{h * .91}" rx="12" fill="none" stroke="{fg}" stroke-width="3" opacity=".7"/>')
@@ -202,7 +250,43 @@ def poster_svg(d: dict, palette_ink: str, w: int = 1000, h: int = 1250) -> str:
     if b["small"] is not None:
         out.append(small_t(h * (1 - b["small"] / 100) - ssz))
     out.append("</svg>")
-    return "".join(out)
+    # every top-level object becomes its own group, so a PSD (or any layered format) gets one layer per object, not one flat layer
+    return out[0] + "".join(_Svg._layer(p) for p in out[1:-1]) + out[-1]
+
+
+def _font_family(font: Path) -> str:
+    """The real family name inside a font file (so a layered-file tool can find the installed font), e.g. 'DM Sans'."""
+    try:
+        from fontTools.ttLib import TTFont
+        n = TTFont(str(font))["name"]
+        return n.getDebugName(16) or n.getDebugName(1) or _family(font)
+    except Exception:   # noqa: BLE001
+        return _family(font)
+
+
+def poster_text_layers(d: dict, w: int = 1000, h: int = 1250, heading: str | None = None, script: str | None = None) -> list[dict]:
+    """The poster's text as live-text layer specs for a layered PSD: name, text, paragraph box [x, y, w, h] in pixels, alignment, font family,
+    weight, size (pt at 72 ppi = px) and colour. Same geometry as poster_svg."""
+    b = d["b"]
+    hf = FONT_DIR / font_file(heading, 700) if heading else None
+    sf = FONT_DIR / font_file(script, 400) if script else None
+    hf = hf if hf and hf.exists() else None
+    sf = sf if sf and sf.exists() else None
+    size = round(d["fs"] * 0.01634 * w)
+    mw = w * (100 - 2 * b["margin"]) / 100
+    left = b["align"] == "left"
+    probe = ImageDraw.Draw(Image.new("RGB", (4, 4)))
+    ft = ImageFont.truetype(str(hf or FONT_DIR / "Nunito-700.ttf"), size)
+    lines = max(1, len(g.wrap(probe, d["text"], ft, int(mw)))) if d.get("text") else 1
+    out = [{"name": "Quote", "text": d["text"], "box": [round(w * b["margin"] / 100 if left else w / 2 - mw / 2), round(h * d["text_top"] / 100),
+                                                         round(mw), round(size * 1.14 * lines + size * .3)],
+            "align": "left" if left else "center", "font": _font_family(hf) if hf else "Nunito", "weight": 700, "size": size, "color": d["fg"]}]
+    small = d.get("small") or ""
+    if small and b.get("small") is not None:
+        ssz = round(3 * 0.01634 * w)
+        out.append({"name": "Small-Text", "text": small, "box": [round(w * .15), round(h * (1 - b["small"] / 100) - ssz), round(w * .7), round(ssz * 1.5)],
+                    "align": "center", "font": _font_family(sf) if sf else "Caveat", "weight": 400, "size": ssz, "color": d["fg"]})
+    return out
 
 
 # ----------------------------------------------------------------------------- export / import
@@ -266,7 +350,8 @@ def export_editable(folder: Path, pid: int | None = None) -> Path:
                                layout=opts.get("page_layout") or ("custom" if opts.get("layout_spec") else None), layout_spec=opts.get("layout_spec"))[0]
         for i, d in enumerate(designs):
             p = out / "posters" / f"design-{i + 1:02d}.svg"
-            p.write_text(poster_svg(d, spec["style"]["palette"]), encoding="utf-8")
+            p.write_text(poster_svg(d, spec["style"]["palette"], heading=style.fonts.heading, script=style.fonts.script), encoding="utf-8")
+            p.with_suffix(".text.json").write_text(json.dumps(poster_text_layers(d, heading=style.fonts.heading, script=style.fonts.script), indent=1), encoding="utf-8")
             written.append(f"posters/{p.name}  (4:5 poster; re-export for other ratios)")
 
     f = style.fonts

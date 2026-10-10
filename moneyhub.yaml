@@ -59,6 +59,11 @@ craft:
   enabled: false            # master switch
   verify_after_make: false  # add a "Second opinion" line to every new product's quality checks
   timeout: 90               # seconds per tool call
+  outputs:                  # extra deliverable files built with the tools (need the master switch and the tool)
+    vectors: false          # AI, EPS, PDF and layered PSD copies of poster designs (vectorcraft)
+    sheets: false           # CSV and HTML copies of spreadsheets (gridcraft)
+    pdfs: false             # title and author metadata on product PDFs (pdfcraft)
+    after_make: false       # build the switched-on kinds for every new product; otherwise: moneyhub export craft <id>
   tools:
     vectorcraft: false
     pdfcraft: false

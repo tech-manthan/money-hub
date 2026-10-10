@@ -156,6 +156,53 @@ Rules that keep your products safe:
 - The result is also saved in the product folder as `craft-verify.json` (tool list plus every finding, with the tool's own
   output trimmed to 300 characters).
 
+## Extra files you can sell: editable formats
+
+Besides checking files, the tools can **build** extra deliverables. Three kinds, each off by default:
+
+| Kind | Tool | What it makes | Where |
+|---|---|---|---|
+| `vectors` | vectorcraft | For each poster design (wall art): the SVG plus **AI, EPS, PDF and layered PSD** copies | `product/Editable-files/vector/` |
+| `sheets` | gridcraft | **CSV and HTML** copies of the spreadsheet (first sheet) | `product/Editable-files/sheets/` |
+| `pdfs` | pdfcraft | **Title and author** set on each product PDF (the shop name comes from `shop.name`) | in place |
+
+Switch them on in **Settings, Extra files to build**, or:
+
+```
+moneyhub tools --master --enable vectorcraft --outputs vectors,sheets      # which kinds
+moneyhub tools --outputs-after-make                                        # build them for every new product
+moneyhub export craft 12 --kinds vectors                                   # build for product 12 now (ignores the switches)
+```
+
+What makes this safe to sell:
+
+- **Every file is checked before it is kept.** It is re-opened with the tool; PDFs and AI files must have one page; a PSD must have
+  at least two layers (its layer table is read directly, so a flat one-layer picture is rejected and deleted); EPS must have a
+  valid header; PDFs given new metadata are only swapped in when the page count matches and page 1 looks the same.
+- **Anything that fails is dropped and listed** in `craft-build.json` in the product folder. The good files are kept.
+- **The upload package is rebuilt** to include `Editable-files/`, and a `README.txt` explains the files to the buyer.
+- **Warn-only:** the product gets one QA line, `Editable formats (craft tools)`, which can only pass or warn.
+- With everything off, **nothing is started and nothing changes**.
+
+### What buyers can and cannot edit
+
+| Format | Objects separate? | Text editable? |
+|---|---|---|
+| SVG, AI, EPS, PDF | yes | yes, live text |
+| PSD | yes, one layer per object (each art piece of a poster motif is its own layer) | **yes when `photocraft` is switched on**: the quote and small text become real text layers (needs the fonts installed). Without it the text layers are pictures |
+
+The pins and the listing hero are *mockups* of finished pages. The art on those pages is an embedded picture, so only the poster
+designs (`editable/posters/`) are true editable artwork. That is why the extra files are built from the posters.
+
+**Live text in the PSD.** With `photocraft` switched on (Settings, or `moneyhub tools --enable photocraft`), each PSD that passes the layer
+check is opened with `photocraft`; the picture layers for the quote and the small text are deleted and replaced by real text layers
+(same box, font, size, colour and alignment). The new file is kept only if it has the same number of layers, every replaced text is a
+Type layer, and the file contains live-text blocks; otherwise the picture-text PSD stays and the report says so. Checked on a real
+PSD: `type.create` made a `Type` layer with font Poppins at 64 pt.
+
+**Fonts.** The designs use DM Sans, Poppins and similar free Google Fonts. Tell buyers to install them. Do not put the font files
+in the download (`docs/licenses.md`). On your own Mac, `~/Library/Fonts/MoneyHub/` holds them so the converters find them.
+
 ## Better sound in the tour
 
 `python scripts/record_tour.py` records the narrated tour videos. Its narration is built as one mixed WAV file. With
