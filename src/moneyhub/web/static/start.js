@@ -38,8 +38,9 @@
     if (englishOnly) $('#language').value = 'en';
     $('#language').disabled = englishOnly;
     $('#oracle-opts').hidden = val('product_type') !== 'oracle_deck';
-    $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
-    const themeOnly = ['montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
+    $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'cut_files', 'montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
+    $('#fig-wrap').hidden = val('product_type') !== 'cut_files';
+    const themeOnly = ['montessori_cards', 'classroom_pack', 'visual_schedule', 'cut_files'].includes(val('product_type'));
     $('#ptc-wrap').hidden = val('product_type') !== 'sticker_sheets';
     $('#age-wrap').hidden = themeOnly; $('#pages-wrap').hidden = themeOnly;
     $('#class-opts').hidden = val('product_type') !== 'classroom_pack';
@@ -164,6 +165,7 @@
     if (val('product_type') === 'activity_book') { o.level = $('#level').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
     if (val('product_type') === 'montessori_cards') { o.language = $('#language').value; o.theme = $('#theme').value; if ($('#pages2').value) o.count = $('#pages2').value; }
     if (val('product_type') === 'learning_workbook') { o.language = $('#language').value; o.focus = $('#focus').value; if ($('#focus').value === 'sightwords') o.grade = $('#grade').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
+    if (val('product_type') === 'cut_files' && $('#figures').checked) { o.figures = '1'; o.theme = $('#theme').value; }
     if (val('product_type') === 'visual_schedule') { o.theme = $('#theme').value; }
     if (val('product_type') === 'classroom_pack') { o.theme = $('#theme').value; if ($('#names').value.trim()) o.names = $('#names').value.trim(); }
     if (val('product_type') === 'oracle_deck') { o.deck = $('#deck').value; o.card_size = $('#card_size').value; }
@@ -183,6 +185,7 @@
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';
     if (p.print_then_cut) cmd += ' --print-then-cut';
+    if (p.figures) cmd += ' --figures';
     const chosen = $('input[name="page_layout"]:checked');
     if (p.layout_spec && chosen) cmd += ` --layout-prompt "${(chosen.dataset.text || '').replace(/"/g, "'")}"`;
     if (p.page_layout && p.page_layout !== Object.keys(JSON.parse($('input[name="product_type"]:checked').dataset.layouts))[0]) cmd += ` --page-layout ${p.page_layout}`;

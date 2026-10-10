@@ -52,6 +52,8 @@ class CutFiles(ProductType[CutContent]):
         return [("svg", "SVG + DXF + EPS + PNG cut files (6 in designs)")]
 
     def builtin_content(self, niche: NicheProfile, rng: random.Random, options: dict) -> CutContent:
+        if options.get("figures"):
+            return CutContent(title="Cute Animal Silhouette SVG Cut Files Bundle", tagline="Friendly silhouettes that cut in one piece.", designs=max(12, min(int(options.get("designs", 24)), 40)))
         return CutContent(title="Boho Shapes SVG Cut Files Bundle", tagline="Clean shapes that cut beautifully.", designs=max(12, min(int(options.get("designs", 24)), 40)))
 
     def llm_brief(self, niche: NicheProfile, options: dict) -> str:
@@ -63,7 +65,17 @@ class CutFiles(ProductType[CutContent]):
         slug = self.slug(content.title)
         n = max(12, min(int(ctx.options.get("designs", content.designs)), 40))
         size_in = max(3.0, min(float(ctx.options.get("size_in", 6.0)), 12.0))
-        designs = cutfiles.make_designs(n, ctx.seed)
+        if ctx.options.get("figures"):
+            from .. import kidsart
+            theme = str(ctx.options.get("theme") or "mixed")
+            if theme not in kidsart.THEMES:
+                raise ValueError(f"unknown theme '{theme}'. Choose one of: {', '.join(kidsart.THEMES)}")
+            pool = list(dict.fromkeys(kidsart.THEMES[theme][1] if theme != "mixed" else kidsart.KINDS))
+            random.Random(ctx.seed).shuffle(pool)
+            designs = [cutfiles.figure_silhouette(pool[i % len(pool)], ctx.seed + i, size_in) for i in range(min(n, len(pool)))]
+            n = len(designs)
+        else:
+            designs = cutfiles.make_designs(n, ctx.seed)
         names = [f"{i + 1:02d}-{re.sub(r'[^a-z0-9]+', '-', d.name.lower()).strip('-')}" for i, d in enumerate(designs)]
         art_dir = ctx.out_dir.parent / "art"
         art_dir.mkdir(exist_ok=True)
@@ -104,7 +116,7 @@ class CutFiles(ProductType[CutContent]):
             "uses": "the physical items and finished designs you make and sell: shirts, mugs, signs, stickers, cards, decor, packaging and printables",
             "shop": {k: (cfg.get(f"shop.{k}") or "") for k in ("name", "email", "url")}})], margin=3.0)
 
-        gap = min(cutfiles.thinnest_gap_mm(d, size_in) for d in designs)
+        gap = min(min(cutfiles.thinnest_gap_mm(d, size_in) for d in designs), cutfiles.MIN_FEATURE_MM if ctx.options.get("figures") else 99.0)
         labels = {"SVG": "SVG files (Cricut, Silhouette, Brother)", "DXF": "DXF files (Silhouette Basic, ScanNCut)", "EPS": "EPS files (Illustrator, CorelDRAW)", "PNG": "Transparent PNG files"}
         files = [ProductFile(z, "zip", labels[z.stem.rsplit("-", 1)[-1]], True) for z in zips] + [ProductFile(license_pdf, "pdf", "Commercial licence (PDF)", True, preview_pages=[0])]
         features = [f"{n} cut-file designs", "SVG, DXF, EPS and PNG versions of every design", f"Designed at {size_in:g} inches; resize to any size",

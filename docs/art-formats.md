@@ -154,3 +154,7 @@ What it makes: `icon_pack` (planner icon stickers: coloured die-cut badges, prin
 
 ## Cross-type uniqueness
 Niche-free packs record a content signature in `spec.json` (palette, theme and the figures drawn: sticker names, Montessori pictures). When a new pack of a different type matches an existing one on 60% or more of it, QA adds an "Uniqueness across types" warning. Only sticker sheets and Montessori cards record figures so far; other types are compared by palette and theme only.
+
+## Cut files from the kids figures
+`moneyhub make x cut_files --figures --theme farm` turns kids-library figures into single closed cut outlines (SVG, DXF, EPS, PNG). `cutfiles.figure_silhouette` draws the figure, fills it solid, closes gaps and drops parts narrower than 1.5 mm at the chosen size (so pieces weld into one shape and nothing is too thin), keeps the largest piece and traces one simplified outline. It is raster-based, so no new dependency was needed (shapely was not required). Interior details (eyes, spots) are lost by design; it is a silhouette. Whiskers, tails and spikes thinner than 1.5 mm disappear at 6 in or smaller.
+- Needs a real check: a test cut of a few designs on your machine, including a small size.

@@ -208,6 +208,48 @@ def make_designs(count: int, seed: int) -> list[Design]:
     return out
 
 
+# --------------------------------------------------------------------------- silhouettes of the kids figures
+MIN_FEATURE_MM = 1.5   # narrowest part (and smallest gap) kept in a cut outline
+
+
+def figure_silhouette(kind: str, seed: int, size_in: float = 6.0, min_mm: float = MIN_FEATURE_MM, px: int = 500) -> Design:
+    """One closed cut outline from a kids-library figure. The figure is drawn, filled solid, small gaps are closed (so pieces weld into
+    one shape), parts narrower than `min_mm` are dropped, only the largest piece is kept and its outer boundary is traced and simplified."""
+    import io
+
+    import numpy as np
+    import pypdfium2 as pdfium
+    from scipy import ndimage
+    from weasyprint import HTML
+
+    from . import kidsart
+    from .stickers import _rdp, trace_outline
+
+    svg = f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000' width='{px}' height='{px}'>{kidsart.figure(kind, seed, 14, False)}</svg>"
+    pdf = HTML(string=f"<style>@page{{size:{px}px {px}px;margin:0}}body{{margin:0}}svg{{display:block}}</style>{svg}").write_pdf()
+    doc = pdfium.PdfDocument(io.BytesIO(pdf))
+    try:
+        im = doc[0].render(scale=1.0, fill_color=(255, 255, 255, 255)).to_pil().convert("L").resize((px, px))
+    finally:
+        doc.close()
+    mask = np.asarray(im) < 250
+    mm_px = size_in * 25.4 / px   # millimetres per pixel
+    r = max(1, round(min_mm / mm_px / 2))
+    disc = np.hypot(*np.ogrid[-r:r + 1, -r:r + 1]) <= r
+    mask = ndimage.binary_closing(np.pad(mask, r + 2), structure=disc, iterations=1)
+    mask = ndimage.binary_fill_holes(mask)
+    mask = ndimage.binary_opening(mask, structure=disc)
+    labels, n = ndimage.label(mask)
+    if n == 0:
+        raise ValueError(f"the {kind} figure left nothing to cut at {size_in} in")
+    biggest = labels == (1 + int(np.argmax(ndimage.sum(mask, labels, range(1, n + 1)))))
+    ring = trace_outline(biggest)
+    far = max(range(len(ring)), key=lambda i: (ring[i][0] - ring[0][0]) ** 2 + (ring[i][1] - ring[0][1]) ** 2)
+    pts = _rdp(ring[:far + 1], 0.8)[:-1] + _rdp(ring[far:] + [ring[0]], 0.8)[:-1]
+    k = 1000 / px
+    return Design(kind, [[((x - r - 2) * k, (y - r - 2) * k) for x, y in pts]])
+
+
 # --------------------------------------------------------------------------- measurements
 def thinnest_gap_mm(d: Design, size_in: float) -> float:
     """The smallest distance between two different rings (a cut-out and the edge of the design), in millimetres at this size.

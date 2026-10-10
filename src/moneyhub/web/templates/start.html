@@ -94,6 +94,7 @@
       <div><label for="theme">Picture theme (kids books and stickers)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
       <div id="age-wrap"><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
       <div id="pages-wrap"><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
+      <div id="fig-wrap" hidden><label><input type="checkbox" id="figures"> Make the shapes from the kids figures (pick a theme)</label></div>
       <div id="ptc-wrap" hidden><label><input type="checkbox" id="print_then_cut"> Also make print-then-cut files (Cricut, Silhouette)</label></div>
     </div>
     <div class="row" id="icon-opts" hidden>

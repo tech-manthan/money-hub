@@ -617,3 +617,13 @@ def test_sticker_sheets_print_then_cut_zip_has_png_and_cut_lines():
     assert z.read("sheet-01-cut-lines.svg").count(b" Z") >= 9
     plain = generate(Request("x", "sticker_sheets", providers=["builtin"], seed=2, sizes=["letter"], with_video=False, with_images=False, options={"no_research": True}))
     assert not list((plain.folder / "product").glob("*print-then-cut.zip"))
+
+
+def test_figure_silhouettes_are_single_closed_outlines_and_cut_files_can_use_them():
+    d = cutfiles.figure_silhouette("cat", 3, 6.0)
+    assert len(d.rings) == 1 and len(d.rings[0]) > 30
+    xs, ys = zip(*d.rings[0])
+    assert 0 <= min(xs) and max(xs) <= 1000 and 0 <= min(ys) and max(ys) <= 1000
+    assert cutfiles.validate_exports(d, 6.0) == []
+    res = generate(Request("x", "cut_files", providers=["builtin"], seed=2, with_video=False, with_images=False, options={"no_research": True, "figures": True, "theme": "farm"}))
+    assert not [c for c in res.checks if c.status == "fail"] and "Silhouette" in res.title
