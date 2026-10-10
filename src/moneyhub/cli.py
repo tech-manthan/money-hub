@@ -719,6 +719,46 @@ def engines_test(name: str = typer.Argument("pillow"), out: Path = typer.Option(
 
 
 @app.command()
+def tools():
+    """Which storytold craft tools (pdfcraft, gridcraft, vectorcraft ...) are installed and their versions."""
+    from .crafttools import status
+    for t in status():
+        typer.echo(f"{'ok ' if t['path'] else '-- '}{t['tool']:<12} {t['version'] or '':<10} {t['path'] or 'not installed (scripts/install_craft_tools.sh)'}")
+
+
+@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def craft(ctx: typer.Context, tool: str = typer.Argument(..., help="vectorcraft, pdfcraft, gridcraft, photocraft, wordcraft, ..."),
+          timeout: float = typer.Option(300.0, help="Seconds before the tool is stopped")):
+    """Run one of the craft tools with its own arguments, e.g. `moneyhub craft pdfcraft info file.pdf` (use -- before options)."""
+    from .crafttools import passthrough
+    r = passthrough(tool, list(ctx.args), timeout)
+    if r.out:
+        typer.echo(r.out, nl=not r.out.endswith("\n"))
+    if r.err:
+        typer.echo(r.err, err=True, nl=not r.err.endswith("\n"))
+    raise typer.Exit(0 if r.ok else (r.code if r.code > 0 else 1))
+
+
+@app.command()
+def verify(product_id: int):
+    """Second opinion: open a product's PDFs, spreadsheets and editable SVGs with the craft tools. Advisory only, never changes QA."""
+    from .crafttools import verify_product, write_report
+    from .store import Store
+    p = Store().product(product_id)
+    if not p:
+        raise typer.BadParameter(f"no product #{product_id}", param_hint="product_id")
+    findings = verify_product(Path(p["folder"]))
+    if not findings:
+        typer.echo("Nothing to check (no PDF, xlsx or editable SVG found).")
+        return
+    for f in findings:
+        typer.echo(f"{'ok  ' if f['ok'] else 'FAIL'} {f['tool']:<11} {f['file']:<48} {f['check']}" + ("" if f["ok"] else f"  - {f['detail']}"))
+    typer.echo(f"Report: {write_report(Path(p['folder']), findings)}")
+    if any(not f["ok"] for f in findings):
+        raise typer.Exit(1)
+
+
+@app.command()
 def doctor():
     """Check this machine (PDF engine, fonts, ffmpeg, AI providers, optional tools) and print how to fix gaps."""
     from . import doctor as d

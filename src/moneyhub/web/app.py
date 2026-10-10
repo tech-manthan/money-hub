@@ -609,7 +609,10 @@ def preview(pid: int, pdf: str, page: int):
     cache = root / "previews" / f"{f.stem}-{page}.png"
     if not cache.exists():
         cache.parent.mkdir(exist_ok=True)
-        imgs = render_pages(f, [page], 1.3)
+        try:
+            imgs = render_pages(f, [page], 1.3)
+        except Exception:   # a damaged or half-written PDF must be a 404, not a server error
+            raise HTTPException(404)
         if not imgs:
             raise HTTPException(404)
         imgs[0].save(cache)

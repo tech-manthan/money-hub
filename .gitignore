@@ -8,3 +8,4 @@ moneyhub.local.yaml
 .env
 node_modules/
 engines/remotion/out/
+tools/

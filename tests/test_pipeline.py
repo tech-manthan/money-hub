@@ -141,3 +141,16 @@ def test_pipeline_flags_a_cross_type_twin():
     spec = json.loads((twin.folder / "spec.json").read_text())
     assert "palette:sage" in spec["signature"] and "theme:farm" in spec["signature"]
     assert any(c.name == "Uniqueness across types" and c.status == "warn" for c in twin.checks), [c.detail if hasattr(c, "detail") else c for c in twin.checks]
+
+
+def test_pdf_rendering_survives_many_threads_at_once(tmp_path):
+    """PDFium crashes the process when used from several threads; pdfium_safe serialises it (the UI loads many previews at once)."""
+    import concurrent.futures as cf
+    from PIL import Image
+    from moneyhub.render.raster import pdf_page_count, render_pages
+    pdf = tmp_path / "t.pdf"
+    ims = [Image.new("RGB", (400, 500), c) for c in ("white", "red", "blue", "green")]
+    ims[0].save(pdf, "PDF", save_all=True, append_images=ims[1:])
+    with cf.ThreadPoolExecutor(8) as ex:
+        out = list(ex.map(lambda i: len(render_pages(pdf, [i % 4], 1.0)) + pdf_page_count(pdf), range(64)))
+    assert set(out) == {5}
