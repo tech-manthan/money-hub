@@ -21,6 +21,20 @@ from .base import BuildContext, BuildResult, ProductFile, ProductType
 from .registry import register
 
 PER_SHEET = 12
+PTC_W_IN, PTC_H_IN, PTC_MARGIN_IN, PTC_PER_SHEET = 6.75, 9.25, 0.2, 9   # inside the 6.75 x 9.25 in print area Cricut Design Space allowed on Letter
+PTC_README = """{title}: print-then-cut files
+
+Each sheet-NN-print.png is a transparent PNG of {w} x {h} in at 300 DPI with the stickers already laid out ({sheets} sheet(s), 9 stickers each).
+Upload it as a "Complex" image, remove nothing, choose "Print Then Cut", keep the size, print on sticker paper, then cut. Do not enlarge it:
+the machine's software adds its own registration marks inside its print area, so no marks are drawn on these files.
+
+sheet-NN-cut-lines.svg holds the cut line of every sticker in the same positions (inches, hairline red) for cutters that read an SVG cut line
+(Silhouette, Brother, Glowforge, or a plotter). Match it to the printed sheet in your software.
+
+Tips: print at 100% (no "fit to page"), use the "Bleed" option if your software has one, and test one sheet before a full run.
+Print-then-cut limits and the way registration marks work change between software versions; check your machine's current help pages.
+Personal use only: please do not resell or share the files.
+"""
 STICKER_PX = 900   # each sticker is drawn at 3 in x 3 in, 300 DPI, before trimming
 
 
@@ -61,6 +75,27 @@ class StickerSheets(ProductType[StickerContent]):
     def llm_brief(self, niche: NicheProfile, options: dict) -> str:
         return (f"Write a short cheerful title and tagline for a pack of colourful STICKER SHEETS with the theme '{kidsart.THEMES[_theme(options)][0]}' "
                 f"({int(options.get('stickers', 24))} stickers, printable plus digital PNGs). End the title with 'Sticker Sheets'. Do not mention any niche or profession.")
+
+    def _print_then_cut(self, ctx: BuildContext, slug: str, title: str, cut: list[Image.Image]) -> ProductFile:
+        """Print-then-cut files: per sheet a transparent PNG inside the cutting machine's print area, plus a cut-line SVG in the same position."""
+        dpi = 300
+        w_px, h_px = round(PTC_W_IN * dpi), round(PTC_H_IN * dpi)
+        sheets = math.ceil(len(cut) / PTC_PER_SHEET)
+        out = ctx.out_dir / f"{slug}-print-then-cut.zip"
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for k in range(sheets):
+                chunk = cut[k * PTC_PER_SHEET:(k + 1) * PTC_PER_SHEET]
+                im = stickers.pack_sheet(chunk, w_px, h_px, round(PTC_MARGIN_IN * dpi), cols=3, rows=3, bg="transparent")
+                buf = io.BytesIO()
+                im.save(buf, "PNG", dpi=(dpi, dpi))
+                z.writestr(f"sheet-{k + 1:02d}-print.png", buf.getvalue())
+                place = stickers.pack_layout([c.size for c in chunk], w_px, h_px, round(PTC_MARGIN_IN * dpi), cols=3, rows=3)
+                d = " ".join(p for c, (x, y, tw, th) in zip(chunk, place) for p in stickers.cut_paths(c, x, y, tw, th, dpi))
+                z.writestr(f"sheet-{k + 1:02d}-cut-lines.svg",
+                           f"<svg xmlns='http://www.w3.org/2000/svg' width='{PTC_W_IN}in' height='{PTC_H_IN}in' viewBox='0 0 {PTC_W_IN} {PTC_H_IN}'>"
+                           f"<path d='{d}' fill='none' stroke='#ff0000' stroke-width='0.006'/></svg>")
+            z.writestr("READ-ME-print-then-cut.txt", PTC_README.format(title=title, w=PTC_W_IN, h=PTC_H_IN, sheets=sheets))
+        return ProductFile(out, "zip", "Print-then-cut sheets (PNG + cut lines)", True)
 
     def build(self, ctx: BuildContext, content: StickerContent) -> BuildResult:
         theme = _theme(ctx.options)
@@ -105,6 +140,8 @@ class StickerSheets(ProductType[StickerContent]):
             z.writestr("READ-ME.txt", f"{content.title}\n\n{n} transparent PNG stickers (300 DPI) with a white die-cut border. Add them to GoodNotes, Notability, Canva or any "
                                       "app that accepts PNG images. Personal use only: please do not resell or share the files.\n")
         files.append(ProductFile(png_zip, "zip", "Transparent PNG stickers (digital planners)", True))
+        if ctx.options.get("print_then_cut"):
+            files.append(self._print_then_cut(ctx, slug, content.title, cut))
         features = [f"{n} colourful stickers on {sheets} printable sheets", "US Letter and A4 PDF sheets for sticker paper", f"{n} transparent PNG stickers for GoodNotes and digital planners",
                     "White die-cut border on every sticker", "Print as many sheets as you like for yourself", "Instant download - no physical item shipped"]
         tiles = mockups.save_tiles(art_dir, cut[::3], 4)

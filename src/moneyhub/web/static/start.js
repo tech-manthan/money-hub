@@ -40,6 +40,7 @@
     $('#oracle-opts').hidden = val('product_type') !== 'oracle_deck';
     $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
     const themeOnly = ['montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
+    $('#ptc-wrap').hidden = val('product_type') !== 'sticker_sheets';
     $('#age-wrap').hidden = themeOnly; $('#pages-wrap').hidden = themeOnly;
     $('#class-opts').hidden = val('product_type') !== 'classroom_pack';
     const r = $(`input[name="product_type"]:checked`);
@@ -167,7 +168,7 @@
     if (val('product_type') === 'classroom_pack') { o.theme = $('#theme').value; if ($('#names').value.trim()) o.names = $('#names').value.trim(); }
     if (val('product_type') === 'oracle_deck') { o.deck = $('#deck').value; o.card_size = $('#card_size').value; }
     if (val('product_type') === 'character_clipart') { o.theme = $('#theme').value; if ($('#pages').value) o.count = $('#pages').value; }
-    if (val('product_type') === 'sticker_sheets') { o.theme = $('#theme').value; if ($('#pages').value) o.stickers = $('#pages').value; }
+    if (val('product_type') === 'sticker_sheets') { o.theme = $('#theme').value; if ($('#pages').value) o.stickers = $('#pages').value; if ($('#print_then_cut').checked) o.print_then_cut = '1'; }
     return o;
   }
   function summarise() {
@@ -181,6 +182,7 @@
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';
+    if (p.print_then_cut) cmd += ' --print-then-cut';
     const chosen = $('input[name="page_layout"]:checked');
     if (p.layout_spec && chosen) cmd += ` --layout-prompt "${(chosen.dataset.text || '').replace(/"/g, "'")}"`;
     if (p.page_layout && p.page_layout !== Object.keys(JSON.parse($('input[name="product_type"]:checked').dataset.layouts))[0]) cmd += ` --page-layout ${p.page_layout}`;
