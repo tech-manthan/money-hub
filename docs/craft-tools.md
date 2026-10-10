@@ -158,12 +158,13 @@ Rules that keep your products safe:
 
 ## Extra files you can sell: editable formats
 
-Besides checking files, the tools can **build** extra deliverables. Three kinds, each off by default:
+Besides checking files, the tools can **build** extra deliverables. Four kinds, each off by default:
 
 | Kind | Tool | What it makes | Where |
 |---|---|---|---|
 | `vectors` | vectorcraft | For each poster design (wall art): the SVG plus **AI, EPS, PDF and layered PSD** copies | `product/Editable-files/vector/` |
 | `sheets` | gridcraft | **CSV and HTML** copies of the spreadsheet (first sheet) | `product/Editable-files/sheets/` |
+| `docx` | wordcraft | An editable **.docx** of the text of guides, worksheets, checklists and journals (headings, paragraphs, lists; not the printed page design). Kept only if wordcraft re-opens it and finds the title | `product/Editable-files/docs/` |
 | `pdfs` | pdfcraft | **Title and author** set on each product PDF (the shop name comes from `shop.name`) | in place |
 
 Switch them on in **Settings, Extra files to build**, or:

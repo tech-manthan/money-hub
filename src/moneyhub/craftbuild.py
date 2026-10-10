@@ -15,8 +15,9 @@ from pathlib import Path
 
 from . import crafttools as ct
 
-KINDS = ("vectors", "sheets", "pdfs")
-TOOL_FOR = {"vectors": "vectorcraft", "sheets": "gridcraft", "pdfs": "pdfcraft"}
+KINDS = ("vectors", "sheets", "pdfs", "docx")
+TOOL_FOR = {"vectors": "vectorcraft", "sheets": "gridcraft", "pdfs": "pdfcraft", "docx": "wordcraft"}
+DOCX_TYPES = ("ebook_guide", "worksheet_pack", "checklist_pack", "journal")
 FOLDER = "Editable-files"
 VECTOR_FORMATS = ("ai", "eps", "pdf", "psd")
 
@@ -30,6 +31,8 @@ vector/    each poster design as SVG (open in any vector editor) plus AI, EPS, P
            The PSD has one layer per object so you can move, hide or replace them. Its text is live, editable
            text when the fonts below are installed (if a file's text is a picture instead, retype it in the SVG,
            AI or PDF version).
+docs/      an editable .docx (Word-format) copy of the text: headings, paragraphs and lists. It is a plain text version,
+           not a copy of the printable page design.
 sheets/    CSV and HTML copies of the spreadsheet (first sheet) for tools that cannot open .xlsx.
 
 Fonts: the designs use {fonts}. They are free Google Fonts: install them before opening the files, otherwise your
@@ -287,6 +290,58 @@ def build_pdfs(folder: Path, spec: dict, timeout: float) -> list[dict]:
     return rows
 
 
+def _html_of(content: dict) -> str:
+    """Plain, semantic HTML of a product's text content (title, headings, paragraphs, lists) for the Word converter."""
+    from html import escape
+    parts: list[str] = []
+
+    def walk(v, level: int, key: str = "") -> None:
+        if isinstance(v, str):
+            if v.strip():
+                parts.append(f"<p>{escape(v)}</p>")
+        elif isinstance(v, list):
+            if v and all(isinstance(x, str) for x in v):
+                parts.append("<ul>" + "".join(f"<li>{escape(x)}</li>" for x in v if x.strip()) + "</ul>")
+            else:
+                for x in v:
+                    walk(x, level, key)
+        elif isinstance(v, dict):
+            head = next((v[k] for k in ("title", "name", "heading") if isinstance(v.get(k), str) and v[k].strip()), "")
+            if head:
+                parts.append(f"<h{min(level, 4)}>{escape(head)}</h{min(level, 4)}>")
+            for k, x in v.items():
+                if k not in ("title", "name", "heading") and isinstance(x, (str, list, dict)):
+                    walk(x, level + 1, k)
+    title = content.get("title") or "Document"
+    walk({k: v for k, v in content.items() if k != "title"}, 2)
+    return f"<html><head><meta charset=\"utf-8\"><title>{escape(str(title))}</title></head><body><h1>{escape(str(title))}</h1>{''.join(parts)}</body></html>"
+
+
+def build_docx(folder: Path, spec: dict, out: Path, timeout: float) -> list[dict]:
+    """An editable .docx of the text of guides, worksheets, checklists and journals. Kept only when wordcraft can re-open it and its text
+    contains the title."""
+    if (spec.get("request") or {}).get("product_type") not in DOCX_TYPES or not isinstance(spec.get("content"), dict):
+        return []
+    content = spec["content"]
+    dest = out / "docs"
+    dest.mkdir(parents=True, exist_ok=True)
+    from .products.base import ProductType
+    name = ProductType.slug(str(content.get("title") or "document")) or "document"
+    with tempfile.TemporaryDirectory() as td:
+        src = Path(td) / f"{name}.html"
+        src.write_text(_html_of(content), encoding="utf-8")
+        target = dest / f"{name}.docx"
+        ok, warn, msg = _convert("wordcraft", src, target, timeout=timeout, min_bytes=500)
+    detail = ""
+    if ok:
+        r = ct.run("wordcraft", ["text", str(target)], timeout)
+        ok = r.ok and str(content.get("title", ""))[:30].lower() in r.out.lower()
+        detail = f"{len(r.out.split())} words" if ok else "text check failed"
+    if not ok:
+        target.unlink(missing_ok=True)
+    return [_row("docx", "wordcraft", target.name, ok, detail or msg, _short(warn))]
+
+
 # ---------------------------------------------------------------------------------------------------------- entry points
 def build(folder: Path, pid: int | None = None, kinds: list[str] | None = None, force: bool = False) -> list[dict]:
     """Build the extra files. `kinds` None means every kind switched on in settings; force=True (an explicit command) ignores the switches
@@ -309,9 +364,11 @@ def build(folder: Path, pid: int | None = None, kinds: list[str] | None = None, 
             rows += build_sheets(folder, out, timeout)
         if "pdfs" in todo:
             rows += build_pdfs(folder, spec, timeout)
+        if "docx" in todo:
+            rows += build_docx(folder, spec, out, timeout)
     except Exception as e:   # noqa: BLE001 - optional extras must never break a product
         rows.append(_row("-", "-", "-", False, f"stopped early: {e}"))
-    made = [r for r in rows if r["ok"] and r["kind"] in ("vectors", "sheets")]
+    made = [r for r in rows if r["ok"] and r["kind"] in ("vectors", "sheets", "docx")]
     if made and out.exists():
         fonts = _fonts_in(sorted((folder / "editable" / "posters").glob("*.svg")))
         (out / "README.txt").write_text(README.format(title=(spec.get("content") or {}).get("title", ""),

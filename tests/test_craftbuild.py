@@ -75,7 +75,7 @@ fi
 
 def settings(monkeypatch, **over):
     cfg = {"enabled": True, "verify_after_make": False, "timeout": 30, "tools": {},
-           "outputs": {"vectors": True, "sheets": True, "pdfs": True, "after_make": False}}
+           "outputs": {"vectors": True, "sheets": True, "pdfs": True, "docx": True, "after_make": False}}
     for k, v in over.items():
         cfg[k] = {**cfg[k], **v} if isinstance(v, dict) else v
 
@@ -213,7 +213,7 @@ def test_settings_cli_and_export_command(tools, monkeypatch, tmp_path):
         r = CliRunner().invoke(app, ["tools", "--outputs", "vectors,pdfs", "--outputs-after-make"])
         assert r.exit_code == 0, r.output
         view = craftbuild.outputs_view()
-        assert {k["kind"]: k["enabled"] for k in view["kinds"]} == {"vectors": True, "sheets": False, "pdfs": True} and view["after_make"]
+        assert {k["kind"]: k["enabled"] for k in view["kinds"]} == {"vectors": True, "sheets": False, "pdfs": True, "docx": False} and view["after_make"]
         assert CliRunner().invoke(app, ["tools", "--outputs", "bogus"]).exit_code != 0
         with pytest.raises(ValueError):
             craftbuild.save_outputs({"nonsense": True})
@@ -297,3 +297,44 @@ def test_live_text_is_skipped_when_photocraft_is_off(tools, monkeypatch):
     fake_photocraft(base, tools)
     rows = craftbuild.build(wall().folder, kinds=["vectors"])
     assert rows and all("LIVE TEXT" not in r["detail"] and "stays as picture" not in r["detail"] for r in rows)
+
+
+# ------------------------------------------------------------------------------------------------ docx
+def fake_wordcraft(tools_dir, fail=False):
+    body = ('if [ "$1" = convert ]; then\n  ' + ("exit 1" if fail else 'python3 -c "import zipfile,sys;z=zipfile.ZipFile(sys.argv[1],\'w\');z.writestr(\'a.txt\',\'x\'*600);z.close()" "$3"') +
+            '\nelif [ "$1" = text ]; then\n  cat "$2" >/dev/null; echo "$WC_TEXT"\nfi\n')
+    fake(tools_dir, "wordcraft", body)
+
+
+def guide(seed=3):
+    return generate(Request("nurse", "ebook_guide", providers=["builtin"], seed=seed, sizes=["letter"], with_images=False, with_video=False,
+                            options={"no_research": True}))
+
+
+def test_docx_html_has_title_headings_and_lists():
+    html = craftbuild._html_of({"title": "My <Guide>", "intro": "Hi", "chapters": [{"title": "One", "tips": ["a", "b"]}]})
+    assert "<h1>My &lt;Guide&gt;</h1>" in html and "<h2>" not in html.split("<h1>")[0] and "<h3>One</h3>" in html and "<li>a</li>" in html
+
+
+def test_docx_is_built_only_for_text_products_and_checked(tools, monkeypatch, tmp_path):
+    settings(monkeypatch)
+    res = guide()
+    title = json.loads((res.folder / "spec.json").read_text())["content"]["title"]
+    fake_wordcraft(tmp_path / "craft")
+    monkeypatch.setenv("WC_TEXT", title)
+    rows = craftbuild.build(res.folder, kinds=["docx"])
+    assert [r["ok"] for r in rows] == [True]
+    assert list((res.folder / "product" / craftbuild.FOLDER / "docs").glob("*.docx"))
+    assert craftbuild.build(wall().folder, kinds=["docx"]) == []      # a poster has no document text
+
+
+def test_docx_is_dropped_when_the_text_check_fails(tools, monkeypatch, tmp_path):
+    settings(monkeypatch)
+    res = guide(seed=4)
+    fake_wordcraft(tmp_path / "craft")
+    monkeypatch.setenv("WC_TEXT", "unrelated")
+    rows = craftbuild.build(res.folder, kinds=["docx"])
+    assert [r["ok"] for r in rows] == [False]
+    assert not list((res.folder / "product" / craftbuild.FOLDER / "docs").glob("*.docx"))
+    fake_wordcraft(tmp_path / "craft", fail=True)
+    assert [r["ok"] for r in craftbuild.build(res.folder, kinds=["docx"])] == [False]

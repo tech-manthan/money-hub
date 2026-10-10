@@ -187,8 +187,8 @@ app.add_typer(export_app, name="export")
 
 
 @export_app.command("craft")
-def export_craft(product_id: int, kinds: str = typer.Option("vectors,sheets,pdfs", help="vectors (AI/EPS/PDF/PSD copies of poster designs), "
-                                                                                  "sheets (CSV/HTML copies of spreadsheets), pdfs (title/author metadata)")):
+def export_craft(product_id: int, kinds: str = typer.Option("vectors,sheets,pdfs,docx", help="vectors (AI/EPS/PDF/PSD copies of poster designs), "
+                                                                                  "sheets (CSV/HTML copies of spreadsheets), pdfs (title/author metadata), docx (editable Word copy of guide/worksheet/checklist/journal text)")):
     """Build extra editable files for a product with the craft tools. Needs the tools installed; ignores the on/off switches because you asked."""
     from . import craftbuild
     from .store import Store
@@ -748,7 +748,7 @@ def tools(enable: str = typer.Option(None, help="Switch these tools on for autom
           master: bool = typer.Option(None, "--master/--no-master", help="Master switch for every automatic use of the craft tools"),
           verify_after_make: bool = typer.Option(None, "--verify-after-make/--no-verify-after-make",
                                                  help="Add a warn-only 'Second opinion' check to every new product"),
-          outputs: str = typer.Option(None, help="Extra file kinds to build: vectors, sheets, pdfs (comma list, 'all' or 'none')"),
+          outputs: str = typer.Option(None, help="Extra file kinds to build: vectors, sheets, pdfs, docx (comma list, 'all' or 'none')"),
           outputs_after_make: bool = typer.Option(None, "--outputs-after-make/--no-outputs-after-make",
                                                   help="Build the switched-on extra files automatically for every new product")):
     """Which storytold craft tools are installed, and which ones MoneyHub uses automatically (everything is off by default)."""
