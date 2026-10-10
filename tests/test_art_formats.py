@@ -533,3 +533,58 @@ def test_visual_schedule_builds_with_every_board_and_card_set():
     listing = (res.folder / "listing" / "listing.json").read_text().lower()
     assert "velcro" not in listing and "autis" not in listing and "therap" not in listing
     assert any("schedule" in t.lower() for t in (res.folder / "listing" / "etsy-tags.txt").read_text().split(","))
+
+
+def test_handwriting_stroke_data_is_complete_and_parses():
+    from xml.etree import ElementTree
+    from moneyhub import handwriting as hw
+    assert set(hw.UPPER) == set("ABCDEFGHIJKLMNOPQRSTUVWXYZ") and set(hw.LOWER) == set(hw.LETTERS) == set(hw.CURSIVE) == set(hw.WORDS)
+    for strokes in [*hw.UPPER.values(), *hw.LOWER.values()]:
+        for d in strokes:
+            (x, y), ang = hw._start_dir(d)
+            assert -20 <= x <= 80 and 0 <= y <= 130 and -180 <= ang <= 180
+    for c, (d, w, ey, extras) in hw.CURSIVE.items():
+        assert d.startswith("M0 95") and w > 30, c
+    for w in hw.WORDS.values():
+        assert all(ch in hw.CURSIVE for ch in w) and hw.cursive_width(w) > 0
+    for style in ("print", "cursive"):
+        for n in (0, 8, 25):
+            ElementTree.fromstring(hw.letter_page(n, 1, style)[0])
+        ElementTree.fromstring(hw.words_page(1, 1, style)[0])
+    ElementTree.fromstring(hw.lined_page(0, 1)[0])
+
+
+def test_dolch_lists_have_the_published_sizes_and_sight_pages_use_the_grade():
+    from moneyhub import learning
+    assert [len(learning.sight_words(g)) for g in learning.GRADES] == [40, 52, 41, 46, 41]
+    assert "the" in learning.sight_words("prek") and "because" in learning.sight_words("2")
+    for kind in ("sight_trace", "sight_fill", "sight_rainbow", "sight_lookcover"):
+        k, svg, cap = learning.page_art(["sight_trace", "sight_fill", "sight_rainbow", "sight_lookcover"].index(kind), 3, "sightwords", "en", "3")
+        assert k == kind and svg.startswith("<svg") and cap
+    k, svg, _ = learning.page_art(0, 3, "sightwords", "en", "3")
+    assert "about" in svg
+
+
+@pytest.mark.parametrize("focus,grade", [("handwriting", None), ("cursive", None), ("sightwords", "2"), ("stem", None)])
+def test_new_learning_focuses_build_without_qa_failures(focus, grade):
+    opts = {"no_research": True, "focus": focus, "pages": 30, **({"grade": grade} if grade else {})}
+    res = generate(Request("x", "learning_workbook", providers=["builtin"], seed=3, sizes=["letter"], with_video=False, with_images=False, options=opts))
+    assert not [c for c in res.checks if c.status == "fail"], [c for c in res.checks if c.status != "pass"]
+    pdf = next((res.folder / "product").glob("*-letter.pdf"))
+    assert pdf_page_count(pdf) == 31   # cover + 30 pages
+    if focus == "sightwords":
+        assert res.title.startswith("2nd Grade Sight Words")
+
+
+def test_new_learning_focuses_are_english_only_and_validated():
+    from typer.testing import CliRunner
+    from moneyhub.cli import app as cli
+    from fastapi.testclient import TestClient
+    from moneyhub.web.app import app
+    r = CliRunner().invoke(cli, ["make", "x", "learning_workbook", "--focus", "stem", "--language", "es", "--llm", "builtin"])
+    assert r.exit_code != 0
+    assert CliRunner().invoke(cli, ["make", "x", "learning_workbook", "--focus", "sightwords", "--grade", "9", "--llm", "builtin"]).exit_code != 0
+    c = TestClient(app)
+    base = {"niche": "x", "product_type": "learning_workbook", "llm": "builtin"}
+    assert c.post("/api/jobs", data={**base, "focus": "cursive", "language": "fr"}).status_code == 422
+    assert c.post("/api/jobs", data={**base, "focus": "sightwords", "grade": "12"}).status_code == 422

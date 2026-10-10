@@ -33,6 +33,10 @@
     $('#learn-opts').hidden = !['activity_book', 'learning_workbook', 'montessori_cards'].includes(val('product_type'));
     $('#lang-wrap').hidden = !['learning_workbook', 'montessori_cards'].includes(val('product_type'));
     $('#level-wrap').hidden = val('product_type') !== 'activity_book'; $('#focus-wrap').hidden = val('product_type') !== 'learning_workbook';
+    const fv = $('#focus').value, englishOnly = ['handwriting', 'cursive', 'sightwords', 'stem'].includes(fv) && val('product_type') === 'learning_workbook';
+    $('#grade-wrap').hidden = !(val('product_type') === 'learning_workbook' && fv === 'sightwords');
+    if (englishOnly) $('#language').value = 'en';
+    $('#language').disabled = englishOnly;
     $('#oracle-opts').hidden = val('product_type') !== 'oracle_deck';
     $('#kids-opts').hidden = !['kids_coloring', 'sticker_sheets', 'character_clipart', 'montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
     const themeOnly = ['montessori_cards', 'classroom_pack', 'visual_schedule'].includes(val('product_type'));
@@ -70,6 +74,7 @@
   }));
   $('#ideas').addEventListener('change', e => { if (e.target.name === 'idea') pickIdea(e.target); });
   $('#types').addEventListener('change', syncType);
+  $('#focus').addEventListener('change', syncType);
   $('#custom-toggle').addEventListener('click', () => setCustom(!customOn));
   $('#surprise').addEventListener('click', () => {
     const all = $$('input[name="idea"]'); const r = pick(all);
@@ -157,7 +162,7 @@
     if (val('product_type') === 'icon_pack') { o.collection = $('#collection').value; o.shape = $('#shape').value; if ($('#query').value.trim()) o.query = $('#query').value.trim(); if ($('#pages').value) o.count = $('#pages').value; }
     if (val('product_type') === 'activity_book') { o.level = $('#level').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
     if (val('product_type') === 'montessori_cards') { o.language = $('#language').value; o.theme = $('#theme').value; if ($('#pages2').value) o.count = $('#pages2').value; }
-    if (val('product_type') === 'learning_workbook') { o.language = $('#language').value; o.focus = $('#focus').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
+    if (val('product_type') === 'learning_workbook') { o.language = $('#language').value; o.focus = $('#focus').value; if ($('#focus').value === 'sightwords') o.grade = $('#grade').value; if ($('#pages2').value) o.pages = $('#pages2').value; }
     if (val('product_type') === 'visual_schedule') { o.theme = $('#theme').value; }
     if (val('product_type') === 'classroom_pack') { o.theme = $('#theme').value; if ($('#names').value.trim()) o.names = $('#names').value.trim(); }
     if (val('product_type') === 'oracle_deck') { o.deck = $('#deck').value; o.card_size = $('#card_size').value; }
@@ -172,7 +177,7 @@
     if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
     $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
-    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', count: '--count', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus', language: '--language', names: '--names', collection: '--collection', query: '--query', shape: '--shape' };
+    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', count: '--count', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus', grade: '--grade', language: '--language', names: '--names', collection: '--collection', query: '--query', shape: '--shape' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';

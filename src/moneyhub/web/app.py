@@ -457,7 +457,7 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
                radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
                brand: str = Form(""), eink: str = Form(""), marketplaces: list[str] = Form(default=[]), page_layout: str = Form(""),
                layout_spec: str = Form(""), theme: str = Form(""), age: str = Form(""), pages: str = Form(""), stickers: str = Form(""),
-               deck: str = Form(""), card_size: str = Form(""), cards: str = Form(""), level: str = Form(""), focus: str = Form(""), count: str = Form(""), collection: str = Form(""), query: str = Form(""), shape: str = Form(""), language: str = Form(""), names: str = Form("")):
+               deck: str = Form(""), card_size: str = Form(""), cards: str = Form(""), level: str = Form(""), focus: str = Form(""), count: str = Form(""), collection: str = Form(""), query: str = Form(""), shape: str = Form(""), language: str = Form(""), names: str = Form(""), grade: str = Form("")):
     bad = [(v, ok, n) for v, ok, n in ((palette, [p.key for p in PALETTES], "palette"), (fonts, [f.key for f in FONT_PAIRS], "fonts"),
                                         (header, HEADERS, "header"), (grid, GRIDS, "grid"), (motif if not motif.startswith("icon:") else "", WALL_MOTIFS, "motif")) if v and v not in ok]
     if bad:
@@ -488,8 +488,12 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
         from .. import svgassets
         if collection not in {c["key"] for c in svgassets.collections()}:
             raise HTTPException(422, f"Icon set '{collection}' is not installed. Run: moneyhub assets fetch tabler")
-    if (level and level not in ("toddler", "kids", "big")) or (focus and focus not in ("mixed", "colours", "words", "numbers", "time", "feelings")):
+    if (level and level not in ("toddler", "kids", "big")) or (focus and focus not in ("mixed", "colours", "words", "numbers", "time", "feelings", "handwriting", "cursive", "sightwords", "stem")):
         raise HTTPException(422, f"Unknown level or focus: {level or focus}")
+    if grade and grade not in ("prek", "k", "1", "2", "3"):
+        raise HTTPException(422, f"Unknown grade: {grade}")
+    if language and language != "en" and focus in ("handwriting", "cursive", "sightwords", "stem"):
+        raise HTTPException(422, f"The {focus} focus is English only; pick English or another focus.")
     if (deck and deck not in ("oracle", "tarot")) or (card_size and card_size not in ("tall", "poker")):
         raise HTTPException(422, f"Unknown deck or card size: {deck or card_size}")
     pt = all_product_types().get(product_type)
@@ -509,7 +513,7 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
             seed=int(seed) if seed.strip().isdigit() else None,
             options={**({"weeks": int(weeks)} if weeks.strip().isdigit() else {}), **({"ai_art": True} if ai_art else {}), **look,
                      **({"theme": theme} if theme else {}), **({"age": age} if age else {}), **({"pages": int(pages)} if pages.strip().isdigit() else {}), **({"stickers": int(stickers)} if stickers.strip().isdigit() else {}),
-                     **({"count": int(count)} if count.strip().isdigit() else {}), **({"collection": collection} if collection else {}), **({"query": query.strip()[:80]} if query.strip() else {}), **({"shape": shape} if shape else {}), **({"language": language} if language else {}), **({"names": names} if names.strip() else {}), **({"level": level} if level else {}), **({"focus": focus} if focus else {}), **({"deck": deck} if deck else {}), **({"card_size": card_size} if card_size else {}), **({"cards": int(cards)} if cards.strip().isdigit() else {})},
+                     **({"count": int(count)} if count.strip().isdigit() else {}), **({"collection": collection} if collection else {}), **({"query": query.strip()[:80]} if query.strip() else {}), **({"shape": shape} if shape else {}), **({"language": language} if language else {}), **({"names": names} if names.strip() else {}), **({"level": level} if level else {}), **({"focus": focus} if focus else {}), **({"grade": grade} if grade and focus == "sightwords" else {}), **({"deck": deck} if deck else {}), **({"card_size": card_size} if card_size else {}), **({"cards": int(cards)} if cards.strip().isdigit() else {})},
             with_video=not no_video,
         )
         if marketplaces:
