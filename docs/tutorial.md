@@ -169,7 +169,7 @@ Three steps. Everything you choose is also shown as the exact command at the end
 A summary in plain words, the equivalent `moneyhub make ...` command (copy it if you like), the AI writer to use, and which marketplaces to write guides for. Press **Make my product**. A progress log runs (about a minute for most products, longer with images and video). When it finishes you land on the product page.
 
 ### 5.3 My products (`/products`)
-Your catalogue with thumbnails. Each card shows title, niche, type and status. Open one to see everything about it.
+Your catalogue with thumbnails. Each card shows title, niche, type and status. Open one to see everything about it. When you have more than one kind of product, a row of buttons above the cards (All, Wall art, Oracle deck...) shows just one kind, with a count on each; the choice goes in the address (`/products?type=wall_art`) so you can bookmark it.
 
 ### 5.4 The product page (`/product/<id>`)
 This is where you work after making something. From the top:

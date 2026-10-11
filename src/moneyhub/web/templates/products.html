@@ -2,9 +2,16 @@
 <h1>My products</h1>
 
 {% if not products %}<p class="meta">Nothing yet. <a href="/make">Make your first product</a>.</p>{% endif %}
+{% set kinds = products|map(attribute='product_type')|unique|sort|list %}
+{% if kinds|length > 1 %}
+<div class="tabs" id="kinds" role="group" aria-label="Show one kind of product">
+  <button type="button" class="on" data-kind="">All ({{ products|length }})</button>
+  {% for k in kinds %}<button type="button" data-kind="{{ k }}">{{ k|replace('_',' ')|capitalize }} ({{ products|selectattr('product_type','equalto',k)|list|length }})</button>{% endfor %}
+</div>
+{% endif %}
 <div class="grid cards">
 {% for p in products %}
-  <div>
+  <div data-kind="{{ p.product_type }}">
   <a class="card" href="/product/{{ p.id }}">
     <div class="img">{% if p.thumb %}<img loading="lazy" src="/files/{{ p.id }}/{{ p.thumb }}">{% else %}no preview{% endif %}</div>
     <div class="body"><div class="t">{{ p.title }}</div>
@@ -15,4 +22,18 @@
   </div>
 {% endfor %}
 </div>
+<script>
+(function () {
+  var bar = document.getElementById("kinds");
+  if (!bar) return;
+  function show(kind) {
+    bar.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b.dataset.kind === kind); });
+    document.querySelectorAll(".cards > div").forEach(function (d) { d.style.display = !kind || d.dataset.kind === kind ? "" : "none"; });
+    try { history.replaceState(null, "", kind ? "?type=" + encodeURIComponent(kind) : location.pathname); } catch (e) {}
+  }
+  bar.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) show(b.dataset.kind); });
+  var want = new URLSearchParams(location.search).get("type") || "";
+  if (want && bar.querySelector('[data-kind="' + want + '"]')) show(want);
+})();
+</script>
 {% endblock %}
