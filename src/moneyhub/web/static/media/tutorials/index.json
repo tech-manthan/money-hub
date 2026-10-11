@@ -1,0 +1,114 @@
+[
+ {
+  "key": "audience",
+  "title": "Pick an audience and a product",
+  "blurb": "Choose who to help, see only the products that fit them, Surprise me, and your own audience.",
+  "seconds": 81,
+  "kind": "app"
+ },
+ {
+  "key": "options",
+  "title": "Product options",
+  "blurb": "The options that belong to each product: themes, ages, names, decks and learning focus.",
+  "seconds": 91,
+  "kind": "app"
+ },
+ {
+  "key": "look",
+  "title": "Colours, fonts, layouts and e-ink",
+  "blurb": "Palettes, your brand colour, fonts, advanced look, page layouts, described layouts and e-ink.",
+  "seconds": 106,
+  "kind": "app"
+ },
+ {
+  "key": "product-page",
+  "title": "The product page",
+  "blurb": "Preview, quality checks, files, listing copy, photos and upload guides.",
+  "seconds": 107,
+  "kind": "app"
+ },
+ {
+  "key": "sell-on",
+  "title": "What to upload on each platform",
+  "blurb": "Platform packs for Etsy, Gumroad, Payhip and Ko-fi, and what goes where.",
+  "seconds": 71,
+  "kind": "app"
+ },
+ {
+  "key": "exports",
+  "title": "Canva, Notion and KDP",
+  "blurb": "Turn a product into a Canva pack, a Notion import or a KDP paperback.",
+  "seconds": 78,
+  "kind": "app"
+ },
+ {
+  "key": "track",
+  "title": "Track sales and learn",
+  "blurb": "Record listings, sales and views, and read the Sales and learning report.",
+  "seconds": 62,
+  "kind": "app"
+ },
+ {
+  "key": "ideas",
+  "title": "The Ideas page",
+  "blurb": "Brainstorm audiences and products, and check them by hand.",
+  "seconds": 46,
+  "kind": "app"
+ },
+ {
+  "key": "settings",
+  "title": "Settings, AI keys and tools",
+  "blurb": "Connect AI helpers, art providers and the optional second-opinion tools.",
+  "seconds": 72,
+  "kind": "app"
+ },
+ {
+  "key": "variations",
+  "title": "Variations and the catalogue",
+  "blurb": "New variations, My products and deleting.",
+  "seconds": 32,
+  "kind": "app"
+ },
+ {
+  "key": "editing",
+  "title": "Edit the art yourself",
+  "blurb": "Export layered editable files and upload your edits back.",
+  "seconds": 36,
+  "kind": "app"
+ },
+ {
+  "key": "launch-video",
+  "title": "The launch video",
+  "blurb": "Make a promo video with music, tone and captions.",
+  "seconds": 40,
+  "kind": "app"
+ },
+ {
+  "key": "cli-basics",
+  "title": "Command line: the basics",
+  "blurb": "types, styles, make, list and look flags.",
+  "seconds": 55,
+  "kind": "terminal"
+ },
+ {
+  "key": "cli-selling",
+  "title": "Command line: listing and learning",
+  "blurb": "risk, export pack, approve, listed, sale, report, next, keywords, calendar.",
+  "seconds": 69,
+  "kind": "terminal"
+ },
+ {
+  "key": "cli-scale",
+  "title": "Command line: many products",
+  "blurb": "make-many, bundle, sample, brag, edit export and regenerate.",
+  "seconds": 58,
+  "kind": "terminal"
+ },
+ {
+  "key": "cli-tools",
+  "title": "Command line: tools and extras",
+  "blurb": "doctor, tools, extra files, slide templates, assets, translations and engines.",
+  "seconds": 90,
+  "kind": "terminal"
+ }
+]

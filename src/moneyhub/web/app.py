@@ -112,6 +112,21 @@ def _media() -> dict:
             "samples": sorted(f"media/samples/{f.name}" for f in (MEDIA / "samples").glob("*.jpg")) if (MEDIA / "samples").is_dir() else []}
 
 
+def _tutorials() -> list[dict]:
+    """The narrated tutorial videos recorded by scripts/record_tutorials.py (only the ones that exist)."""
+    idx = MEDIA / "tutorials" / "index.json"
+    try:
+        items = json.loads(idx.read_text()) if idx.exists() else []
+    except ValueError:
+        items = []
+    return [e for e in items if (MEDIA / "tutorials" / f"{e['key']}.mp4").exists()]
+
+
+@app.get("/tutorials", response_class=HTMLResponse)
+def tutorials(request: Request):
+    return templates.TemplateResponse(request, "tutorials.html", _ctx(request, items=_tutorials()))
+
+
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
     types = all_product_types()

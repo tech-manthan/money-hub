@@ -67,6 +67,35 @@
 <!-- ============ STEP 2 ============ -->
 <section class="step panel" data-step="2">
   <h2>How should it look?</h2>
+  <div id="product-opts" hidden><h3>Options for this product</h3>
+  <div class="row" id="kids-opts" hidden>
+    <div><label for="theme">Picture theme (kids books and stickers)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
+    <div id="age-wrap"><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
+    <div id="pages-wrap"><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
+    <div id="fig-wrap" hidden><label><input type="checkbox" id="figures"> Make the shapes from the kids figures (pick a theme)</label></div>
+    <div id="ptc-wrap" hidden><label><input type="checkbox" id="print_then_cut"> Also make print-then-cut files (Cricut, Silhouette)</label></div>
+  </div>
+  <div class="row" id="icon-opts" hidden>
+    <div><label for="collection">Icon set</label><select id="collection" name="collection">{% for c in icon_sets %}<option value="{{ c.key }}">{{ c.name }} ({{ c.license }}, {{ c.icons }} icons)</option>{% else %}<option value="">None installed: run "moneyhub assets fetch tabler"</option>{% endfor %}</select></div>
+    <div><label for="query">Only icons about (optional)</label><input id="query" name="query" placeholder="heart, star, home"></div>
+    <div><label for="shape">Badge</label><select id="shape" name="shape"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="none">No badge</option></select></div>
+  </div>
+  <div class="row" id="learn-opts" hidden>
+    <div id="lang-wrap"><label for="language">Word language (workbook and Montessori)</label><select id="language" name="language"><option value="en">English</option><option value="es">Spanish + English</option><option value="fr">French + English</option><option value="de">German + English</option></select></div>
+    <div id="level-wrap"><label for="level">Difficulty (activity book)</label><select id="level" name="level"><option value="kids">Kids (ages 4-7)</option><option value="toddler">Toddler (ages 2-4, easy)</option><option value="big">Big kids (ages 6-9, harder)</option></select></div>
+    <div id="focus-wrap"><label for="focus">Focus (learning workbook)</label><select id="focus" name="focus"><option value="mixed">Mixed preschool topics</option><option value="colours">Colors and shapes</option><option value="words">First words tracing</option><option value="numbers">Counting and numbers</option><option value="time">Time, days and seasons</option><option value="feelings">Feelings and opposites</option><option value="handwriting">Print handwriting practice</option><option value="cursive">Cursive handwriting practice</option><option value="sightwords">Sight words by grade</option><option value="stem">STEM shapes and simple machines</option></select></div>
+    <div id="grade-wrap" hidden><label for="grade">Grade (sight words)</label><select id="grade" name="grade"><option value="prek">Pre-K</option><option value="k" selected>Kindergarten</option><option value="1">1st grade</option><option value="2">2nd grade</option><option value="3">3rd grade</option></select></div>
+    <div><label for="pages2">Pages</label><input type="number" id="pages2" min="10" max="48" placeholder="24"></div>
+  </div>
+  <div class="row" id="class-opts" hidden>
+    <div style="flex:2 1 20em;"><label for="names">Student names (optional, comma separated, up to 30)</label><textarea id="names" name="names" rows="2" placeholder="Ava, Ben, Chloe. Leave empty for blank name lines."></textarea></div>
+  </div>
+  <div class="row" id="oracle-opts" hidden>
+    <div><label for="deck">Kind of deck</label><select id="deck" name="deck"><option value="oracle">Oracle: gentle message cards</option><option value="tarot">Tarot-style: 22 archetype cards</option></select></div>
+    <div><label for="card_size">Card size</label><select id="card_size" name="card_size"><option value="tall">Tall (2.5 x 4.5 in, 6 per sheet)</option><option value="poker">Poker (2.5 x 3.5 in, 9 per sheet)</option></select></div>
+  </div>
+  </div>
+  <h3>The look</h3>
   <div class="grid choice">
     <label class="opt"><input type="radio" name="lookmode" value="auto" checked><span class="in"><b>Choose for me</b><span class="meta">Recommended. We match colours and fonts to your audience's mood.</span></span></label>
     <label class="opt"><input type="radio" name="lookmode" value="pick"><span class="in"><b>I'll pick</b><span class="meta">Choose colours and fonts yourself.</span></span></label>
@@ -91,32 +120,6 @@
       {% for f in fonts %}
       <label class="opt"><input type="radio" name="fonts" value="{{ f.key }}"><span class="in"><b>{{ f.key|capitalize }}</b><span class="meta">{{ plain.FONT_PLAIN[f.key] }}</span></span></label>
       {% endfor %}
-    </div>
-    <div class="row" id="kids-opts" hidden>
-      <div><label for="theme">Picture theme (kids books and stickers)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
-      <div id="age-wrap"><label for="age">Line thickness</label><select id="age" name="age"><option value="kids">Kids (ages 4-8)</option><option value="toddler">Toddlers (thicker, simpler)</option></select></div>
-      <div id="pages-wrap"><label for="pages">Pages (or stickers, for sticker sheets)</label><input type="number" id="pages" name="pages" min="10" max="40" placeholder="20"></div>
-      <div id="fig-wrap" hidden><label><input type="checkbox" id="figures"> Make the shapes from the kids figures (pick a theme)</label></div>
-      <div id="ptc-wrap" hidden><label><input type="checkbox" id="print_then_cut"> Also make print-then-cut files (Cricut, Silhouette)</label></div>
-    </div>
-    <div class="row" id="icon-opts" hidden>
-      <div><label for="collection">Icon set</label><select id="collection" name="collection">{% for c in icon_sets %}<option value="{{ c.key }}">{{ c.name }} ({{ c.license }}, {{ c.icons }} icons)</option>{% else %}<option value="">None installed: run "moneyhub assets fetch tabler"</option>{% endfor %}</select></div>
-      <div><label for="query">Only icons about (optional)</label><input id="query" name="query" placeholder="heart, star, home"></div>
-      <div><label for="shape">Badge</label><select id="shape" name="shape"><option value="circle">Circle</option><option value="rounded">Rounded square</option><option value="none">No badge</option></select></div>
-    </div>
-    <div class="row" id="learn-opts" hidden>
-      <div id="lang-wrap"><label for="language">Word language (workbook and Montessori)</label><select id="language" name="language"><option value="en">English</option><option value="es">Spanish + English</option><option value="fr">French + English</option><option value="de">German + English</option></select></div>
-      <div id="level-wrap"><label for="level">Difficulty (activity book)</label><select id="level" name="level"><option value="kids">Kids (ages 4-7)</option><option value="toddler">Toddler (ages 2-4, easy)</option><option value="big">Big kids (ages 6-9, harder)</option></select></div>
-      <div id="focus-wrap"><label for="focus">Focus (learning workbook)</label><select id="focus" name="focus"><option value="mixed">Mixed preschool topics</option><option value="colours">Colors and shapes</option><option value="words">First words tracing</option><option value="numbers">Counting and numbers</option><option value="time">Time, days and seasons</option><option value="feelings">Feelings and opposites</option><option value="handwriting">Print handwriting practice</option><option value="cursive">Cursive handwriting practice</option><option value="sightwords">Sight words by grade</option><option value="stem">STEM shapes and simple machines</option></select></div>
-      <div id="grade-wrap" hidden><label for="grade">Grade (sight words)</label><select id="grade" name="grade"><option value="prek">Pre-K</option><option value="k" selected>Kindergarten</option><option value="1">1st grade</option><option value="2">2nd grade</option><option value="3">3rd grade</option></select></div>
-      <div><label for="pages2">Pages</label><input type="number" id="pages2" min="10" max="48" placeholder="24"></div>
-    </div>
-    <div class="row" id="class-opts" hidden>
-      <div style="flex:2 1 20em;"><label for="names">Student names (optional, comma separated, up to 30)</label><textarea id="names" name="names" rows="2" placeholder="Ava, Ben, Chloe. Leave empty for blank name lines."></textarea></div>
-    </div>
-    <div class="row" id="oracle-opts" hidden>
-      <div><label for="deck">Kind of deck</label><select id="deck" name="deck"><option value="oracle">Oracle: gentle message cards</option><option value="tarot">Tarot-style: 22 archetype cards</option></select></div>
-      <div><label for="card_size">Card size</label><select id="card_size" name="card_size"><option value="tall">Tall (2.5 x 4.5 in, 6 per sheet)</option><option value="poker">Poker (2.5 x 3.5 in, 9 per sheet)</option></select></div>
     </div>
     <details class="help"><summary>More detail (optional)</summary>
       <div class="row">

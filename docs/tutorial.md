@@ -33,6 +33,7 @@ The short version lives in the app at `/docs`. This file goes deeper and is the 
 25. [Troubleshooting](#25-troubleshooting)
 26. [What still needs a real device or app](#26-what-still-needs-a-real-device-or-app)
 27. [Glossary](#27-glossary)
+28. [The video tutorials](#28-the-video-tutorials)
 
 ---
 
@@ -131,7 +132,9 @@ In the wizard those cards carry a small **"Same for every audience"** label, and
 
 **What this means for you:** for a niche-free type you can type any audience (or pick the first card) and spend your effort on the *look* and the *theme* options instead. For audience-specific types the audience is the whole point, so choose it carefully.
 
-Each audience card also shows **"We'd make: X"**, the product MoneyHub thinks suits that group best. It is only a starting suggestion; you can pick any of the 25 types for any audience.
+**Not every product belongs to every audience, and the wizard knows it.** When you pick an audience card, the product grid shrinks to the products that fit that audience (for example a wedding couple sees budget tracker, checklists, journal, wall art, clipart, digital paper and cut files, but not classroom charts or Montessori cards). A line above the grid says how many are shown, and **Show all 25 products anyway** brings the rest back if you want one. If you type your own audience, you see the 10 audience-specific types first, with the rest behind the same button. The same rule applies to the Ideas page: its offline brainstorm only pairs an audience with products that suit it, and the AI brainstorm is told to do the same.
+
+Each audience card also shows **"We'd make: X"**, the product MoneyHub thinks suits that group best.
 
 ---
 
@@ -153,6 +156,7 @@ Three steps. Everything you choose is also shown as the exact command at the end
 
 **Step 2: Pick a look.**
 
+- **Options for this product** (shown first, only when the product has some): picture theme, line thickness and pages for kids books and stickers; icon set, search word and badge shape for icon stickers; word language, difficulty, focus, grade and pages for workbooks and activity books; student names for classroom packs; deck kind and card size for oracle decks. These appear whether you choose "Choose for me" or "I'll pick".
 - Colour palette (12 of them), or **your brand colour** (any hex; MoneyHub builds a matching palette).
 - **E-ink tablet** version (reMarkable, Kindle Scribe, Boox): black and white, hyperlinked.
 - Font pairs (editorial, modern, friendly, classic, clean, warm).
@@ -199,6 +203,9 @@ Which audience, product type and look is working, based on the sales and views *
 
 ### 5.8 Docs (`/docs`)
 The short in-app guide with the video tour, glossary and troubleshooting.
+
+### 5.9 Video tutorials (`/tutorials`)
+One narrated video per feature, recorded from the real app (section 28). The page groups them: making a product, checking and selling it, ideas and settings and extras, and the command line.
 
 ---
 
@@ -712,3 +719,29 @@ MoneyHub is honest about what it could not verify. These need you:
 - **Live text:** text in a design file that you can still retype, as opposed to text baked into a picture.
 - **Hook-and-loop:** the generic name for the fastener; never use the trademark in listings.
 - **Brag:** MoneyHub's launch-video feature.
+
+---
+
+## 28. The video tutorials
+
+Open **Video tutorials** in the menu (`/tutorials`). Sixteen narrated videos, each 1 to 3 minutes:
+
+| Group | Videos |
+|---|---|
+| Make a product | Pick an audience and a product; Product options; Colours, fonts, layouts and e-ink |
+| Check it and sell it | The product page; What to upload on each platform; Canva, Notion and KDP; Track sales and learn |
+| Ideas, settings and extras | The Ideas page; Settings, AI keys and tools; Variations and the catalogue; Edit the art yourself; The launch video |
+| The command line | The basics; Listing and learning; Many products at once; Tools and extras |
+
+They are recorded by the real app against a throwaway offline copy (built-in writer, a temporary output folder), so your catalogue and AI accounts are never touched. The command-line videos replay the real output of the real commands in a terminal window.
+
+Re-record after you change the wizard, Settings or the product page:
+
+```bash
+python scripts/record_tour.py                         # the original tour (about 6 minutes)
+python scripts/record_tutorials.py                    # all tutorials (30-40 minutes)
+python scripts/record_tutorials.py --only look,sell-on   # just these
+python scripts/record_tutorials.py --list
+```
+
+Needs the project venv, `playwright install chromium` and ffmpeg. A natural voice is used when Kokoro is installed (`moneyhub voices install`), otherwise the Mac voice. One broken tutorial does not stop the others; a failure screenshot is written to the system temp folder.

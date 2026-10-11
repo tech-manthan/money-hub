@@ -33,9 +33,9 @@
   }
   function pickType(key) { const r = $(`input[name="product_type"][value="${key}"]`); if (r) r.checked = true; syncType(); applyFit(); }
   function markSuggested(key) {
-    $$('#types .tag').forEach(t => t.hidden = true);
+    $$('#types .tag:not(.free)').forEach(t => t.hidden = true);
     const r = $(`input[name="product_type"][value="${key}"]`);
-    if (r) $('.tag', r.parentElement).hidden = false;
+    if (r) $('.tag:not(.free)', r.parentElement).hidden = false;
   }
   function pickIdea(radio) {
     radio.checked = true; setCustom(false);
@@ -70,6 +70,7 @@
     const r = $(`input[name="product_type"]:checked`);
     $('#eink-wrap').hidden = !(r && r.dataset.eink === '1');
     if ($('#eink-wrap').hidden) $('#opt-eink').checked = false;
+    $('#product-opts').hidden = !$$('#product-opts .row').some(row => !row.hidden);   // the options row(s) that belong to this product
   }
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   function shuffleLook() {

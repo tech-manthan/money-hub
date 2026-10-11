@@ -3,7 +3,7 @@
 <title>MoneyHub</title><link rel="stylesheet" href="/static/app.css"></head>
 <body>
 <header class="top"><div class="in"><b>MoneyHub</b>
-<nav>{% for href, label in [('/', 'Home'), ('/make', 'Make a product'), ('/products', 'My products'), ('/ideas', 'Ideas'), ('/docs', 'How to use'), ('/report', 'Sales &amp; learning'), ('/settings', 'Settings')] %}<a href="{{ href }}" class="{{ 'on' if request.url.path == href }}">{{ label|safe }}</a>{% endfor %}</nav></div></header>
+<nav>{% for href, label in [('/', 'Home'), ('/make', 'Make a product'), ('/products', 'My products'), ('/ideas', 'Ideas'), ('/docs', 'How to use'), ('/tutorials', 'Video tutorials'), ('/report', 'Sales &amp; learning'), ('/settings', 'Settings')] %}<a href="{{ href }}" class="{{ 'on' if request.url.path == href }}">{{ label|safe }}</a>{% endfor %}</nav></div></header>
 <main>{% block main %}{% endblock %}</main>
 <script src="/static/app.js"></script>
 </body></html>

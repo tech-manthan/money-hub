@@ -43,7 +43,8 @@ def suggest_ideas(n: int = 15, focus: str | None = None, providers: list[str] | 
         f"Allowed product types: {', '.join(types)}. "
         + (f"Focus area: {focus}. " if focus else "Cover a wide range of audiences. ")
         + "Prefer narrow, underserved audiences with real, recurring needs (e.g. a specific profession, life stage, condition-adjacent "
-        "routine, hobby or exam) over broad topics. Do not make income claims. Give buyer search phrases for each."
+        "routine, hobby or exam) over broad topics. Every product type must genuinely suit its audience (no classroom charts for a wedding couple). "
+        "Do not make income claims. Give buyer search phrases for each."
     )
     system = "You are an Etsy/Pinterest market researcher. You reason from general market knowledge and say what to verify."
     out = router.complete_json("research", system, prompt, IdeaList, providers=providers)
@@ -53,7 +54,8 @@ def suggest_ideas(n: int = 15, focus: str | None = None, providers: list[str] | 
     else:
         rng = random.Random()
         ideas, source = [], "builtin"
-        combos = [(k, t) for k in LIBRARY for t in types]
+        from .web.guide import FIT
+        combos = [(k, t) for k in LIBRARY for t in FIT.get(k, types) if t in types]   # only products that suit the audience
         rng.shuffle(combos)
         for k, t in combos[:n]:
             nz = LIBRARY[k]

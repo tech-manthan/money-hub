@@ -656,7 +656,7 @@ def calendar(months: int = typer.Option(4, help="How many months ahead to show")
     import calendar as pycal
     for row in cal(months=months):
         when = "this month" if row["in_months"] == 0 else f"in {row['in_months']} month(s)"
-        typer.echo(f"{pycal.month_name[row['month']]:<10} ({when:<13}) {row['occasion']}: {'; '.join(row['ideas'])}")
+        typer.echo(f"{pycal.month_name[row['month']]:<10} ({when:<13}) {row['occasion']}: {row['ideas'] if isinstance(row['ideas'], str) else '; '.join(row['ideas'])}")
 
 
 @app.command()

@@ -144,3 +144,43 @@ def test_wizard_page_carries_the_fit_data(tmp_path, monkeypatch):
     html = TestClient(app).get("/make").text
     assert 'data-fits="' in html and 'id="fit-note"' in html and 'data-default-fits="' in html and 'id="show-all"' in html
     assert "Same for every audience" in html
+
+
+def test_offline_ideas_only_pair_an_audience_with_products_that_suit_it(tmp_path, monkeypatch):
+    from moneyhub import ideas
+    from moneyhub.web.guide import FIT
+    monkeypatch.setattr(ideas, "_path", lambda: tmp_path / "ideas.json")
+
+    class Down:
+        last_used = None
+
+        def complete_json(self, *a, **k):
+            return None
+    monkeypatch.setattr(ideas, "get_router", lambda: Down())
+    data = ideas.suggest_ideas(n=60)
+    assert data["source"] == "builtin" and len(data["ideas"]) == 60
+    by_name = {nz.name: k for k, nz in ideas.LIBRARY.items()}
+    for i in data["ideas"]:
+        assert i["product_type"] in FIT[by_name[i["niche"]]], i
+
+
+def test_tutorials_page_lists_only_recorded_videos(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from moneyhub.web import app as web
+    d = tmp_path / "tutorials"
+    d.mkdir()
+    (d / "audience.mp4").write_bytes(b"x")
+    (d / "index.json").write_text(json.dumps([
+        {"key": "audience", "title": "Pick an audience", "blurb": "Choose who to help.", "seconds": 81, "kind": "app"},
+        {"key": "look", "title": "Looks", "blurb": "Colours.", "seconds": 90, "kind": "app"}]))   # look.mp4 does not exist: not listed
+    monkeypatch.setattr(web, "MEDIA", tmp_path)
+    html = TestClient(web.app).get("/tutorials").text
+    assert "Pick an audience" in html and "1:21" in html and "Looks" not in html
+    assert "/tutorials" in TestClient(web.app).get("/").text      # linked from the menu
+
+
+def test_calendar_command_prints_each_idea_as_text_not_letter_by_letter():
+    from typer.testing import CliRunner
+    from moneyhub.cli import app
+    out = CliRunner().invoke(app, ["calendar", "--months", "6"]).output
+    assert out.strip() and "; ;" not in out and not any(len(part.strip()) == 1 for line in out.splitlines() for part in line.split(": ", 1)[-1].split("; ") if part.strip())
