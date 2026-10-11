@@ -493,7 +493,7 @@ AI image providers for wall-art backgrounds (Hugging Face, Together, OpenAI, loc
 
 ## 18. The optional craft tools
 
-Third-party command-line programs (vectorcraft, pdfcraft, gridcraft, photocraft, wordcraft, deckcraft, soundcraft, cadcraft, plus lightcraft, designcraft, effectcraft, filmcraft). They are **unaudited and optional**, installed by `scripts/install_craft_tools.sh` (checksum-verified) into the git-ignored `tools/craft/`. `moneyhub tools` lists them.
+Third-party command-line programs (vectorcraft, pdfcraft, gridcraft, photocraft, wordcraft, deckcraft, soundcraft, cadcraft, plus lightcraft, designcraft, effectcraft, filmcraft). They are **unaudited and optional**, installed by `scripts/install_craft_tools.sh` (checksum-verified) into the git-ignored `tools/craft/`. `moneyhub tools` lists them. With the cadcraft switch on, `moneyhub verify <id>` (and the after-make check) also compares each cut-file DXF's size and unit with its SVG and warns if they differ.
 
 **Everything is off by default.** With the master switch off no tool is ever started and output is byte-for-byte the same. A missing, slow or failing tool is skipped and never fails a product.
 

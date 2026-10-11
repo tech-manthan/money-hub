@@ -128,6 +128,7 @@ it in a script.
 | `editable/**/*.svg` (up to 12) | vectorcraft | opens as a vector document | `vectorcraft-cli info FILE` |
 | `images/**/*.jpg, *.png` (up to 6) | photocraft | opens as an image | `photocraft-cli info FILE --compact` |
 | DXF inside `product/*.zip` (up to 3 per zip) | cadcraft | opens as a drawing | `cadcraft-cli info FILE.dxf` |
+| same DXF files | cadcraft | size and units match the design | reads the drawing size from `cadcraft-cli info`, requires `$INSUNITS` = inches, the shape inside its mat, and the same width and height as the SVG of the same design (a program that read inches as millimetres is 25.4 times off and fails) |
 | `product/*.docx` | wordcraft | opens as a document | `wordcraft-cli info FILE` |
 | `product/*.pptx` | deckcraft | opens as a presentation | `deckcraft-cli info FILE` |
 | audio files (up to 3) | soundcraft | opens as audio | `soundcraft-cli info FILE` |

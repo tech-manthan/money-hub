@@ -108,6 +108,58 @@ def _finding(file: Path, tool: str, r: Run, what: str) -> dict:
     return {"file": file.name, "tool": tool, "check": what, "ok": r.ok, "detail": detail}
 
 
+def _svg_boxes(dxf_zip: Path) -> dict[str, tuple[float, float, float]]:
+    """For each design in the sibling `*-SVG.zip` of a cut-file DXF zip: (width, height, mat size) in inches, read from its path."""
+    import re
+    boxes: dict[str, tuple[float, float, float]] = {}
+    svg_zip = dxf_zip.with_name(dxf_zip.name.replace("-DXF.zip", "-SVG.zip"))
+    if svg_zip == dxf_zip or not svg_zip.exists():
+        return boxes
+    try:
+        with zipfile.ZipFile(svg_zip) as zf:
+            for n in zf.namelist():
+                if not n.lower().endswith(".svg"):
+                    continue
+                txt = zf.read(n).decode("utf-8", "replace")
+                m = re.search(r"width='([\d.]+)in'", txt)
+                d = re.search(r" d='([^']*)'", txt)
+                if not (m and d):
+                    continue
+                pts = [(float(a), float(b)) for a, b in re.findall(r"(-?[\d.]+),(-?[\d.]+)", d.group(1))]
+                if pts:
+                    k = float(m.group(1)) / 1000.0
+                    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+                    boxes[Path(n).stem] = ((max(xs) - min(xs)) * k, (max(ys) - min(ys)) * k, float(m.group(1)))
+    except (zipfile.BadZipFile, OSError, ValueError):
+        pass
+    return boxes
+
+
+def dxf_size_check(info_json: str, dxf_text: str, svg_box: tuple[float, float, float] | None, tol: float = 0.02) -> tuple[bool, str]:
+    """Compare what cadcraft reads from a DXF (`info` extents) with the design: the file must declare inches, sit inside its mat and, when the
+    matching SVG is known, have the same width and height. A drawing read in millimetres by mistake is 25.4 times off and fails here."""
+    import re
+    try:
+        (x0, y0), (x1, y1) = json.loads(info_json)["extents"]
+    except (ValueError, KeyError, TypeError):
+        return False, "cadcraft did not report the drawing size"
+    w, h = x1 - x0, y1 - y0
+    got = f"{w:.2f} x {h:.2f} in"
+    units = re.search(r"\$INSUNITS\s+70\s+(\d+)", re.sub(r"\s*\n\s*", " ", dxf_text.replace("\r", "")))
+    if not units or units.group(1) != "1":
+        return False, f"{got}; the file does not say its unit is inches"
+    if w <= 0 or h <= 0:
+        return False, "the drawing has no size"
+    if svg_box is None:
+        return True, f"{got}, unit inches (no matching SVG to compare)"
+    sw, sh, mat = svg_box
+    if min(x0, y0) < -tol or max(x1, y1) > mat + tol:
+        return False, f"{got} does not fit the {mat:g} in mat"
+    if abs(w - sw) > tol + 0.01 * sw or abs(h - sh) > tol + 0.01 * sh:
+        return False, f"{got} but the SVG of the same design is {sw:.2f} x {sh:.2f} in"
+    return True, f"{got}, matches the SVG ({mat:g} in mat)"
+
+
 def verify_product(folder: Path, timeout: float = 90.0, only: list[str] | None = None) -> list[dict]:
     """Open each PDF, spreadsheet and editable SVG of a product with the matching tool and report whether it reads cleanly.
     `only` limits the run to those tools (the automatic check passes the ones switched on in settings)."""
@@ -143,13 +195,18 @@ def verify_product(folder: Path, timeout: float = 90.0, only: list[str] | None =
     if on("cadcraft"):
         for z in sorted((folder / "product").glob("*.zip"))[:6]:   # cut files ship their DXF files zipped
             try:
+                svgs = _svg_boxes(z)
                 with zipfile.ZipFile(z) as zf, tempfile.TemporaryDirectory() as td:
                     for n in [n for n in zf.namelist() if n.lower().endswith(".dxf")][:3]:
                         dst = Path(td) / Path(n).name
                         dst.write_bytes(zf.read(n))
-                        r = _finding(dst, "cadcraft", run("cadcraft", ["info", str(dst)], timeout), "opens as a drawing")
-                        r["file"] = f"{z.name}:{Path(n).name}"
-                        out.append(r)
+                        r = run("cadcraft", ["info", str(dst)], timeout)
+                        f = _finding(dst, "cadcraft", r, "opens as a drawing")
+                        f["file"] = f"{z.name}:{Path(n).name}"
+                        out.append(f)
+                        if r.ok:
+                            ok, detail = dxf_size_check(r.out, dst.read_text(errors="replace"), svgs.get(Path(n).stem))
+                            out.append({"file": f["file"], "tool": "cadcraft", "check": "size and units match the design", "ok": ok, "detail": detail})
             except (zipfile.BadZipFile, OSError):
                 out.append({"file": z.name, "tool": "cadcraft", "check": "zip opens", "ok": False, "detail": "not a readable zip file"})
     if on("photocraft"):

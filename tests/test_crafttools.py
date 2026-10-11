@@ -89,9 +89,56 @@ def test_dxf_in_zips_audio_and_decks_are_checked(tmp_path, monkeypatch):
     (prod / "product" / "s.pptx").write_bytes(b"x")
     (prod / "music.wav").write_bytes(b"x")
     res = crafttools.verify_product(prod)
-    names = {(f["tool"], f["file"]): f["ok"] for f in res}
+    names = {(f["tool"], f["file"]): f["ok"] for f in res if f["check"] != "size and units match the design"}
     assert names[("cadcraft", "cut-DXF.zip:01-star.dxf")] and names[("deckcraft", "s.pptx")] and names[("soundcraft", "music.wav")]
     assert names[("cadcraft", "bad.zip")] is False
+
+
+def _cut_zips(prod, size_in=6.0, dxf_units=True):
+    import zipfile
+    from moneyhub import cutfiles
+    d = cutfiles.heart()
+    (prod / "product").mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(prod / "product" / "cut-SVG.zip", "w") as z:
+        z.writestr("01-heart.svg", cutfiles.to_svg(d, size_in))
+    dxf = cutfiles.to_dxf(d, size_in)
+    with zipfile.ZipFile(prod / "product" / "cut-DXF.zip", "w") as z:
+        z.writestr("01-heart.dxf", dxf if dxf_units else dxf.replace("$INSUNITS\n70\n1", "$INSUNITS\n70\n4"))
+    return d
+
+
+def _extents_json(d, scale):
+    k = 6.0 / 1000.0 * scale
+    xs = [x for r in d.rings for x, _ in r]
+    ys = [1000 - y for r in d.rings for _, y in r]
+    return json.dumps({"extents": [[min(xs) * k, min(ys) * k], [max(xs) * k, max(ys) * k]]})
+
+
+def test_cad_size_and_unit_check(tmp_path, monkeypatch):
+    tools = tmp_path / "tools"
+    monkeypatch.setenv("MONEYHUB_CRAFT_DIR", str(tools))
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    _fake(tools, "cadcraft", 'cat "$CAD_JSON"\n')
+    prod = tmp_path / "p"
+    d = _cut_zips(prod)
+
+    def size_row(scale, **kw):
+        (tmp_path / "e.json").write_text(_extents_json(d, scale))
+        monkeypatch.setenv("CAD_JSON", str(tmp_path / "e.json"))
+        return [f for f in crafttools.verify_product(prod, only=["cadcraft"]) if f["check"] == "size and units match the design"][0]
+
+    good = size_row(1.0)
+    assert good["ok"] and "matches the SVG" in good["detail"]
+    mm = size_row(25.4)                                     # a program that read inches as millimetres
+    assert not mm["ok"] and "mat" in mm["detail"]
+    small = size_row(0.5)
+    assert not small["ok"] and "SVG of the same design" in small["detail"]
+    prod2 = tmp_path / "p2"
+    _cut_zips(prod2, dxf_units=False)
+    (tmp_path / "e.json").write_text(_extents_json(d, 1.0))
+    row = [f for f in crafttools.verify_product(prod2, only=["cadcraft"]) if f["check"] == "size and units match the design"][0]
+    assert not row["ok"] and "inches" in row["detail"]
+    assert crafttools.dxf_size_check("not json", "", None)[0] is False
 
 
 def _settings(monkeypatch, **craft):
