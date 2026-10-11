@@ -50,8 +50,8 @@
   <div class="grid types" id="types">
     {% for k, t in types.items() %}
     <label class="type">
-      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}">
-      <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span></span>
+      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}" data-nichefree="{{ 0 if t.niche_in_copy else 1 }}">
+      <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span>{% if not t.niche_in_copy %}<span class="tag free" title="The files are the same whichever audience you pick. The listing is written for everyone who buys this kind of file, without the audience word.">Same for every audience</span>{% endif %}</span>
     </label>
     {% endfor %}
   </div>

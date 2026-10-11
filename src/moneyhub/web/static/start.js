@@ -6,6 +6,7 @@
 
   const val = name => ($(`input[name="${name}"]:checked`, form) || {}).value || '';
   const sel = id => $('#' + id).value;
+  const nicheFree = () => { const r = $(`input[name="product_type"]:checked`); return !!r && r.dataset.nichefree === '1'; };
   const typeLabel = () => { const r = $(`input[name="product_type"]:checked`); return r ? $('b', r.parentElement).textContent : ''; };
   const niche = () => customOn ? $('#custom-niche').value.trim() : (($(`input[name="idea"]:checked`) || { dataset: {} }).dataset.niche || '');
 
@@ -179,7 +180,7 @@
     if (l.brand) bits.push(`your brand colour <b>${l.brand}</b>`);
     if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
-    $('#summary').innerHTML = `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, ` + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
+    $('#summary').innerHTML = (nicheFree() ? `I'll make a <b>${typeLabel()}</b>. It is the same for every audience, so <b>${niche()}</b> only nudges the colour mood; the files and the listing are not about that audience, ` : `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, `) + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
     const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', count: '--count', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus', grade: '--grade', language: '--language', names: '--names', collection: '--collection', query: '--query', shape: '--shape' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
