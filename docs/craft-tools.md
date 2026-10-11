@@ -287,7 +287,9 @@ The path contains the version, so point it at the folder under `current/` and re
 - `filmcraft`, `lightcraft`, `designcraft` and `effectcraft` have no automatic job. They are editors and renderers that
   produce files, so using them needs a decision about which output they should change. They work through `moneyhub craft`.
 - The automatic check does not look inside every zip (only the first three DXF files per zip are opened).
+- **filmcraft as a video engine.** Add `filmcraft` to the chain (`--motion filmcraft,pillow` or `render.motion` in `moneyhub.yaml`) and switch it on (master switch + `filmcraft`). Each scene becomes a still (its finished layout), placed on a timeline with 6-frame cross-dissolves and exported as H.264 by `filmcraft-cli` (`run` script with `--save-as`, then `--project ... export --format h264`). It is a slideshow: no per-scene animation, unlike the built-in Pillow engine. If the tool is off, missing, fails, or the video length is off by more than half a second, the next engine in the chain renders instead. Run for real on a 5-scene plan: 11.21 s for 11.2 s planned.
 - Only `soundcraft` normalising is used for sound.
+- effectcraft is not used yet (it needs a project with compositions; it has a JavaScript scripting interface that could give real per-scene motion).
 - `moneyhub brag --voice` runs the same levelling on each spoken line before it is mixed with the music (same two switches; the progress line says `Voice-over levelled with soundcraft`). Off, missing or failing: the line is used as recorded. Music and sound effects are not touched.
 - Nothing here replaces the real-device checks in `docs/owner-verification.md`: printing, cutting, Excel or Numbers
   recalculation, and a native speaker for the translations.

@@ -2,6 +2,7 @@
 frame renderer + ffmpeg turns it into video. Needs ffmpeg (system) or the optional `imageio-ffmpeg` package."""
 from __future__ import annotations
 
+import json
 import logging
 import math
 import shutil
@@ -485,7 +486,80 @@ tl.seek(0);
         return out
 
 
-ENGINES: dict[str, MotionEngine] = {e.name: e for e in (PillowEngine(), RemotionEngine(), ManimEngine(), HyperFramesEngine())}
+class FilmCraftEngine(MotionEngine):
+    """Slideshow video assembled in the third-party filmcraft video editor: each scene is a still (its finished layout), placed on a
+    timeline with cross-dissolves and exported as H.264. No per-scene animation (the Pillow engine animates text and zooms).
+    Off unless the craft master switch and the filmcraft switch are on (Settings or `moneyhub tools --enable filmcraft`)."""
+    name = "filmcraft"
+    note = "stills + dissolves edited in the filmcraft tool; needs the craft switches and `scripts/install_craft_tools.sh`"
+    TICKS = 254016000000   # filmcraft time units per second
+    DISSOLVE_FRAMES = 6
+
+    def available(self) -> bool:
+        from .. import crafttools
+        return crafttools.is_enabled("filmcraft") and crafttools.find_tool("filmcraft") is not None
+
+    def render(self, plan, pages, brush, out, size, title, fps):
+        import tempfile
+
+        from .. import crafttools
+        out.parent.mkdir(parents=True, exist_ok=True)
+        w, h = size[0] // 2 * 2, size[1] // 2 * 2
+        r = _Renderer(plan, pages, brush, (w, h), title)
+        timeout = float(crafttools._cfg("timeout", 90)) * 4
+        with tempfile.TemporaryDirectory() as td:
+            work = Path(td)
+            stills = []
+            for i, s in enumerate(plan.scenes):
+                f = work / f"scene-{i + 1:02d}.png"
+                r.frame(i, s, s.seconds if s.kind == "page" else max(s.seconds, 2.4)).convert("RGB").save(f)
+                stills.append(f)
+            lines = [{"id": "file.newProject", "params": {"name": "moneyhub"}},
+                     {"id": "file.import", "params": {"paths": [str(f) for f in stills]}},
+                     {"id": "file.newSequence", "params": {"name": "main", "width": w, "height": h, "fps": fps, "video": 1, "audio": 1}}]
+            frame = 0
+            plan_frames = []
+            for s in plan.scenes:
+                n = max(1, int(round(s.seconds * fps)))
+                plan_frames.append((frame, n))
+                frame += n
+            for i, (start, n) in enumerate(plan_frames):
+                lines.append({"id": "timeline.place", "params": {"item": i + 1, "track": "V1", "frame": start,
+                                                                  "duration": n * self.TICKS // fps, "audio": False}})
+            script = work / "build.jsonl"
+            script.write_text("\n".join(json.dumps(x) for x in lines) + "\n", encoding="utf-8")
+            proj = work / "p.fcproj"
+            res = crafttools.run("filmcraft", ["--compact", "--save-as", str(proj), "run", str(script)], timeout)
+            rows = [json.loads(x) for x in res.out.splitlines() if x.startswith("{")]
+            if not res.ok or len(rows) != len(lines) or not all(x.get("ok") for x in rows):
+                log.warning("filmcraft could not build the timeline: %s", (res.err or res.out)[-300:])
+                return None
+            items = rows[1]["result"].get("items", [])
+            clips = [x["result"]["clips"][0] for x in rows[3:]]
+            if items != list(range(1, len(stills) + 1)) or len(clips) != len(stills):   # the placements above assume ids 1..n in scene order
+                log.warning("filmcraft imported %d of %d scenes", len(items), len(stills))
+                return None
+            # the imports come back in path order, which is scene order; dissolve into every scene after the first
+            fades = [{"id": "sequence.applyVideoTransition", "params": {"clip": c, "effect": "cross_dissolve", "frames": self.DISSOLVE_FRAMES, "edge": "in"}}
+                     for c in clips[1:]]
+            script2 = work / "fades.jsonl"
+            script2.write_text("\n".join(json.dumps(x) for x in fades) + "\n", encoding="utf-8")
+            res = crafttools.run("filmcraft", ["--compact", "--project", str(proj), "--save", "run", str(script2)], timeout)
+            if not res.ok:   # no dissolves is still a valid slideshow
+                log.info("filmcraft dissolves skipped: %s", (res.err or res.out)[-200:])
+            tmp = out.with_suffix(".filmcraft.mp4")
+            res = crafttools.run("filmcraft", ["--compact", "--project", str(proj), "export", str(tmp), "--format", "h264", "--no-audio"], timeout)
+            want = sum(n for _, n in plan_frames) / fps
+            got = video_duration(tmp) if tmp.exists() else None
+            if not res.ok or got is None or abs(got - want) > 0.5:
+                tmp.unlink(missing_ok=True)
+                log.warning("filmcraft export failed or has the wrong length (%s vs %.1fs): %s", got, want, (res.err or res.out)[-200:])
+                return None
+            tmp.replace(out)
+        return out
+
+
+ENGINES: dict[str, MotionEngine] = {e.name: e for e in (PillowEngine(), RemotionEngine(), ManimEngine(), HyperFramesEngine(), FilmCraftEngine())}
 
 
 def engine_status() -> list[dict]:

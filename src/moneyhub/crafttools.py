@@ -18,8 +18,9 @@ TOOLS = ["vectorcraft", "pdfcraft", "gridcraft", "photocraft", "wordcraft", "dec
          "designcraft", "effectcraft"]
 
 
-# the tools that have a real check in verify_product (the others are only reachable with `moneyhub craft`)
-CHECKERS = ["vectorcraft", "pdfcraft", "gridcraft", "photocraft", "wordcraft", "deckcraft", "soundcraft", "cadcraft"]
+# the tools with a switch in Settings: the ones with a real check in verify_product, plus filmcraft (an optional video engine)
+# (the others are only reachable with `moneyhub craft`)
+CHECKERS = ["vectorcraft", "pdfcraft", "gridcraft", "photocraft", "wordcraft", "deckcraft", "soundcraft", "cadcraft", "filmcraft"]
 
 
 def _cfg(key: str, default):

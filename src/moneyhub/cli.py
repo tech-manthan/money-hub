@@ -57,7 +57,7 @@ def make(
     weeks: int = typer.Option(None, help="Weekly planner: number of weeks (4-60)"),
     no_images: bool = typer.Option(False, help="Skip listing images/pins"),
     no_video: bool = typer.Option(False, help="Skip the MP4 pin / listing video"),
-    motion: str = typer.Option(None, help="Video engine chain, e.g. 'remotion,pillow' (engines: pillow, remotion, manim, hyperframes)"),
+    motion: str = typer.Option(None, help="Video engine chain, e.g. 'remotion,pillow' (engines: pillow, remotion, manim, hyperframes, filmcraft)"),
     ai_art: bool = typer.Option(False, help="Wall art: use the AI image providers configured in render.art for backgrounds"),
     days: int = typer.Option(None, help="Daily planner: number of pages (7-120)"),
     pages: int = typer.Option(None, help="Coloring books: number of pages (10-40)"),

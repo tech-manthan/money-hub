@@ -286,3 +286,75 @@ def test_tools_command_lists_every_tool(tmp_path, monkeypatch):
     _fake(tmp_path, "gridcraft", "echo ok\n")
     out = CliRunner().invoke(app, ["tools"]).output
     assert "gridcraft" in out and "v1.0" in out and "pdfcraft" in out and "not installed" in out
+
+
+def _fake_filmcraft(base, mode="ok"):
+    """A stand-in filmcraft-cli: answers `run` with one ok line per script line and `export` with a real video of the planned length."""
+    import sys
+    d = base / "filmcraft" / "current" / "filmcraft-cli-1.0-macos-universal"
+    d.mkdir(parents=True, exist_ok=True)
+    exe = d / "filmcraft-cli"
+    exe.write_text(f'''#!{sys.executable}
+import json, os, subprocess, sys
+a = sys.argv[1:]
+if "run" in a:
+    lines = [json.loads(x) for x in open(a[a.index("run") + 1]) if x.strip()]
+    if os.environ.get("FAKE_MODE") == "badrun":
+        print(json.dumps({{"id": "x", "line": 1, "ok": False, "error": "boom"}})); sys.exit(1)
+    n = sum(1 for x in lines if x["id"] == "timeline.place")
+    for k, x in enumerate(lines, 1):
+        res = {{"items": list(range(1, n + 1)), "errors": []}} if x["id"] == "file.import" else {{"clips": [100 + k]}} if x["id"] == "timeline.place" else None
+        print(json.dumps({{"id": x["id"], "line": k, "ok": True, "result": res}}))
+    sys.exit(0)
+if "export" in a:
+    out = a[a.index("export") + 1]
+    secs = os.environ["FAKE_SECONDS"] if os.environ.get("FAKE_MODE") != "short" else "1"
+    subprocess.run([os.environ["FFMPEG"], "-y", "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red:s=64x64:r=10", "-t", secs, "-pix_fmt", "yuv420p", out], check=True)
+    sys.exit(0)
+sys.exit(2)
+''')
+    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
+    (base / "filmcraft" / "VERSION").write_text("v1.0\n")
+
+
+def test_filmcraft_video_engine_is_off_by_default_and_falls_back_when_it_fails(tmp_path, monkeypatch):
+    import pytest
+    from PIL import Image
+
+    from moneyhub.design import choose_style
+    from moneyhub.render import graphics as g
+    from moneyhub.render import motion
+    ff = motion.ffmpeg_exe()
+    if not ff:
+        pytest.skip("ffmpeg missing")
+    tools = tmp_path / "tools"
+    monkeypatch.setenv("MONEYHUB_CRAFT_DIR", str(tools))
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("FFMPEG", ff)
+    _fake_filmcraft(tools)
+    plan = motion.builtin_plan("A Planner", "sub", ["one", "two", "three"], "Plan it")
+    monkeypatch.setenv("FAKE_SECONDS", f"{sum(s.seconds for s in plan.scenes):.2f}")
+    brush = g.Brush(choose_style(seed=2))
+    pages = [Image.new("RGB", (400, 500), "#eee")]
+    size = (270, 480)
+    engine = motion.ENGINES["filmcraft"]
+
+    _settings(monkeypatch)   # everything off: not available, never started
+    assert not engine.available()
+    assert motion.render_video(plan, pages, brush, tmp_path / "a.mp4", size, "t", 10, engines=["filmcraft"]) is None
+
+    _settings(monkeypatch, enabled=True, tools={"filmcraft": True})
+    assert engine.available()
+    out = motion.render_video(plan, pages, brush, tmp_path / "b.mp4", size, "t", 10, engines=["filmcraft"])
+    assert out and out.exists() and abs(motion.video_duration(out) - float(__import__("os").environ["FAKE_SECONDS"])) < 0.5
+
+    for mode in ("badrun", "short"):     # a failing tool or a wrong-length video is dropped, and the next engine in the chain takes over
+        monkeypatch.setenv("FAKE_MODE", mode)
+        assert motion.render_video(plan, pages, brush, tmp_path / f"{mode}.mp4", size, "t", 10, engines=["filmcraft"]) is None
+        assert not (tmp_path / f"{mode}.filmcraft.mp4").exists()
+        out = motion.render_video(plan, pages, brush, tmp_path / f"{mode}-chain.mp4", size, "t", 10, engines=["filmcraft", "pillow"])
+        assert out and out.exists()
+
+
+def test_filmcraft_has_a_settings_switch():
+    assert "filmcraft" in crafttools.CHECKERS and "filmcraft" in {t["tool"] for t in crafttools.settings_view()["tools"]}
