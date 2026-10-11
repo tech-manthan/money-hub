@@ -10,7 +10,28 @@
   const typeLabel = () => { const r = $(`input[name="product_type"]:checked`); return r ? $('b', r.parentElement).textContent : ''; };
   const niche = () => customOn ? $('#custom-niche').value.trim() : (($(`input[name="idea"]:checked`) || { dataset: {} }).dataset.niche || '');
 
-  function pickType(key) { const r = $(`input[name="product_type"][value="${key}"]`); if (r) r.checked = true; syncType(); }
+  // Not every product suits every audience: show the ones that fit the chosen audience, keep the rest behind "Show all".
+  let showAll = false;
+  function fits() {
+    const r = !customOn && $(`input[name="idea"]:checked`);
+    return ((r && r.dataset.fits) || $('#types').dataset.defaultFits || '').split(',').filter(Boolean);
+  }
+  function applyFit() {
+    const list = fits(), chosen = val('product_type'), who = niche();
+    const cards = $$('#types .type');
+    let hidden = 0;
+    cards.forEach(c => {
+      const key = $('input', c).value, ok = !who || !list.length || list.includes(key) || key === chosen || showAll;
+      c.hidden = !ok; if (!ok) hidden++;
+    });
+    const btn = $('#show-all');
+    btn.hidden = !who || !(hidden || showAll) || !list.length;
+    btn.textContent = showAll ? 'Show only the products that fit' : `Show all ${cards.length} products anyway`;
+    $('#fit-note').textContent = !list.length || !who ? 'Not every product suits every audience. Pick an audience above and we show the products that fit it.'
+      : customOn ? `Showing the products that are written for any audience you describe. Products labelled "Same for every audience" are behind the button below.`
+      : `Showing ${cards.length - hidden} products that fit ${who}. The others (for example classroom charts for a wedding) are hidden.`;
+  }
+  function pickType(key) { const r = $(`input[name="product_type"][value="${key}"]`); if (r) r.checked = true; syncType(); applyFit(); }
   function markSuggested(key) {
     $$('#types .tag').forEach(t => t.hidden = true);
     const r = $(`input[name="product_type"][value="${key}"]`);
@@ -18,13 +39,14 @@
   }
   function pickIdea(radio) {
     radio.checked = true; setCustom(false);
-    pickType(radio.dataset.type); markSuggested(radio.dataset.type);
+    showAll = false; pickType(radio.dataset.type); markSuggested(radio.dataset.type);
     $('#msg-1').textContent = '';
   }
   function setCustom(on) {
     customOn = on; $('#custom-box').hidden = !on;
     $('#custom-toggle').textContent = on ? '← Back to the ready-made ideas' : '✍️ Type my own audience';
     $('#ideas').classList.toggle('dim', on);
+    showAll = false; applyFit();
     if (on) { $$('input[name="idea"]').forEach(r => r.checked = false); markSuggested(''); $('#custom-niche').focus(); }
   }
   function syncType() {
@@ -76,7 +98,9 @@
     setCustom(true); $('#custom-niche').value = b.dataset.niche; pickType(b.dataset.type); markSuggested(b.dataset.type); $('#msg-1').textContent = '';
   }));
   $('#ideas').addEventListener('change', e => { if (e.target.name === 'idea') pickIdea(e.target); });
-  $('#types').addEventListener('change', syncType);
+  $('#types').addEventListener('change', () => { syncType(); applyFit(); });
+  $('#show-all').addEventListener('click', () => { showAll = !showAll; applyFit(); });
+  $('#custom-niche').addEventListener('input', applyFit);
   $('#focus').addEventListener('change', syncType);
   $('#custom-toggle').addEventListener('click', () => setCustom(!customOn));
   $('#surprise').addEventListener('click', () => {

@@ -130,7 +130,7 @@ def docs(request: Request):
 def start(request: Request):
     types = all_product_types()
     return templates.TemplateResponse(request, "start.html", _ctx(
-        request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), steps=guide.STEPS, recs=recommend(),
+        request, products=_catalogue()[:4], types=types, ideas=guide.idea_cards(types), default_fits=guide.default_fits(types), steps=guide.STEPS, recs=recommend(),
         size_map={k: t.size_options() for k, t in types.items()}, ai_art=any(a["available"] for a in art_status()), **_look_ctx()))
 
 

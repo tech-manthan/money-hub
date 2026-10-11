@@ -38,7 +38,7 @@
   <div class="grid ideas" id="ideas">
     {% for i in ideas %}
     <label class="idea">
-      <input type="radio" name="idea" value="{{ loop.index0 }}" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}">
+      <input type="radio" name="idea" value="{{ loop.index0 }}" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}" data-fits="{{ i.fits }}">
       <span class="in"><span class="ic">{{ i.icon }}</span><b>{{ i.niche }}</b>
         <span class="meta">For {{ i.audience }}.</span>
         <span class="prob">Helps with: {{ i.problem|lower }}</span>
@@ -47,7 +47,8 @@
     {% endfor %}
   </div>
   <h2>What should we make for them?</h2>
-  <div class="grid types" id="types">
+  <p class="meta" id="fit-note">Not every product suits every audience. Pick an audience above and we show the products that fit it.</p>
+  <div class="grid types" id="types" data-default-fits="{{ default_fits|join(',') }}">
     {% for k, t in types.items() %}
     <label class="type">
       <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}" data-nichefree="{{ 0 if t.niche_in_copy else 1 }}">
@@ -55,6 +56,7 @@
     </label>
     {% endfor %}
   </div>
+  <p><button type="button" class="ghost sm" id="show-all" hidden></button></p>
   <p class="msg" id="msg-1" role="alert"></p>
   <div class="nav"><span></span><button type="button" data-go="2">Next: pick a look →</button></div>
   <details class="help"><summary>Not sure what will sell?</summary>

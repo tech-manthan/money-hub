@@ -111,3 +111,36 @@ def test_presentation_template_needs_the_tool(tmp_path, monkeypatch):
     with pytest.raises(Exception) as e:
         _make(seed=6)
     assert "deckcraft" in str(e.value)
+
+
+# ------------------------------------------------------------------ audience fit in the wizard
+def test_every_audience_card_fits_its_suggested_product_and_only_real_types():
+    from moneyhub.products import all_product_types
+    from moneyhub.web import guide
+    types = all_product_types()
+    cards = guide.idea_cards(types)
+    assert len(cards) == 15
+    for c in cards:
+        fits = c["fits"].split(",")
+        assert c["product_type"] in fits, c["niche"]
+        assert set(fits) <= set(types), (c["niche"], set(fits) - set(types))
+        assert 8 <= len(fits) < len(types), c["niche"]              # a real shortlist, never everything
+    by = {c["niche"].lower(): set(c["fits"].split(",")) for c in cards}
+    assert "classroom_pack" not in by["wedding"] and "budget_tracker" in by["wedding"]
+    assert {"classroom_pack", "worksheet_pack"} <= by["teacher"]
+    assert "oracle_deck" not in by["nurse"]
+
+
+def test_a_typed_audience_gets_the_audience_specific_products_first():
+    from moneyhub.products import all_product_types
+    from moneyhub.web import guide
+    d = guide.default_fits(all_product_types())
+    assert "weekly_planner" in d and "digital_paper" not in d and len(d) == 10
+
+
+def test_wizard_page_carries_the_fit_data(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from moneyhub.web.app import app
+    html = TestClient(app).get("/make").text
+    assert 'data-fits="' in html and 'id="fit-note"' in html and 'data-default-fits="' in html and 'id="show-all"' in html
+    assert "Same for every audience" in html
