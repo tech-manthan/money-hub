@@ -166,3 +166,44 @@ def test_bundle_and_sample_end_to_end():
     assert (out / "listing.md").read_text().count("sold separately") == 2 and list((out / "product").glob("*.zip"))
     s = growth.make_sample(a.product_id, 1)
     assert s and s.exists()
+
+
+def _fake_voice(monkeypatch):
+    class Fake(voicemod.Voice):
+        name = "fake"
+        def available(self): return True
+        def synth(self, text, dst, ffmpeg):
+            audio.write_wav(dst, np.zeros((2, int(1.2 * audio.SR))) + 0.01)
+            return 1.2
+    monkeypatch.setattr(voicemod, "pick", lambda preferred=None: Fake())
+
+
+def test_brag_voice_is_polished_only_when_soundcraft_is_switched_on(tmp_path, monkeypatch):
+    import stat
+
+    from moneyhub import crafttools
+    from moneyhub.render.motion import ffmpeg_exe
+    if not ffmpeg_exe():
+        pytest.skip("ffmpeg missing")
+    _fake_voice(monkeypatch)
+    tools = tmp_path / "tools"
+    exe = tools / "soundcraft" / "current" / "soundcraft-cli-1.0-macos-universal" / "soundcraft-cli"
+    exe.parent.mkdir(parents=True)
+    marker = tmp_path / "soundcraft-was-started"
+    exe.write_text(f"#!/bin/bash\ntouch {marker}\nexit 2\n")
+    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("MONEYHUB_CRAFT_DIR", str(tools))
+    monkeypatch.setattr(crafttools, "_cfg", lambda key, default=None: {"enabled": False, "tools": {}}.get(key, default))
+    res = make_brag(_mat(tmp_path / "a"), duration=14, voice=True, preview=True, use_llm=False, music="none")
+    assert res.video.exists() and not marker.exists()     # switched off: the tool is never started
+
+    seen = []
+    monkeypatch.setattr("moneyhub.brag.pipeline.polish_wav", lambda f: seen.append(f.name) or True)
+    msgs = []
+    res = make_brag(_mat(tmp_path / "b"), duration=14, voice=True, preview=True, use_llm=False, music="none", progress=msgs.append)
+    assert res.video.exists() and seen and all(n.startswith("vo-") for n in seen)
+    assert any("levelled with soundcraft" in m for m in msgs)
+
+    monkeypatch.setattr("moneyhub.brag.pipeline.polish_wav", lambda f: False)   # a failing tool changes nothing
+    res = make_brag(_mat(tmp_path / "c"), duration=14, voice=True, preview=True, use_llm=False, music="none")
+    assert res.video.exists()

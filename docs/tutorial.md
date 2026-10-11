@@ -425,7 +425,7 @@ moneyhub brag --shop 3,4,5            # a collection video
 moneyhub brag --url https://...       # from a website (needs Playwright + Chromium)
 ```
 
-Tones: polished, playful, cinematic, chaotic, app-store, or free text like "calm and cosy". Formats: vertical, landscape, square, all. Music: generated, none, or your own licensed file (`--music file --music-file x.mp3`). Voice: kokoro, say, espeak or auto. `--preview` makes a quick half-size draft. See `docs/brag.md`.
+Tones: polished, playful, cinematic, chaotic, app-store, or free text like "calm and cosy". Formats: vertical, landscape, square, all. Music: generated, none, or your own licensed file (`--music file --music-file x.mp3`). Voice: kokoro, say, espeak or auto. `--preview` makes a quick half-size draft. With the soundcraft switch on (Settings, craft tools) each voice-over line is levelled before mixing. See `docs/brag.md`.
 
 ---
 

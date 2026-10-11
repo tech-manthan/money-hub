@@ -24,7 +24,7 @@ descriptions, from their own repositories:
 | `cadcraft` | CAD / DXF | Opens the DXF files inside cut-file zips |
 | `wordcraft` | Word processor | Opens `.docx` files if a product has one |
 | `deckcraft` | Slides | Opens `.pptx` files if a product has one |
-| `soundcraft` | Audio editor | Opens audio files; levels the tour narration |
+| `soundcraft` | Audio editor | Opens audio files; levels the tour narration and launch-video voice-overs |
 | `filmcraft`, `lightcraft`, `designcraft`, `effectcraft` | Video, photo, layout and effects editors | Not used automatically yet (see [What is not done](#what-is-not-done)) |
 
 Two more repositories in the same organisation, `artcraft` and `craft-launcher`, are desktop apps, not command-line tools.
@@ -287,6 +287,7 @@ The path contains the version, so point it at the folder under `current/` and re
 - `filmcraft`, `lightcraft`, `designcraft` and `effectcraft` have no automatic job. They are editors and renderers that
   produce files, so using them needs a decision about which output they should change. They work through `moneyhub craft`.
 - The automatic check does not look inside every zip (only the first three DXF files per zip are opened).
-- Only `soundcraft` normalising is used for sound. The launch videos made by `moneyhub brag` are not run through it yet.
+- Only `soundcraft` normalising is used for sound.
+- `moneyhub brag --voice` runs the same levelling on each spoken line before it is mixed with the music (same two switches; the progress line says `Voice-over levelled with soundcraft`). Off, missing or failing: the line is used as recorded. Music and sound effects are not touched.
 - Nothing here replaces the real-device checks in `docs/owner-verification.md`: printing, cutting, Excel or Numbers
   recalculation, and a native speaker for the translations.

@@ -14,6 +14,7 @@ from PIL import Image
 from ..llm import get_router
 from ..render import graphics as g
 from ..render.motion import ffmpeg_exe
+from ..crafttools import polish_wav
 from . import audio, voice as voicemod
 from .plan import BragPlan, make_plan
 from .render import FORMATS, BragRenderer, build_timeline, encode, srt
@@ -109,6 +110,10 @@ def make_brag(mat: Material, tone: str | None = None, fmt: str = "vertical", dur
                     f = work / f"vo-{i + 1:02d}.wav"
                     lens[i] = v.synth(line, f, ffmpeg)
                     vo_files[i], vo_lines[i] = f, line
+            if polish_wav is not None:   # optional soundcraft levelling of each spoken line; off unless switched on in Settings
+                done = sum(1 for f in vo_files if f is not None and polish_wav(f))
+                if done:
+                    say(f"Voice-over levelled with soundcraft ({done} line{'s' if done != 1 else ''})")
 
     fps = 15 if preview else fps
     fmts = list(FORMATS) if fmt == "all" else [fmt]
