@@ -80,6 +80,13 @@ def make(
     names: str = typer.Option(None, help="Classroom printables: student names to print on tags and desk plates, comma separated (up to 30); blank lines to write in when omitted"),
     no_research: bool = typer.Option(False, help="Do not use an LLM to research unknown niches"),
     gsheet_link: str = typer.Option(None, help="Spreadsheet products: your Google Sheets link (its /edit ending becomes /copy on the Start Here page)"),
+    decor: str = typer.Option(None, help="Page decoration shortcut: all (themed corner art, title-bar pictures and a watercolour background), corner, header, background or none. The specific flags below override it"),
+    decor_corner: str = typer.Option(None, help="Faint line art in a page corner: themed, botanical, floral, waves, sparkles, geometric or none"),
+    decor_header: str = typer.Option(None, help="Small pictures in the title bar: themed, botanical, floral, sparkles, hearts, waves or none"),
+    decor_background: str = typer.Option(None, help="A pale background: themed, watercolor, dots, leaves, daisies, waves, sparkles, diamonds, terrazzo, hearts, stars, confetti or none (uses more ink)"),
+    decor_strength: str = typer.Option(None, help="How strong the decoration is: light (default), medium or bold"),
+    decor_corner_at: str = typer.Option(None, help="Where the corner art goes: bottom-right (default), top-right, bottom-left, top-left or opposite"),
+    decor_theme: str = typer.Option(None, help="Pictures for 'themed' decoration: medical, school, money, wedding, fitness, calm, family, pets, garden, faith, home, food, focus, business or general (default: chosen from the audience)"),
 ):
     """Generate one product with its images, listing copy and upload guides."""
     from .art import WALL_MOTIFS as MOTIFS
@@ -101,6 +108,16 @@ def make(
             names = ", ".join(parse_names(names))
         except ValueError as e:
             raise typer.BadParameter(str(e), param_hint="--names")
+    from . import decor as _decor
+    if decor:
+        _check(decor, ["all", "corner", "header", "background", "none"], "--decor")
+        preset = {"all": ("themed", "themed", "watercolor"), "corner": ("themed", "none", "none"), "header": ("none", "themed", "none"),
+                  "background": ("none", "none", "watercolor"), "none": ("none", "none", "none")}[decor]
+        decor_corner, decor_header, decor_background = decor_corner or preset[0], decor_header or preset[1], decor_background or preset[2]
+    try:
+        _decor.make(decor_corner or "", decor_header or "", decor_background or "", decor_strength or "", decor_corner_at or "", decor_theme or "")
+    except ValueError as e:
+        raise typer.BadParameter(str(e), param_hint="--decor-*")
     _check(radius, RADII, "--radius"), _check(grid, GRIDS, "--grid"), _check(motif if not (motif or "").startswith("icon:") else None, MOTIFS, "--motif"), _check(layout, list(range(5)), "--layout")
     if layout is not None and not page_layout:   # the old numbered wall-art layouts are now the first five presets
         from .layouts import ART_PRESETS
@@ -141,7 +158,7 @@ def make(
             typer.echo("note: no AI art provider is usable. Use --art-provider claude_svg (needs Claude Code or another writing helper), or add a key "
                        "in Settings (Hugging Face / Together / OpenAI). Falling back to built-in motifs.", err=True)
     opts = {k: v for k, v in {"weeks": weeks, "days": days, "pages": pages, "stickers": stickers, "count": count, "collection": collection, "query": query, "shape": shape, "deck": deck, "card_size": card_size, "level": level, "focus": focus, "grade": grade, "language": language, "names": names, "print_then_cut": print_then_cut or None, "figures": figures or None, "cards": cards, "theme": theme, "age": age, "ai_art": (ai_art or bool(art_chain)) or None, "no_research": no_research or None,
-                              "gsheet_url": gsheet_link, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
+                              "gsheet_url": gsheet_link, "decor_corner": decor_corner, "decor_header": decor_header, "decor_background": decor_background, "decor_strength": decor_strength, "decor_corner_at": decor_corner_at, "decor_theme": decor_theme, "page_layout": page_layout, "layout_spec": layout_spec, "brand": brand, "eink": eink or None, "header": header, "radius": radius, "grid": grid, "motif": motif,
                               "art_providers": art_chain}.items() if v is not None and v != "" and v is not False}
     req = Request(niche=niche, product_type=product, sizes=_csv(sizes), seed=seed, palette=palette, fonts=fonts,
                   providers=_csv(llm), options=opts, with_images=not no_images, with_video=not no_video, motion=_csv(motion))
@@ -170,6 +187,12 @@ def styles():
     typer.echo(f"Corner radius px (--radius): {', '.join(map(str, RADII))}")
     typer.echo(f"Grid lines (--grid): {', '.join(GRIDS)}")
     typer.echo(f"Wall art motifs (--motif): {', '.join(MOTIFS)}")
+    from . import decor as _decor
+    c = _decor.choices()
+    typer.echo("\nPage decoration (planners, journals, trackers, checklists, worksheets, guides; all off by default; --decor all|corner|header|background):\n"
+               f"  --decor-corner      none, {', '.join(c['corner'])}\n  --decor-header      none, {', '.join(c['header'])}\n"
+               f"  --decor-background  none, {', '.join(c['background'])}\n  --decor-strength    {', '.join(c['strength'])}\n"
+               f"  --decor-corner-at   {', '.join(c['corner_at'])}\n  --decor-theme       {', '.join(c['theme'])} (default: from the audience)")
     typer.echo("\nPage layouts (--page-layout), by product:")
     from .products import all_product_types as _all
     for key, t in _all().items():

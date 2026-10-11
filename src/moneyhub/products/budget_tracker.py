@@ -34,6 +34,7 @@ class BudgetContent(BaseModel):
 @register
 class BudgetTracker(ProductType[BudgetContent]):
     key = "budget_tracker"
+    decor_ok = True
     layouts = {"classic": "Classic: income and savings left, expenses right, plus bills, savings, debt and year pages",
                "stacked": "Stacked: income and savings across the top, expenses in columns below",
                "essentials": "Essentials: three monthly pages and a big bill tracker, nothing else",

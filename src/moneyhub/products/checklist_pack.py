@@ -33,6 +33,7 @@ class ChecklistContent(BaseModel):
 @register
 class ChecklistPack(ProductType[ChecklistContent]):
     key = "checklist_pack"
+    decor_ok = True
     label = "Checklist pack"
     description = "A bundle of niche-specific printable checklists (routines, prep lists, resets, supplies)."
     content_model = ChecklistContent

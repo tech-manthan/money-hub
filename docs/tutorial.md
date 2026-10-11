@@ -217,7 +217,7 @@ Prices are the suggested range MoneyHub shows; they are starting points, not dat
 
 | Type | You get | Notable options |
 |---|---|---|
-| **weekly_planner** ($6-15) | Undated weekly pages, monthly overviews, goals, notes. Printable PDF plus a hyperlinked tablet version. Sizes: Letter, A4, tablet, e-ink. | `--weeks` (4-60), `--page-layout`, `--layout-prompt`, `--eink` |
+| **weekly_planner** ($6-15) | Undated weekly pages, monthly overviews, goals, notes. Printable PDF plus a hyperlinked tablet version. Sizes: Letter, A4, tablet, e-ink. | `--weeks` (4-60), `--page-layout`, `--layout-prompt`, `--eink`, `--decor` and `--decor-*` (also on the other planners, journals, trackers, checklists, worksheets and guides) |
 | **daily_planner** ($5-12) | One page per day: hourly schedule, priorities, to-do list, audience boxes. | `--days` (7-120), page layouts |
 | **habit_tracker** ($4-10) | An interactive spreadsheet (tick boxes, automatic percentages, chart) plus 12 printable monthly trackers. | `--gsheet-link` |
 | **budget_tracker** ($7-18) | A spreadsheet with transactions, budget vs actual, savings goals, debt payoff and a dashboard, plus printable budget pages. | `--gsheet-link` |
@@ -281,6 +281,26 @@ Spreadsheet products add a Google Sheets help block to the Start-Here page. Cell
 **Page layouts** (weekly and daily planners): presets, `auto:N` (generated layout number N), or a description in words. `moneyhub layouts weekly_planner --count 8` writes a contact sheet so you can pick a number, then `--page-layout auto:5`. A layout that does not fit a page size falls back to the first preset and the product page says so.
 
 **E-ink:** `--eink` makes black-and-white, hyperlinked pages sized for reMarkable, Kindle Scribe or Boox. Not yet checked on a real device.
+
+**Page decoration (optional, all off by default).** Planners, journals, trackers, checklists, worksheets and guides are plain white pages unless you ask for decoration. It has three separate layers, and each has its own style:
+
+| Layer | What it is | Styles |
+|---|---|---|
+| **Corner art** | Faint line art in a corner of every page (a watermark) | themed, botanical, floral, waves, sparkles, geometric |
+| **Title-bar pictures** | A small row of pictures in the page title bar | themed, botanical, floral, sparkles, hearts, waves |
+| **Background** | A pale pattern or watercolour wash behind the page. Writing boxes stay white. **Uses more ink.** | themed, watercolor, dots, leaves, daisies, waves, sparkles, diamonds, terrazzo, hearts, stars, confetti |
+
+Shared settings: **strength** (light, medium, bold), **corner position** (bottom-right, top-right, bottom-left, top-left, or opposite corners) and the **theme** for the "themed" style. A themed picture set follows the audience: a stethoscope, heart and pulse line for nurses; books, a pencil and an apple for teachers and students; a sprout and flowers for gardeners; coins and a chart for money; rings and a dove for weddings; a paw for pet owners; and so on (14 themes, `--decor-theme` overrides). The pictures are simple original line drawings made for MoneyHub, so there is nothing to credit.
+
+Three ways to set it:
+
+```bash
+moneyhub make "nurse" weekly_planner --decor all                      # themed corner + title bar + watercolour background
+moneyhub make "nurse" weekly_planner --decor-corner floral --decor-corner-at opposite --decor-strength medium
+moneyhub make "nurse" daily_planner --decor-header themed             # only the title-bar pictures
+```
+
+or the **Decoration** block on step 2 of the wizard (with *Light touch*, *Fully decorated* and *No decoration* buttons and a live example page), or the `decor:` section of `moneyhub.yaml` for defaults. Options you give always win over the file. Backgrounds are kept faint on purpose: the strongest tint of every palette is tested so that body text and small grey text stay easy to read. When a background is on, the listing description and the Start-Here page add a short note suggesting grayscale or economy printing. E-ink versions are always plain. Asking for decoration on a product that does not support it (clipart, digital paper and so on) is an error; defaults from the yaml file are simply skipped there.
 
 **Why flex and not grid inside tables:** a known WeasyPrint issue can make a grid page with nested flex tables take about 15 minutes to lay out. The budget pages use flex rows for that reason. This only matters if you edit templates.
 
@@ -570,7 +590,7 @@ Run `moneyhub <command> --help` for any command.
 
 | Command | What it does |
 |---|---|
-| `make <niche> [product]` | One product with images, copy and guides. Options: `--sizes --seed --palette --fonts --page-layout --layout-prompt --brand --eink --header --radius --grid --motif --art-provider --marketplaces --llm --weeks --days --pages --language --level --focus --grade --deck --card-size --cards --count --collection --query --shape --stickers --theme --age --figures --print-then-cut --names --no-research --gsheet-link --no-images --no-video --motion --ai-art` |
+| `make <niche> [product]` | One product with images, copy and guides. Options: `--sizes --seed --palette --fonts --page-layout --layout-prompt --brand --eink --header --radius --grid --motif --decor --decor-corner --decor-header --decor-background --decor-strength --decor-corner-at --decor-theme --art-provider --marketplaces --llm --weeks --days --pages --language --level --focus --grade --deck --card-size --cards --count --collection --query --shape --stickers --theme --age --figures --print-then-cut --names --no-research --gsheet-link --no-images --no-video --motion --ai-art` |
 | `regenerate <id>` | A fresh variation of a product |
 | `make-many <niche> <product> --count N --vary look,theme,seed` | Several distinct variations plus a summary table |
 | `batch <niches> --products ...` | Every product for every niche |
@@ -724,11 +744,11 @@ MoneyHub is honest about what it could not verify. These need you:
 
 ## 28. The video tutorials
 
-Open **Video tutorials** in the menu (`/tutorials`). Sixteen narrated videos, each 1 to 3 minutes:
+Open **Video tutorials** in the menu (`/tutorials`). Seventeen narrated videos, each 1 to 3 minutes:
 
 | Group | Videos |
 |---|---|
-| Make a product | Pick an audience and a product; Product options; Colours, fonts, layouts and e-ink |
+| Make a product | Pick an audience and a product; Product options; Colours, fonts, layouts and e-ink; Page decoration |
 | Check it and sell it | The product page; What to upload on each platform; Canva, Notion and KDP; Track sales and learn |
 | Ideas, settings and extras | The Ideas page; Settings, AI keys and tools; Variations and the catalogue; Edit the art yourself; The launch video |
 | The command line | The basics; Listing and learning; Many products at once; Tools and extras |

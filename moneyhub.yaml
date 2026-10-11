@@ -80,6 +80,16 @@ shop:
   email: ""
   url: ""
 
+# Optional page decoration for planners, journals, trackers, checklists, worksheets and guides. All OFF by default (plain white pages print
+# cleanly and save ink). Options given with `make` or in the wizard win over these. Values: see `moneyhub styles`.
+decor:
+  corner: none        # none, themed, botanical, floral, waves, sparkles, geometric   (faint line art in a corner)
+  header: none        # none, themed, botanical, floral, sparkles, hearts, waves       (small pictures in the title bar)
+  background: none    # none, themed, watercolor, dots, leaves, daisies, waves, sparkles, diamonds, terrazzo, hearts, stars, confetti (uses more ink)
+  strength: light     # light, medium, bold
+  corner_at: bottom-right   # bottom-right, top-right, bottom-left, top-left, opposite
+  theme: ""           # pictures for "themed": medical, school, money, wedding, fitness, calm, family, pets, garden, faith, home, food, focus, business, general; empty = match the audience
+
 defaults:
   page_sizes: [letter, a4]
   marketplaces: [etsy, gumroad, payhip, kofi]

@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Callable
 
 from .config import get_config
+from . import decor
 from .design import choose_style
 from .listing.guides_render import MARKETPLACES, render_guides
 from .listing.images import make_images
 from .listing.kit import ListingKit, make_kit
 from .llm import get_router
 from .niches import NicheProfile, resolve_niche, smart_resolve
-from .products import get_product_type
+from .products import all_product_types, get_product_type
 from .products.base import BuildContext, BuildResult
 from . import risk as riskmod
 from .qa import Check, media_checks, run_checks, summarize
@@ -56,6 +57,25 @@ class Result:
     listing_source: str
 
 
+def _decoration(req, niche, ptype, style, say):
+    """Apply the optional page decoration to the look. Explicit options on an unsupported product are an error; defaults from moneyhub.yaml
+    are simply skipped there. E-ink pages stay plain."""
+    given = {k: v for k, v in req.options.items() if k.startswith("decor_") and v}
+    d = decor.from_options(req.options, niche.key, f"{niche.name} {niche.audience}", get_config().get("decor") or {})
+    if not d.active:
+        return None
+    if not ptype.decor_ok:
+        if given:
+            raise ValueError(f"{ptype.label} has no page decoration. It works with: " + ", ".join(k for k, t in all_product_types().items() if t.decor_ok))
+        return None
+    if req.options.get("eink"):
+        say("E-ink pages are black and white, so the decoration is left off")
+        return None
+    style.extra["decor"] = d.as_dict()
+    say("Decorating the pages: " + (decor.describe(d) or "on").lower().replace("decorated pages: ", ""))
+    return d
+
+
 def generate(req: Request, progress: Callable[[str], None] | None = None, store: Store | None = None) -> Result:
     say = progress or (lambda m: None)
     cfg = get_config()
@@ -79,6 +99,8 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
                              "checklist_pack, worksheet_pack, ebook_guide")
         sizes = ["eink"]
 
+    dec = _decoration(req, niche, ptype, style, say)
+
     stamp = time.strftime("%Y%m%d-%H%M%S")
     base = f"{stamp}-{niche.key}-{ptype.key}"
     folder, n = cfg.output_dir / "products" / base, 1
@@ -96,6 +118,13 @@ def generate(req: Request, progress: Callable[[str], None] | None = None, store:
         content, content_source = ptype.generate_content(ctx)
         say(f"Content from {content_source}; rendering files")
         build: BuildResult = ptype.build(ctx, content)
+        if dec:
+            build.meta["decor"] = dec.as_dict()
+            note = decor.ink_note(dec)
+            if note:
+                build.meta["decor_ink_note"] = note
+            if decor.describe(dec):
+                build.features.insert(min(2, len(build.features)), decor.describe(dec))
 
         start = build_start_page(build, style, pdir, ptype.key, niche.key, req.options.get("gsheet_url"))
         if start:

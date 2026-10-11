@@ -14,6 +14,7 @@
     <div><b>3.</b> In the print window choose <b>Actual size</b> (or <b>Scale 100%</b>). Do not choose "Fit" or "Shrink to fit": that changes the size of the page.</div>
     <div><b>4.</b> Print the pages you need. Standard paper is fine; use thicker paper or cardstock for cards. A print shop can print the file too.</div>
     <div><b>5.</b> Home printers cannot print to the very edge of the paper, so the layouts keep a margin. If an edge is cut off, check that you printed at 100%.</div>
+    {% if ink_note %}<div><b>6.</b> {{ ink_note }}</div>{% endif %}
   </div>
   {% endif %}
   {% if has_tablet %}

@@ -4,7 +4,7 @@
 {% if not items %}
 <div class="panel"><p>The tutorial videos have not been recorded yet. Run <code>python scripts/record_tutorials.py</code> from the project folder. It records them from the real app, offline, with your data untouched.</p></div>
 {% else %}
-{% set groups = [('Make a product', ['audience', 'options', 'look']), ('Check it and sell it', ['product-page', 'sell-on', 'exports', 'track']),
+{% set groups = [('Make a product', ['audience', 'options', 'look', 'decoration']), ('Check it and sell it', ['product-page', 'sell-on', 'exports', 'track']),
                  ('Ideas, settings and extras', ['ideas', 'settings', 'variations', 'editing', 'launch-video']),
                  ('The command line', ['cli-basics', 'cli-selling', 'cli-scale', 'cli-tools'])] %}
 {% for title, keys in groups %}

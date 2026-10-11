@@ -33,6 +33,7 @@ class GuideContent(BaseModel):
 @register
 class EbookGuide(ProductType[GuideContent]):
     key = "ebook_guide"
+    decor_ok = True
     layouts = {"classic": "Classic: key points as bullets, then action steps and notes",
                "split": "Split: numbered key points on the left, action steps on the right",
                "cards": "Cards: key points as small cards, contents as tiles",

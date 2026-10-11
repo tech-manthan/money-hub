@@ -106,6 +106,7 @@ def idea_cards(types: dict) -> list[dict]:
         cards.append({
             "niche": nz.name, "icon": icon, "audience": nz.audience, "tagline": nz.tagline,
             "problem": nz.pain_points[0] if nz.pain_points else "", "product_type": ptype,
+            "theme": __import__("moneyhub.decor", fromlist=["theme_for"]).theme_for(key, nz.audience),
             "fits": ",".join(k for k in FIT.get(key, []) if k in types) or ",".join(default_fits(types)),
             "product_label": t.label if t else ptype,
         })

@@ -28,6 +28,7 @@ MONTHS = ["January", "February", "March", "April", "May", "June", "July", "Augus
 @register
 class HabitTracker(ProductType[HabitContent]):
     key = "habit_tracker"
+    decor_ok = True
     label = "Habit tracker"
     description = "Interactive spreadsheet (checkboxes, auto % and chart) plus 12 printable monthly trackers."
     content_model = HabitContent

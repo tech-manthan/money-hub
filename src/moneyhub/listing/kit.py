@@ -180,6 +180,8 @@ def _description(copy: ListingCopy, build: BuildResult, ptype: ProductType) -> s
     inc = "\n".join(f"- {f}" for f in build.features)
     files = "\n".join(f"- {f.label}" for f in build.files if f.primary)
     faq = "\n".join(copy.faq)
+    if build.meta.get("decor_ink_note"):
+        faq += "\nQ: Does the decorated background use a lot of ink? A: " + build.meta["decor_ink_note"]
     return (
         f"{copy.intro}\n\n"
         f"WHAT'S INCLUDED\n{inc}\n\n"

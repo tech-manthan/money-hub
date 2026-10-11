@@ -38,7 +38,7 @@
   <div class="grid ideas" id="ideas">
     {% for i in ideas %}
     <label class="idea">
-      <input type="radio" name="idea" value="{{ loop.index0 }}" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}" data-fits="{{ i.fits }}">
+      <input type="radio" name="idea" value="{{ loop.index0 }}" data-niche="{{ i.niche }}" data-type="{{ i.product_type }}" data-fits="{{ i.fits }}" data-theme="{{ i.theme }}">
       <span class="in"><span class="ic">{{ i.icon }}</span><b>{{ i.niche }}</b>
         <span class="meta">For {{ i.audience }}.</span>
         <span class="prob">Helps with: {{ i.problem|lower }}</span>
@@ -51,7 +51,7 @@
   <div class="grid types" id="types" data-default-fits="{{ default_fits|join(',') }}">
     {% for k, t in types.items() %}
     <label class="type">
-      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}" data-nichefree="{{ 0 if t.niche_in_copy else 1 }}">
+      <input type="radio" name="product_type" value="{{ k }}" data-defaults="{{ t.default_sizes|join(',') }}" data-eink="{{ 1 if 'eink' in t.supported_sizes else 0 }}" data-layouts="{{ t.layouts|tojson|forceescape }}" data-nichefree="{{ 0 if t.niche_in_copy else 1 }}" data-decor="{{ 1 if t.decor_ok else 0 }}">
       <span class="in"><b>{{ t.label }}</b><span class="meta">{{ plain.PRODUCT_PLAIN[k] }}</span><span class="tag" hidden>Suggested</span>{% if not t.niche_in_copy %}<span class="tag free" title="The files are the same whichever audience you pick. The listing is written for everyone who buys this kind of file, without the audience word.">Same for every audience</span>{% endif %}</span>
     </label>
     {% endfor %}
@@ -67,6 +67,8 @@
 <!-- ============ STEP 2 ============ -->
 <section class="step panel" data-step="2">
   <h2>How should it look?</h2>
+  <div class="lookwrap">
+  <div class="lookctl">
   <div id="product-opts" hidden><h3>Options for this product</h3>
   <div class="row" id="kids-opts" hidden>
     <div><label for="theme">Picture theme (kids books and stickers)</label><select id="theme" name="theme">{% for k, t in kids_themes.items() %}<option value="{{ k }}">{{ t[0] }}</option>{% endfor %}</select></div>
@@ -95,13 +97,24 @@
     <div><label for="card_size">Card size</label><select id="card_size" name="card_size"><option value="tall">Tall (2.5 x 4.5 in, 6 per sheet)</option><option value="poker">Poker (2.5 x 3.5 in, 9 per sheet)</option></select></div>
   </div>
   </div>
+  <div id="decor-opts" hidden><h3>Decoration <span class="meta">(optional, all off by default)</span></h3>
+    <p class="meta">Planners and other printables are plain white pages by default, which prints cleanly and saves ink. You can add faint art in three places. Each one is separate, and the example page on the right shows the result.</p>
+    <div class="row">
+      <div><label for="decor_corner">Corner art (a faint watermark)</label><select id="decor_corner" name="decor_corner"><option value="">None</option>{% for c in decor_choices.corner %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}</select></div>
+      <div><label for="decor_corner_at">Corner</label><select id="decor_corner_at" name="decor_corner_at">{% for c in decor_choices.corner_at %}<option value="{{ c }}">{{ c|replace('-', ' ')|capitalize }}</option>{% endfor %}</select></div>
+      <div><label for="decor_header">Pictures in the title bar</label><select id="decor_header" name="decor_header"><option value="">None</option>{% for c in decor_choices.header %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}</select></div>
+      <div><label for="decor_background">Page background (uses more ink)</label><select id="decor_background" name="decor_background"><option value="">None</option>{% for c in decor_choices.background %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}</select></div>
+      <div><label for="decor_strength">How strong</label><select id="decor_strength" name="decor_strength">{% for c in decor_choices.strength %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}</select></div>
+      <div><label for="decor_theme">Pictures for "Themed"</label><select id="decor_theme" name="decor_theme"><option value="">Match my audience</option>{% for c in decor_choices.theme %}<option value="{{ c }}">{{ c|capitalize }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="actions"><button type="button" class="ghost sm" id="decor-light">Light touch</button> <button type="button" class="ghost sm" id="decor-full">Fully decorated</button> <button type="button" class="ghost sm" id="decor-none">No decoration</button></div>
+    <p class="meta" id="decor-note"></p>
+  </div>
   <h3>The look</h3>
   <div class="grid choice">
     <label class="opt"><input type="radio" name="lookmode" value="auto" checked><span class="in"><b>Choose for me</b><span class="meta">Recommended. We match colours and fonts to your audience's mood.</span></span></label>
     <label class="opt"><input type="radio" name="lookmode" value="pick"><span class="in"><b>I'll pick</b><span class="meta">Choose colours and fonts yourself.</span></span></label>
   </div>
-  <div class="lookwrap">
-  <div class="lookctl">
   <div id="look-pick" hidden>
     <div class="actions"><button type="button" class="ghost sm" id="shuffle">🎲 Shuffle the look</button></div>
     <h3>Colours</h3>

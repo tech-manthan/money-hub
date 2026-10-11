@@ -114,6 +114,7 @@ def _reflective(topic: str, niche: NicheProfile, rng: random.Random) -> Sheet:
 @register
 class WorksheetPack(ProductType[WorksheetContent]):
     key = "worksheet_pack"
+    decor_ok = True
     layouts = {"classic": "Classic: numbered boxes, directions card, two answer lines",
                "two_column": "Two columns: more questions side by side",
                "clean": "Clean: no boxes, plain numbers and generous answer lines",

@@ -10,14 +10,21 @@
   "key": "options",
   "title": "Product options",
   "blurb": "The options that belong to each product: themes, ages, names, decks and learning focus.",
-  "seconds": 91,
+  "seconds": 88,
+  "kind": "app"
+ },
+ {
+  "key": "decoration",
+  "title": "Page decoration",
+  "blurb": "Optional corner art, title-bar pictures and pale backgrounds for planners, with strength and themes.",
+  "seconds": 136,
   "kind": "app"
  },
  {
   "key": "look",
   "title": "Colours, fonts, layouts and e-ink",
   "blurb": "Palettes, your brand colour, fonts, advanced look, page layouts, described layouts and e-ink.",
-  "seconds": 106,
+  "seconds": 108,
   "kind": "app"
  },
  {

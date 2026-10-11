@@ -94,7 +94,8 @@ def _catalogue() -> list[dict]:
 
 
 def _look_ctx() -> dict:
-    return dict(palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=WALL_MOTIFS, plain=guide, kids_themes=__import__("moneyhub.kidsart", fromlist=["THEMES"]).THEMES,
+    from .. import decor
+    return dict(decor_choices=decor.choices(), palettes=PALETTES, fonts=FONT_PAIRS, headers=HEADERS, radii=RADII, grids=GRIDS, motifs=WALL_MOTIFS, plain=guide, kids_themes=__import__("moneyhub.kidsart", fromlist=["THEMES"]).THEMES,
                 icon_sets=__import__("moneyhub.svgassets", fromlist=["collections"]).collections())
 
 
@@ -150,7 +151,8 @@ def start(request: Request):
 
 
 @app.get("/api/preview.png")
-def look_preview(palette: str = "", fonts: str = "", header: str = "", radius: str = "", grid: str = "", brand: str = "", eink: str = ""):
+def look_preview(palette: str = "", fonts: str = "", header: str = "", radius: str = "", grid: str = "", brand: str = "", eink: str = "",
+                 decor_corner: str = "", decor_header: str = "", decor_background: str = "", decor_strength: str = "", decor_corner_at: str = "", decor_theme: str = ""):
     from ..design import is_hex_colour
     from ..render.preview import look_preview_png
     if brand and not is_hex_colour(brand):
@@ -161,7 +163,13 @@ def look_preview(palette: str = "", fonts: str = "", header: str = "", radius: s
         raise HTTPException(422, "unknown fonts")
     if header and header not in HEADERS or grid and grid not in GRIDS:
         raise HTTPException(422, "unknown header or grid")
-    png = look_preview_png(palette, fonts, header, radius if radius in {str(r) for r in RADII} else "", grid, "#" + brand.lstrip("#") if brand else "", bool(eink))
+    from .. import decor as _decor
+    try:
+        dec = _decor.make(decor_corner, decor_header, decor_background, decor_strength, decor_corner_at, decor_theme)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    png = look_preview_png(palette, fonts, header, radius if radius in {str(r) for r in RADII} else "", grid, "#" + brand.lstrip("#") if brand else "", bool(eink),
+                           decor=tuple(dec.as_dict().items()) if dec.active and not eink else ())
     return Response(png, media_type="image/png", headers={"Cache-Control": "max-age=600"})
 
 
@@ -484,6 +492,8 @@ def settings(request: Request):
 # ------------------------------------------------------------------ actions
 @app.post("/api/jobs")
 def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: list[str] = Form(default=[]),
+               decor_corner: str = Form(""), decor_header: str = Form(""), decor_background: str = Form(""), decor_strength: str = Form(""),
+               decor_corner_at: str = Form(""), decor_theme: str = Form(""),
                palette: str = Form(""), llm: str = Form(""), weeks: str = Form(""), seed: str = Form(""),
                ai_art: str = Form(""), no_video: str = Form(""), fonts: str = Form(""), header: str = Form(""),
                radius: str = Form(""), grid: str = Form(""), motif: str = Form(""), layout: str = Form(""),
@@ -537,6 +547,13 @@ def create_job(niche: str = Form(...), product_type: str = Form(...), sizes: lis
     look = {**({"page_layout": page_layout} if page_layout else {}), **({"layout_spec": json.loads(_checked_spec(product_type, layout_spec))} if layout_spec else {}), **({"brand": "#" + brand.lstrip("#")} if brand else {}), **({"eink": True} if eink else {}),
             **({"header": header} if header else {}), **({"grid": grid} if grid else {}), **({"motif": motif} if motif else {}),
             **({"radius": int(radius)} if radius.strip().isdigit() and int(radius) in RADII else {})}
+    from .. import decor as _decor
+    try:
+        _decor.make(decor_corner, decor_header, decor_background, decor_strength, decor_corner_at, decor_theme)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    look.update({k: v for k, v in (("decor_corner", decor_corner), ("decor_header", decor_header), ("decor_background", decor_background), ("decor_strength", decor_strength),
+                                   ("decor_corner_at", decor_corner_at), ("decor_theme", decor_theme)) if v})
     ids = []
     for n in [x.strip() for x in niche.split(",") if x.strip()]:
         req = GenRequest(

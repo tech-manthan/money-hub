@@ -106,8 +106,9 @@ def lines_css(style: Style, page: PageSize) -> str:
 
 
 def base_css(style: Style, page: PageSize, margin: float = 3.4) -> str:
+    from .. import decor
     css = _env.from_string(BASE_CSS).render(page=page, margin=margin)
-    return "\n".join([style.font_css(), style.css_vars(), css, lines_css(style, page)])
+    return "\n".join([style.font_css(), style.css_vars(), css, lines_css(style, page), decor.css(style, page)])
 
 
 def render_html(template: str, style: Style, page: PageSize, extra_css: str = "", margin: float = 3.4, **ctx) -> str:

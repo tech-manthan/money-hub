@@ -1,5 +1,5 @@
 {% macro header(style, title, sub='') -%}
-<div class="hdr {{ style.header }}"><h2>{{ title }}</h2>{% if sub %}<div class="sub">{{ sub }}</div>{% endif %}</div>
+<div class="hdr {{ style.header }}"><h2>{{ title }}</h2>{% if style.extra.get('decor', {}).get('header', 'none') != 'none' %}<span class="hdr-art"></span>{% endif %}{% if sub %}<div class="sub">{{ sub }}</div>{% endif %}</div>
 {%- endmacro %}
 
 {% macro lines(n=6) -%}

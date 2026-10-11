@@ -22,7 +22,7 @@ _EXTRA = {
     "moneyhub", "affirmations", "weekly", "monthly", "dotted", "habit", "habits", "lifestyle", "homeschool", "homeschooling",
     "wi", "fi", "etc", "vs", "okay", "ok", "gen", "z", "mom", "moms", "mum", "mums", "pre", "non", "re", "tabbed", "spreadsheet",
     "cardstock", "builtin", "printout", "printouts", "cutout", "cutouts", "downloadable", "tablet-friendly", "goodnotes", "samsung",
-    "pptx", "widescreen", "fraunces", "playfair", "lora", "nunito", "poppins", "inter", "caveat", "powerpoint", "keynote", "impress", "libreoffice", "spreadsheets", "gsheet", "google", "sheets", "numbers", "onenote", "evernote", "todoist", "bujo", "journaling", "journal",
+    "grayscale", "pptx", "widescreen", "fraunces", "playfair", "lora", "nunito", "poppins", "inter", "caveat", "powerpoint", "keynote", "impress", "libreoffice", "spreadsheets", "gsheet", "google", "sheets", "numbers", "onenote", "evernote", "todoist", "bujo", "journaling", "journal",
 }
 
 

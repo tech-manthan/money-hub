@@ -70,6 +70,9 @@
     const r = $(`input[name="product_type"]:checked`);
     $('#eink-wrap').hidden = !(r && r.dataset.eink === '1');
     if ($('#eink-wrap').hidden) $('#opt-eink').checked = false;
+    const dec = !!(r && r.dataset.decor === '1');
+    $('#decor-opts').hidden = !dec;
+    $('#decor-note').textContent = $('#decor_background').value ? 'A decorated background uses more ink than plain pages. The listing says so and suggests printing in grayscale or economy mode.' : '';
     $('#product-opts').hidden = !$$('#product-opts .row').some(row => !row.hidden);   // the options row(s) that belong to this product
   }
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -90,6 +93,9 @@
         const l = look(); ['palette', 'fonts', 'header', 'radius', 'grid', 'brand'].forEach(k => l[k] && q.set(k, l[k]));
         $('#prev-note').textContent = '';
       } else $('#prev-note').textContent = 'Shown in a sample look. With "Choose for me" we match colours to your audience.';
+      const dq = decorOpts(), ar = !customOn && $('input[name="idea"]:checked');
+      if (dq.decor_corner || dq.decor_header || dq.decor_background) { if (!dq.decor_theme && ar && ar.dataset.theme) dq.decor_theme = ar.dataset.theme; }
+      Object.entries(dq).forEach(([k, v]) => q.set(k, v));
       if ($('#opt-eink') && $('#opt-eink').checked) q.set('eink', '1');
       $('#look-preview').src = '/api/preview.png?' + q;
     }, 200);
@@ -112,6 +118,11 @@
   $$('input[name="lookmode"]').forEach(r => r.addEventListener('change', () => { $('#look-pick').hidden = val('lookmode') !== 'pick'; updatePreview(); }));
   $('#look-pick').addEventListener('change', e => { if (e.target.id === 'use-brand') $('#brand').disabled = !e.target.checked; updatePreview(); });
   $('#brand').addEventListener('input', updatePreview);
+  const setDecor = (c, h, b, s) => { $('#decor_corner').value = c; $('#decor_header').value = h; $('#decor_background').value = b; $('#decor_strength').value = s; syncType(); updatePreview(); };
+  $('#decor-opts').addEventListener('change', () => { syncType(); updatePreview(); });
+  $('#decor-light').addEventListener('click', () => setDecor('themed', 'themed', '', 'light'));
+  $('#decor-full').addEventListener('click', () => setDecor('themed', 'themed', 'watercolor', 'medium'));
+  $('#decor-none').addEventListener('click', () => setDecor('', '', '', 'light'));
   $('#opt-eink').addEventListener('change', () => { updatePreview(); if (step === 3) renderLayouts(); });
 
   function go(n) {
@@ -128,6 +139,14 @@
   }
   $$('[data-go]').forEach(b => b.addEventListener('click', () => go(+b.dataset.go)));
 
+  const decorOpts = () => {
+    if ($('#decor-opts').hidden) return {};
+    const o = { decor_corner: sel('decor_corner'), decor_header: sel('decor_header'), decor_background: sel('decor_background') };
+    if (!o.decor_corner && !o.decor_header && !o.decor_background) return {};
+    Object.assign(o, { decor_strength: sel('decor_strength'), decor_theme: sel('decor_theme') });
+    if (o.decor_corner) o.decor_corner_at = sel('decor_corner_at');
+    return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== ''));
+  };
   function look() {
     if (val('lookmode') !== 'pick') return {};
     const o = { palette: $('#use-brand').checked ? '' : val('palette'), brand: $('#use-brand').checked ? sel('brand') : '', fonts: val('fonts'),
@@ -179,7 +198,7 @@
   });
   const markets = () => $$('input[name="mk"]:checked').map(x => x.value);
   function payload() {
-    const o = { niche: niche(), product_type: val('product_type'), ...look() };
+    const o = { niche: niche(), product_type: val('product_type'), ...look(), ...decorOpts() };
     if (!$('#opt-video').checked) o.no_video = '1';
     if ($('#opt-eink').checked) o.eink = '1';
     const pl = !$('#layout-wrap').hidden && val('page_layout');
@@ -204,9 +223,10 @@
     if (l.palette) bits.push(`<b>${l.palette}</b> colours`);
     if (l.brand) bits.push(`your brand colour <b>${l.brand}</b>`);
     if ($('#opt-eink').checked) bits.push('<b>e-ink</b> black and white pages');
+    const dk = decorOpts(); if (Object.keys(dk).length && !$('#opt-eink').checked) bits.push('<b>decorated</b> pages (' + [dk.decor_corner && 'corner art', dk.decor_header && 'title-bar pictures', dk.decor_background && 'a pale background'].filter(Boolean).join(', ') + ')');
     if (l.fonts) bits.push(`<b>${l.fonts}</b> fonts`);
     $('#summary').innerHTML = (nicheFree() ? `I'll make a <b>${typeLabel()}</b>. It is the same for every audience, so <b>${niche()}</b> only nudges the colour mood; the files and the listing are not about that audience, ` : `I'll make a <b>${typeLabel()}</b> for <b>${niche()}</b>, `) + (bits.length ? 'with ' + bits.join(' and ') + '.' : 'with a look chosen to suit them.');
-    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', count: '--count', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus', grade: '--grade', language: '--language', names: '--names', collection: '--collection', query: '--query', shape: '--shape' };
+    const p = payload(), flag = { palette: '--palette', brand: '--brand', fonts: '--fonts', header: '--header', radius: '--radius', grid: '--grid', motif: '--motif', seed: '--seed', theme: '--theme', age: '--age', pages: '--pages', stickers: '--stickers', count: '--count', deck: '--deck', card_size: '--card-size', level: '--level', focus: '--focus', grade: '--grade', language: '--language', names: '--names', collection: '--collection', query: '--query', shape: '--shape', decor_corner: '--decor-corner', decor_header: '--decor-header', decor_background: '--decor-background', decor_strength: '--decor-strength', decor_corner_at: '--decor-corner-at', decor_theme: '--decor-theme' };
     let cmd = `moneyhub make "${p.niche}" ${p.product_type}`;
     Object.entries(flag).forEach(([k, f]) => { if (p[k]) cmd += ` ${f} ${p[k]}`; });
     if (p.eink) cmd += ' --eink';

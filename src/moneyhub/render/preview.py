@@ -14,9 +14,11 @@ from .raster import render_pages
 
 @lru_cache(maxsize=64)
 def look_preview_png(palette: str = "", fonts: str = "", header: str = "", radius: str = "", grid: str = "",
-                     brand: str = "", eink: bool = False, seed: int = 7) -> bytes:
+                     brand: str = "", eink: bool = False, seed: int = 7, decor: tuple = ()) -> bytes:
     style = choose_style(seed=seed, palette=palette or None, fonts=fonts or None, header=header or None,
                          radius=int(radius) if radius.isdigit() else None, grid=grid or None, brand=brand or None, eink=eink)
+    if decor:
+        style.extra["decor"] = dict(decor)
     page = PAGE_SIZES["eink" if eink else "a5"]
     html = render_html("look_preview.html.j2", style, page, margin=3.2, title="Weekly planner", tagline="Plan the week you have.")
     with tempfile.TemporaryDirectory() as tmp:

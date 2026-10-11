@@ -31,6 +31,7 @@ class PlannerContent(BaseModel):
 @register
 class WeeklyPlanner(ProductType[PlannerContent]):
     key = "weekly_planner"
+    decor_ok = True
     label = "Weekly planner"
     description = "Undated weekly planner with monthly overviews, goal pages and notes. Printable + hyperlinked tablet version."
     content_model = PlannerContent

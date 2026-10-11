@@ -29,7 +29,7 @@ def build_start_page(build: BuildResult, style: Style, out_dir: Path, ptype_key:
         has_print=any(f.kind == "pdf" and "hyperlinked" not in f.path.name for f in prim),
         has_tablet=any("hyperlinked" in f.path.name for f in prim),
         has_xlsx=any(f.kind == "xlsx" for f in prim), has_a5=any("a5" in f.path.name for f in prim),
-        gsheet=_gsheet_copy_link(gsheet_url), classroom=niche_key == "teacher")
+        gsheet=_gsheet_copy_link(gsheet_url), classroom=niche_key == "teacher", ink_note=build.meta.get("decor_ink_note", ""))
     out = out_dir / "00-Start-Here.pdf"
     render_pdf(html, out, page_css_size=PAGE_SIZES["letter"].css_size)
     return ProductFile(out, "pdf", "Start Here: how to print/open and licence", True, preview_pages=[0])

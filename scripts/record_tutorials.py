@@ -208,6 +208,42 @@ def tut_look(t: T, ctx):
     t.cap("For a reMarkable, Kindle Scribe or Boox tablet, tick the e-ink box. You get black and white pages with tap-to-jump links.", 4.2)
 
 
+def tut_decoration(t: T, ctx):
+    p = t.page
+    go_make(t, "Nurse", "Weekly planner")
+    next_step(t, 2)
+    p.locator("#decor-opts").scroll_into_view_if_needed(); p.wait_for_timeout(600)
+    t.cap("Planners are plain white pages by default, because plain pages print cleanly and save ink. Decoration is optional, and it stays off until you turn it on.", 5.4)
+
+    def pick(sel, value, wait=1800):
+        t.click(sel, 0.3)
+        p.select_option(sel, value)
+        p.wait_for_timeout(wait)
+    pick("#decor_corner", "themed")
+    t.cap("Corner art adds a faint line drawing in the corner of every page, like a watermark. Themed means pictures that suit your audience. For nurses, a stethoscope, a heart and a pulse line.", 6.4)
+    pick("#decor_corner_at", "opposite")
+    t.cap("Choose which corner it goes in, or use two opposite corners.", 3.0)
+    pick("#decor_header", "themed")
+    t.cap("Title-bar pictures put a small row of pictures in the title bar of every page.", 3.4)
+    pick("#decor_background", "leaves")
+    t.cap("A background adds a pale pattern behind the page. Your writing boxes stay white. It uses more ink, so your listing will say so.", 5.0)
+    pick("#decor_strength", "medium")
+    t.cap("Strength is light, medium or bold. We keep every strength faint enough to read the text easily.", 4.0)
+    pick("#decor_theme", "garden")
+    t.cap("Themed pictures follow your audience, but you can pick a different set. Here, a garden set.", 4.0)
+    pick("#decor_theme", "")
+    t.click("#decor-light", 1.6)
+    t.cap("Light touch gives you a gentle corner and title bar in one click.", 3.4)
+    t.click("#decor-full", 1.8)
+    t.cap("Fully decorated turns on all three layers. No decoration switches everything off again.", 4.0)
+    t.click("#decor-none", 1.4)
+    t.click("#decor-light", 1.2)
+    next_step(t, 3)
+    t.cap("Your choices appear in the summary, and in the matching command, so you can repeat them from the terminal.", 4.2)
+    p.locator("details.help summary:has-text('matching command')").click(); p.wait_for_timeout(900)
+    t.cap("They can also be set as defaults in the settings file.", 3.0)
+
+
 def tut_product_page(t: T, ctx):
     p = t.page
     pid = ctx["ids"]["planner"]
@@ -453,6 +489,7 @@ def tut_cli_tools(t: T, ctx):
 TUTORIALS = [
     ("audience", "Pick an audience and a product", "Choose who to help, see only the products that fit them, Surprise me, and your own audience.", tut_audience),
     ("options", "Product options", "The options that belong to each product: themes, ages, names, decks and learning focus.", tut_options),
+    ("decoration", "Page decoration", "Optional corner art, title-bar pictures and pale backgrounds for planners, with strength and themes.", tut_decoration),
     ("look", "Colours, fonts, layouts and e-ink", "Palettes, your brand colour, fonts, advanced look, page layouts, described layouts and e-ink.", tut_look),
     ("product-page", "The product page", "Preview, quality checks, files, listing copy, photos and upload guides.", tut_product_page),
     ("sell-on", "What to upload on each platform", "Platform packs for Etsy, Gumroad, Payhip and Ko-fi, and what goes where.", tut_sell_on),

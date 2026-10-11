@@ -53,6 +53,7 @@ _GENERIC = [
 @register
 class GuidedJournal(ProductType[JournalContent]):
     key = "guided_journal"
+    decor_ok = True
     label = "Guided journal"
     description = "30 days of prompts with gratitude, mood and a small-step box, plus weekly check-ins."
     content_model = JournalContent

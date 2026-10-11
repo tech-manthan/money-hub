@@ -82,6 +82,7 @@ class ProductType(ABC, Generic[C]):
     license_terms: ClassVar[str] = ""
     license_faq: ClassVar[str] = ""
     extra_tags: ClassVar[tuple[str, ...]] = ()   # replaces the generic filler tags (gift idea, relaxation...) in niche-free listings
+    decor_ok: ClassVar[bool] = False     # accepts the optional page decoration (corner art, title-bar pictures, background): see decor.py
     use_faq: ClassVar[str] = ""          # replaces the generic "how many times can I print / which apps" Q&A in niche-free listings
     how_steps: ClassVar[tuple[str, ...]] = ()
     layout_preview_page: ClassVar[int] = 0   # PDF page (0-based) shown in the thumbnail when layout_marker is empty or not found

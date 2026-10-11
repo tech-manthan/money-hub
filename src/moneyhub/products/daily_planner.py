@@ -30,6 +30,7 @@ class DailyContent(BaseModel):
 @register
 class DailyPlanner(ProductType[DailyContent]):
     key = "daily_planner"
+    decor_ok = True
     label = "Daily planner"
     description = "Undated one-page-per-day planner with hourly schedule, priorities, to-do list and niche boxes."
     content_model = DailyContent
