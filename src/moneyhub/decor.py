@@ -25,7 +25,12 @@ STRENGTHS = ("light", "medium", "bold")
 CORNER_AT = ("bottom-right", "top-right", "bottom-left", "top-left", "opposite")
 CORNER_STYLES = ("themed", "botanical", "floral", "waves", "sparkles", "geometric")
 HEADER_STYLES = ("themed", "botanical", "floral", "sparkles", "hearts", "waves")
-BACKGROUND_STYLES = ("themed", "watercolor", "dots", "leaves", "daisies", "waves", "sparkles", "diamonds", "terrazzo", "hearts", "stars", "confetti")
+BACKGROUND_STYLES = ("themed", "watercolor", "dots", "leaves", "daisies", "waves", "sparkles", "diamonds", "terrazzo", "hearts", "stars", "confetti",
+                     "solid", "gradient", "grid", "stripes", "frame", "paper")
+PAPER_TONES = ("#f1e2bd", "#f4ead9", "#ead9c0", "#f2dcd4", "#e3ecd6", "#dde8ee", "#e8dff0", "#f3efc9")   # cream, ivory, sand, blush, mint, sky, lilac, butter
+AUTO_MAX = 1000     # `auto:N` (1..1000): a numbered, repeatable background made from the pattern library and the whole-page fills
+# whole-page backgrounds drawn with plain CSS (a colour, a fade, lines or a border) instead of a picture tile
+FILLS = ("solid", "gradient", "grid", "stripes", "frame", "paper")
 # opacity of each layer by strength. The background one is the strongest tint the page can get; see `tint` and the contrast test.
 OPACITY = {"corner": {"light": .14, "medium": .22, "bold": .32},
            "header": {"light": .32, "medium": .48, "bold": .66},
@@ -125,6 +130,27 @@ class Decor:
                 "corner_at": self.corner_at, "theme": self.theme}
 
 
+def auto_number(value: str) -> int | None:
+    """N of an `auto:N` background, or None for any other value."""
+    if value.startswith("auto:") and value[5:].isdigit() and 1 <= int(value[5:]) <= AUTO_MAX:
+        return int(value[5:])
+    return None
+
+
+def auto_recipe(n: int) -> dict:
+    """What background number `n` is. The 36 patterns and 6 whole-page fills take turns; each lap changes the colours, the size of the repeat,
+    the direction of lines and the arrangement (the pattern seed), so no two numbers look alike."""
+    bases = [(k, False) for k in patterns.KINDS] + [(k, True) for k in FILLS]
+    (base, fill), lap = bases[(n - 1) % len(bases)], (n - 1) // len(bases)
+    r = {"n": n, "kind": base, "fill": fill, "index": lap % 4, "size": (9, 12, 15)[(lap // 4) % 3], "seed": n}
+    if fill:
+        r.update(angle=(0, 90, 45, 135)[lap % 4], space=(.9, 1.3, 1.8)[(lap // 4) % 3], src=("accent", "accent2", "soft")[(lap // 12) % 3],
+                 fade=(180, 90, 135, 45)[lap % 4])
+        if base == "solid":   # a single colour: vary how far it leans towards the accent so the lap still looks different
+            r["lean"] = (1.0, .75, .55, .4)[lap % 4]
+    return r
+
+
 def choices() -> dict[str, tuple[str, ...]]:
     return {"corner": CORNER_STYLES, "header": HEADER_STYLES, "background": BACKGROUND_STYLES, "strength": STRENGTHS, "corner_at": CORNER_AT, "theme": tuple(THEMES)}
 
@@ -137,9 +163,11 @@ def make(corner: str = "", header: str = "", background: str = "", strength: str
 
     def pick(name: str, given: str, allowed: tuple[str, ...], default: str) -> str:
         v = (given or str(d.get(name) or "") or default).strip().lower()
+        if name == "background" and (v == "auto" or auto_number(v)):
+            return v if v != "auto" else f"auto:{random.randint(1, AUTO_MAX)}"
         ok = (NONE, *allowed) if name in ("corner", "header", "background") else allowed     # a layer can be switched off
         if v not in ok:
-            raise ValueError(f"unknown decoration {name} '{v}'. Choose from: {', '.join(ok)}")
+            raise ValueError(f"unknown decoration {name} '{v}'. Choose from: {', '.join(ok)}" + (f", auto, auto:<1-{AUTO_MAX}>" if name == "background" else ""))
         return v
     return Decor(corner=pick("corner", corner, CORNER_STYLES, NONE), header=pick("header", header, HEADER_STYLES, NONE),
                  background=pick("background", background, BACKGROUND_STYLES, NONE), strength=pick("strength", strength, STRENGTHS, "light"),
@@ -243,6 +271,10 @@ def corner_art(d: Decor, ink: str, seed: int = 1) -> str:
 def _bg_tile(d: Decor, pal: Palette, seed: int) -> str:
     """SVG for the page background: a repeating tile (patterns), a watercolour wash, or the audience's pictures scattered."""
     o = OPACITY["background"][d.strength]
+    rec = _recipe(d)
+    if rec:
+        tile = patterns.pattern_tile(rec["kind"], pal, rec["seed"], rec["index"])
+        return f"<svg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000' viewBox='0 0 1000 1000'><g opacity='{o * 2.2:.3f}'>{tile}</g></svg>"
     if d.background == "watercolor":
         cols = [pal.accent, pal.accent2, pal.soft, pal.accent]
         rng = random.Random(seed)
@@ -262,9 +294,48 @@ def _bg_tile(d: Decor, pal: Palette, seed: int) -> str:
     return f"<svg xmlns='http://www.w3.org/2000/svg' width='1000' height='1000' viewBox='0 0 1000 1000'><g opacity='{o * 2.2:.3f}'>{tile}</g></svg>"
 
 
+def _recipe(d: Decor) -> dict | None:
+    n = auto_number(d.background)
+    return auto_recipe(n) if n else None
+
+
+def _kind(d: Decor) -> str:
+    r = _recipe(d)
+    return (r["kind"] if r["fill"] else "tile") if r else d.background
+
+
+def _fill_colour(pal: Palette, d: Decor) -> str:
+    """The colour of a whole-page background: the accent diluted to the chosen strength, or warm cream for `paper`."""
+    r = _recipe(d)
+    if _kind(d) == "paper":
+        tone = PAPER_TONES[(r["n"] // 42) % len(PAPER_TONES)] if r else PAPER_TONES[0]
+        return _mix(pal.paper, tone, {"light": .45, "medium": .6, "bold": .75}[d.strength])
+    src = getattr(pal, r["src"]) if r and "src" in r else pal.accent
+    return _mix(pal.paper, src, min(1.0, OPACITY["background"][d.strength] * 2.4 * (r or {}).get("lean", 1.0)))
+
+
 def tint(pal: Palette, d: Decor) -> str:
     """The darkest colour the background layer can make the page (accent at the full opacity of the chosen strength). Used by the contrast check."""
-    return _mix(pal.paper, pal.accent, min(1.0, OPACITY["background"][d.strength] * 2.4))
+    return _fill_colour(pal, d)
+
+
+def _fill_css(pal: Palette, d: Decor) -> str:
+    """The `.page::before` declarations of a whole-page background (WeasyPrint draws gradients and borders, but not filters or box-shadows)."""
+    c, paper, kind = _fill_colour(pal, d), pal.paper, _kind(d)
+    r = _recipe(d) or {}
+    sp = r.get("space", 1.0)
+    if kind in ("solid", "paper"):
+        return f"background:{c};"
+    if kind == "gradient":
+        return f"background:linear-gradient({r.get('fade', 180)}deg,{c} 0%,{_mix(paper, c, .5)} 45%,{paper} 100%);"
+    if kind == "grid":
+        a = r.get("angle", 0)
+        return (f"background-color:{paper};background-image:linear-gradient({a}deg,{c} 1px,transparent 1px),linear-gradient({a + 90}deg,{c} 1px,transparent 1px);"
+                f"background-size:{1.1 * sp:.2f}em {1.1 * sp:.2f}em;")
+    if kind == "stripes":
+        w = 1.6 * sp
+        return f"background:repeating-linear-gradient({r.get('angle', 90)}deg,{paper} 0,{paper} {w:.2f}em,{c} {w:.2f}em,{c} {2 * w:.2f}em);"
+    return f"background:{paper};border:{1.3 * sp:.2f}em solid {c};box-sizing:border-box;"   # frame
 
 
 def _corner_pos(at: str) -> list[tuple[str, str]]:
@@ -292,13 +363,16 @@ def css(style: Style, page=None) -> str:
         out.append(".page{z-index:0;}\n.page::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;"
                    f"background-image:{','.join(imgs)};background-position:{','.join(p for p, _ in _corner_pos(d.corner_at))};"
                    f"background-size:{','.join(['24em 24em'] * len(imgs))};background-repeat:no-repeat;}}")
-    if d.background != NONE:    # behind everything; cards keep their own white, so writing areas stay clean
+    rec = _recipe(d)
+    if _kind(d) in FILLS:   # behind everything; cards keep their own white, so writing areas stay clean
+        out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;" + _fill_css(pal, d) + "}")
+    elif d.background != NONE:
         if d.background == "watercolor":
             size, rep = "100% 100%", "no-repeat"
         elif d.background == "themed":
             size, rep = "9em 9em", "repeat"
         else:
-            size, rep = "12em 12em", "repeat"
+            size, rep = f"{rec['size'] if rec else 12}em {rec['size'] if rec else 12}em", "repeat"
         out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;"
                    f"background-image:url('{_uri(_bg_tile(d, pal, style.seed))}');background-position:0 0;background-size:{size};background-repeat:{rep};}}")
     if d.header != NONE:
@@ -324,5 +398,7 @@ def describe(d: Decor) -> str:
     if d.header != NONE:
         bits.append("small pictures in the title bar" if d.header != "themed" else "small themed pictures in the title bar")
     if d.background != NONE:
-        bits.append("a pale decorative background" if d.background != "watercolor" else "a pale watercolour background")
+        bits.append({"watercolor": "a pale watercolour background", "solid": "a soft colour background", "gradient": "a soft colour fade background",
+                     "grid": "a graph-paper grid background", "stripes": "a soft striped background", "frame": "a coloured page border",
+                     "paper": "a cream paper background"}.get(_kind(d), "a pale decorative background"))
     return "Decorated pages: " + ", ".join(bits) if bits else ""

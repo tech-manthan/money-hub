@@ -83,7 +83,7 @@ def make(
     decor: str = typer.Option(None, help="Page decoration shortcut: all (themed corner art, title-bar pictures and a watercolour background), corner, header, background or none. The specific flags below override it"),
     decor_corner: str = typer.Option(None, help="Faint line art in a page corner: themed, botanical, floral, waves, sparkles, geometric or none"),
     decor_header: str = typer.Option(None, help="Small pictures in the title bar: themed, botanical, floral, sparkles, hearts, waves or none"),
-    decor_background: str = typer.Option(None, help="A pale background: themed, watercolor, dots, leaves, daisies, waves, sparkles, diamonds, terrazzo, hearts, stars, confetti or none (uses more ink)"),
+    decor_background: str = typer.Option(None, help="A pale background: themed, watercolor, dots, leaves, daisies, waves, sparkles, diamonds, terrazzo, hearts, stars, confetti, solid, gradient, grid, stripes, frame, paper, a numbered design auto:1 to auto:1000 (browse them at /backgrounds), auto (random number) or none (uses more ink)"),
     decor_strength: str = typer.Option(None, help="How strong the decoration is: light (default), medium or bold"),
     decor_corner_at: str = typer.Option(None, help="Where the corner art goes: bottom-right (default), top-right, bottom-left, top-left or opposite"),
     decor_theme: str = typer.Option(None, help="Pictures for 'themed' decoration: medical, school, money, wedding, fitness, calm, family, pets, garden, faith, home, food, focus, business or general (default: chosen from the audience)"),

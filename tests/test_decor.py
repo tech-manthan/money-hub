@@ -71,8 +71,11 @@ def test_every_style_draws_valid_svg_in_every_palette():
     for b in decor.BACKGROUND_STYLES:
         st = styled(background=b, theme="food")
         out = svgs_in(decor.css(st))
-        assert len(out) == 1
-        ET.fromstring(out[0])
+        if b in decor.FILLS:      # plain CSS: a colour, fade, lines or border, no picture
+            assert out == [] and ".page::before" in decor.css(st)
+        else:
+            assert len(out) == 1
+            ET.fromstring(out[0])
     assert d.theme == "medical"
     for name, body in decor.M.items():                       # every picture is well formed
         ET.fromstring(f"<svg xmlns='http://www.w3.org/2000/svg'>{body}</svg>")
@@ -172,3 +175,51 @@ def test_preview_and_job_endpoints_check_decoration_values():
     assert c.post("/api/jobs", data={"niche": "nurse", "product_type": "weekly_planner", "decor_strength": "huge"}).status_code == 422
     page = c.get("/make").text
     assert 'id="decor-opts"' in page and 'name="decor_corner"' in page and 'data-decor="1"' in page and 'data-theme="medical"' in page
+
+
+def test_numbered_backgrounds_are_valid_repeatable_and_varied():
+    import hashlib
+    assert decor.auto_number("auto:1") == 1 and decor.auto_number("auto:1000") == 1000
+    assert decor.auto_number("auto:0") is None and decor.auto_number("auto:1001") is None and decor.auto_number("dots") is None
+    assert decor.make(background="auto:42").background == "auto:42"
+    assert decor.make(background="auto").background.startswith("auto:")           # "surprise me" is stored as a number, so it can be repeated
+    for bad in ("auto:0", "auto:1001", "auto:x"):
+        try:
+            decor.make(background=bad)
+            raise AssertionError(bad)
+        except ValueError as e:
+            assert "auto:<1-1000>" in str(e)
+    st = choose_style(seed=3)
+    seen = set()
+    for n in range(1, decor.AUTO_MAX + 1):
+        st.extra["decor"] = decor.make(background=f"auto:{n}", strength="medium").as_dict()
+        css = decor.css(st)
+        assert css == decor.css(st)                                                # same number, same background
+        if n <= 120:
+            for s in svgs_in(css):
+                ET.fromstring(s)
+        seen.add(hashlib.md5(css.encode()).hexdigest())
+    assert len(seen) >= 800                                                         # about 870 look different with one palette
+    assert any(decor.auto_recipe(n)["fill"] for n in range(1, 43)) and any(not decor.auto_recipe(n)["fill"] for n in range(1, 43))
+
+
+def test_numbered_backgrounds_keep_text_readable_in_every_palette():
+    for pal in PALETTES:
+        for strength in decor.STRENGTHS:
+            for n in range(1, 85, 3):
+                d = decor.make(background=f"auto:{n}", strength=strength)
+                assert contrast(pal.ink, decor.tint(pal, d)) >= 7, (pal.key, strength, n)
+                assert contrast(pal.muted, decor.tint(pal, d)) >= 4.5, (pal.key, strength, n)
+
+
+def test_background_gallery_page_and_preview():
+    from fastapi.testclient import TestClient
+
+    from moneyhub.web.app import app
+    c = TestClient(app)
+    first = c.get("/backgrounds")
+    assert first.status_code == 200 and "auto:1<" in first.text and "auto:24<" in first.text and "auto:25<" not in first.text
+    assert "#1000" in c.get("/backgrounds?page=99").text                            # pages are clamped
+    assert c.get("/api/preview.png?decor_background=auto:777").status_code == 200
+    assert c.get("/api/preview.png?decor_background=auto:1001").status_code == 422
+    assert "Numbered design" in c.get("/make").text

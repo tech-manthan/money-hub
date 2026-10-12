@@ -119,7 +119,7 @@
   $('#look-pick').addEventListener('change', e => { if (e.target.id === 'use-brand') $('#brand').disabled = !e.target.checked; updatePreview(); });
   $('#brand').addEventListener('input', updatePreview);
   const setDecor = (c, h, b, s) => { $('#decor_corner').value = c; $('#decor_header').value = h; $('#decor_background').value = b; $('#decor_strength').value = s; syncType(); updatePreview(); };
-  $('#decor-opts').addEventListener('change', () => { syncType(); updatePreview(); });
+  $('#decor-opts').addEventListener('change', () => { $('#decor_bg_no_row').hidden = sel('decor_background') !== 'auto'; syncType(); updatePreview(); });
   $('#decor-light').addEventListener('click', () => setDecor('themed', 'themed', '', 'light'));
   $('#decor-full').addEventListener('click', () => setDecor('themed', 'themed', 'watercolor', 'medium'));
   $('#decor-none').addEventListener('click', () => setDecor('', '', '', 'light'));
@@ -142,6 +142,7 @@
   const decorOpts = () => {
     if ($('#decor-opts').hidden) return {};
     const o = { decor_corner: sel('decor_corner'), decor_header: sel('decor_header'), decor_background: sel('decor_background') };
+    if (o.decor_background === 'auto') { const n = parseInt(sel('decor_bg_no'), 10); o.decor_background = n >= 1 && n <= 1000 ? 'auto:' + n : 'auto'; }
     if (!o.decor_corner && !o.decor_header && !o.decor_background) return {};
     Object.assign(o, { decor_strength: sel('decor_strength'), decor_theme: sel('decor_theme') });
     if (o.decor_corner) o.decor_corner_at = sel('decor_corner_at');

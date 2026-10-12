@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block main %}
+<h1>Page backgrounds</h1>
+<p class="meta">1000 numbered backgrounds for planners, trackers, journals and other printable pages. Pick a number, then choose <b>Numbered design</b> under Page background on step 2 of <a href="/make">Make</a>, or use <code>--decor-background auto:NUMBER</code>. The same number always gives the same background. Backgrounds use more ink than plain pages.</p>
+<form method="get" class="row" style="gap:12px;align-items:end;margin:10px 0">
+  <div><label for="palette">Colours</label><select id="palette" name="palette" onchange="this.form.submit()"><option value="">Default</option>{% for p in palettes %}<option value="{{ p.key }}" {{ 'selected' if p.key == palette }}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div><label for="strength">How strong</label><select id="strength" name="strength" onchange="this.form.submit()">{% for s in strengths %}<option value="{{ s }}" {{ 'selected' if s == strength }}>{{ s|capitalize }}</option>{% endfor %}</select></div>
+  <input type="hidden" name="page" value="1">
+</form>
+<div class="grid cards">
+{% for n in nums %}
+  <div class="card"><div class="img"><img loading="lazy" alt="Background {{ n }}" src="/api/preview.png?decor_background=auto:{{ n }}&decor_strength={{ strength }}{% if palette %}&palette={{ palette }}{% endif %}"></div>
+    <div class="body"><div class="t">#{{ n }}</div><div class="meta"><code>auto:{{ n }}</code></div></div></div>
+{% endfor %}
+</div>
+<div class="actions" style="margin:16px 0">
+  {% if page > 1 %}<a class="btn ghost sm" href="?page={{ page - 1 }}&palette={{ palette }}&strength={{ strength }}">Previous</a>{% endif %}
+  <span class="meta">Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a class="btn ghost sm" href="?page={{ page + 1 }}&palette={{ palette }}&strength={{ strength }}">Next</a>{% endif %}
+</div>
+{% endblock %}

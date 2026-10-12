@@ -212,6 +212,22 @@ def layout_spec(request: Request, product_type: str = Form(...), text: str = For
     return {"spec": json.loads(spec.model_dump_json()), "source": source, "name": spec.name}
 
 
+@app.get("/backgrounds", response_class=HTMLResponse)
+def backgrounds_page(request: Request, page: int = 1, palette: str = "", strength: str = "medium"):
+    """A numbered gallery of the 1000 generated page backgrounds (decoration `auto:N`), 24 to a page, drawn with the chosen colours."""
+    from .. import decor as _decor
+    per = 24
+    pages = _decor.AUTO_MAX // per + (1 if _decor.AUTO_MAX % per else 0)
+    page = max(1, min(page, pages))
+    if palette and palette not in [p.key for p in PALETTES]:
+        palette = ""
+    if strength not in _decor.STRENGTHS:
+        strength = "medium"
+    nums = list(range((page - 1) * per + 1, min(page * per, _decor.AUTO_MAX) + 1))
+    return templates.TemplateResponse(request, "backgrounds.html", _ctx(request, nums=nums, page=page, pages=pages, palette=palette, strength=strength, palettes=PALETTES,
+                                                                      strengths=_decor.STRENGTHS))
+
+
 @app.get("/products", response_class=HTMLResponse)
 def products_page(request: Request):
     return templates.TemplateResponse(request, "products.html", _ctx(request, products=_catalogue()))
