@@ -857,8 +857,12 @@ def doctor():
 @app.command()
 def ui(host: str = "127.0.0.1", port: int = 8765):
     """Open the local web UI."""
+    import os
+
     import uvicorn
+    from .render.raster import ISOLATE_ENV
     from .web.app import app as web
+    os.environ.setdefault(ISOLATE_ENV, "1")   # preview thumbnails are drawn in a child process: a pdfium crash must not take the UI down
     typer.echo(f"MoneyHub UI: http://{host}:{port}")
     uvicorn.run(web, host=host, port=port, log_level="warning")
 
