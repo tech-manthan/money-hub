@@ -73,6 +73,10 @@ def test_every_style_draws_valid_svg_in_every_palette():
         out = svgs_in(decor.css(st))
         if b in decor.FILLS:      # plain CSS: a colour, fade, lines or border, no picture
             assert out == [] and ".page::before" in decor.css(st)
+        elif b == "floral":       # four bouquets, one per corner
+            assert len(out) == 4
+            for sv in out:
+                ET.fromstring(sv)
         else:
             assert len(out) == 1
             ET.fromstring(out[0])
@@ -223,3 +227,34 @@ def test_background_gallery_page_and_preview():
     assert c.get("/api/preview.png?decor_background=auto:777").status_code == 200
     assert c.get("/api/preview.png?decor_background=auto:1001").status_code == 422
     assert "Numbered design" in c.get("/make").text
+
+
+def test_picture_backgrounds_repeat_one_picture_over_the_whole_page():
+    assert "stethoscope" in decor.background_pictures() and "pic:stethoscope" in decor.choices()["background"]
+    d = decor.make(background="pic:stethoscope", strength="medium")
+    assert d.background == "pic:stethoscope"
+    try:
+        decor.make(background="pic:nope")
+        raise AssertionError("expected ValueError")
+    except ValueError as e:
+        assert "stethoscope" in str(e)
+    st = styled(background="pic:stethoscope", strength="medium")
+    out = decor.css(st)
+    assert "z-index:2" in out and len(svgs_in(out)) == 1 and "stethoscope pictures" in decor.describe(d)
+    ET.fromstring(svgs_in(out)[0])
+    for pal in PALETTES:
+        for strength in decor.STRENGTHS:
+            t = decor.tint(pal, decor.make(background="pic:stethoscope", strength=strength))
+            assert contrast(pal.ink, t) >= 7 and contrast(pal.muted, t) >= 4.5, (pal.key, strength)
+
+
+def test_floral_background_has_big_bouquets_in_every_corner_and_keeps_text_readable():
+    d = decor.make(background="floral", strength="medium")
+    assert "floral" in decor.BACKGROUND_STYLES and "bouquets" in decor.describe(d)
+    out = decor.css(styled(background="floral", strength="medium"))
+    assert "z-index:2" in out and "32em 32em" in out and out.count("url(") == 4
+    for pal in PALETTES:
+        for strength in decor.STRENGTHS:
+            t = decor.tint(pal, decor.make(background="floral", strength=strength))
+            assert contrast(pal.ink, t) >= 7 and contrast(pal.muted, t) >= 4.5, (pal.key, strength)
+    assert decor.floral_art(PALETTES[0], 1, "light") != decor.floral_art(PALETTES[0], 2, "light")     # seeded: each product gets its own bouquets

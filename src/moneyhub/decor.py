@@ -26,9 +26,12 @@ CORNER_AT = ("bottom-right", "top-right", "bottom-left", "top-left", "opposite")
 CORNER_STYLES = ("themed", "botanical", "floral", "waves", "sparkles", "geometric")
 HEADER_STYLES = ("themed", "botanical", "floral", "sparkles", "hearts", "waves")
 BACKGROUND_STYLES = ("themed", "watercolor", "dots", "leaves", "daisies", "waves", "sparkles", "diamonds", "terrazzo", "hearts", "stars", "confetti",
-                     "solid", "gradient", "grid", "stripes", "frame", "paper")
+                     "solid", "gradient", "grid", "stripes", "frame", "paper", "floral")
 PAPER_TONES = ("#f1e2bd", "#f4ead9", "#ead9c0", "#f2dcd4", "#e3ecd6", "#dde8ee", "#e8dff0", "#f3efc9")   # cream, ivory, sand, blush, mint, sky, lilac, butter
-AUTO_MAX = 1000     # `auto:N` (1..1000): a numbered, repeatable background made from the pattern library and the whole-page fills
+AUTO_MAX = 1000
+PIC_OPACITY = {"light": .11, "medium": .17, "bold": .23}   # a picture background is thin lines over the page, so it can be stronger than a tint
+FLORAL_OPACITY = {"light": .12, "medium": .18, "bold": .23}   # big filled blooms in the corners: stronger than a tint, but only near the page edges
+PIC_PREFIX = "pic:"   # `pic:stethoscope`: one picture from the library repeated all over the page     # `auto:N` (1..1000): a numbered, repeatable background made from the pattern library and the whole-page fills
 # whole-page backgrounds drawn with plain CSS (a colour, a fade, lines or a border) instead of a picture tile
 FILLS = ("solid", "gradient", "grid", "stripes", "frame", "paper")
 # opacity of each layer by strength. The background one is the strongest tint the page can get; see `tint` and the contrast test.
@@ -151,8 +154,13 @@ def auto_recipe(n: int) -> dict:
     return r
 
 
+def background_pictures() -> tuple[str, ...]:
+    """The pictures that can be repeated as a background (every picture an audience theme uses), e.g. stethoscope, heart, sprout."""
+    return tuple(sorted({p for pics in THEMES.values() for p in pics}))
+
+
 def choices() -> dict[str, tuple[str, ...]]:
-    return {"corner": CORNER_STYLES, "header": HEADER_STYLES, "background": BACKGROUND_STYLES, "strength": STRENGTHS, "corner_at": CORNER_AT, "theme": tuple(THEMES)}
+    return {"corner": CORNER_STYLES, "header": HEADER_STYLES, "background": BACKGROUND_STYLES + tuple(PIC_PREFIX + p for p in background_pictures()), "strength": STRENGTHS, "corner_at": CORNER_AT, "theme": tuple(THEMES)}
 
 
 def make(corner: str = "", header: str = "", background: str = "", strength: str = "", corner_at: str = "", theme: str = "",
@@ -163,6 +171,10 @@ def make(corner: str = "", header: str = "", background: str = "", strength: str
 
     def pick(name: str, given: str, allowed: tuple[str, ...], default: str) -> str:
         v = (given or str(d.get(name) or "") or default).strip().lower()
+        if name == "background" and v.startswith(PIC_PREFIX):
+            if v[len(PIC_PREFIX):] not in background_pictures():
+                raise ValueError(f"unknown background picture '{v[len(PIC_PREFIX):]}'. Choose from: {', '.join(background_pictures())}")
+            return v
         if name == "background" and (v == "auto" or auto_number(v)):
             return v if v != "auto" else f"auto:{random.randint(1, AUTO_MAX)}"
         ok = (NONE, *allowed) if name in ("corner", "header", "background") else allowed     # a layer can be switched off
@@ -282,6 +294,12 @@ def _bg_tile(d: Decor, pal: Palette, seed: int) -> str:
                         for (cx, cy, rx, ry, a), c, rot in zip(((90, 110, 330, 250, 1), (780, 190, 300, 210, .8), (140, 940, 360, 260, .9), (800, 1010, 340, 240, 1),
                                                                 (470, 560, 240, 160, .45), (700, 520, 180, 130, .35)), cols * 2, (rng.randint(-30, 30) for _ in range(6))))
         return f"<svg xmlns='http://www.w3.org/2000/svg' width='850' height='1100' viewBox='0 0 850 1100' preserveAspectRatio='none'><g opacity='{o * .8:.3f}'>{blobs}</g></svg>"
+    if d.background.startswith(PIC_PREFIX):   # big thin-line pictures, drawn over the page like the corner art (see css)
+        pic = d.background[len(PIC_PREFIX):]
+        rng = random.Random(seed)
+        spots = [(10, 20, 150), (215, 215, 160), (230, 15, 110), (20, 240, 120)]   # big and small ones, spaced so none touch
+        body = "".join(_icon(pic, x, y, sz, rng.uniform(-22, 22), 1.3) for x, y, sz in spots)
+        return _svg(400, 400, body, pal.accent, PIC_OPACITY[d.strength])
     if d.background == "themed":
         pics = THEMES[d.theme]
         rng = random.Random(seed)
@@ -316,6 +334,10 @@ def _fill_colour(pal: Palette, d: Decor) -> str:
 
 def tint(pal: Palette, d: Decor) -> str:
     """The darkest colour the background layer can make the page (accent at the full opacity of the chosen strength). Used by the contrast check."""
+    if d.background.startswith(PIC_PREFIX):
+        return _mix(pal.paper, pal.accent, PIC_OPACITY[d.strength])
+    if d.background == "floral":
+        return _mix(pal.paper, pal.accent, FLORAL_OPACITY[d.strength])
     return _fill_colour(pal, d)
 
 
@@ -344,6 +366,43 @@ def _corner_pos(at: str) -> list[tuple[str, str]]:
             "opposite": [("right bottom", ""), ("left top", "xy")]}[at]
 
 
+def floral_art(pal: Palette, seed: int, strength: str, flip: str = "") -> str:
+    """A bouquet for the top-left corner of a 300 x 300 square (flip 'x', 'y' or 'xy' for the others): big filled blooms, buds and leaves."""
+    rng = random.Random(seed)
+    petal = [pal.accent2, pal.accent, _mix(pal.accent2, pal.paper, .45), _mix(pal.accent, pal.paper, .5)]
+    leaf = [pal.accent, _mix(pal.accent, pal.accent2, .5)]
+    out: list[str] = []
+
+    def bloom(cx, cy, r, n, k):
+        rot = rng.uniform(0, 360)
+        for ring, (scale, col) in enumerate(((1.0, petal[k % 4]), (.62, petal[(k + 2) % 4]))):
+            for i in range(n):
+                a = rot + ring * 180 / n + i * 360 / n
+                out.append(f"<ellipse cx='{cx:.1f}' cy='{cy - r * .55 * scale:.1f}' rx='{r * .34 * scale:.1f}' ry='{r * .56 * scale:.1f}' fill='{col}' "
+                           f"stroke='{pal.paper}' stroke-width='1.6' transform='rotate({a:.1f} {cx:.1f} {cy:.1f})'/>")
+        out.append(f"<circle cx='{cx:.1f}' cy='{cy:.1f}' r='{r * .2:.1f}' fill='{pal.paper}' stroke='{leaf[0]}' stroke-width='2'/>")
+        for i in range(7):
+            a = i * 51.4 + rot
+            out.append(f"<circle cx='{cx + r * .09 * math.cos(math.radians(a)):.1f}' cy='{cy + r * .09 * math.sin(math.radians(a)):.1f}' r='{r * .028:.1f}' fill='{leaf[0]}'/>")
+
+    def sprig(x, y, length, ang, k):
+        out.append(f"<g transform='translate({x:.1f} {y:.1f}) rotate({ang:.1f})'><path d='M0 0 Q{length * .5:.1f} {-length * .09:.1f} {length:.1f} 0' fill='none' stroke='{leaf[0]}' stroke-width='2.4'/>")
+        for i in range(4):
+            lx = length * (.2 + i * .2)
+            for side in (-1, 1):
+                out.append(f"<path d='M{lx:.1f} 0 q{length * .09:.1f} {side * length * .1:.1f} {length * .2:.1f} {side * length * .06:.1f} q{-length * .07:.1f} {-side * length * .02:.1f} {-length * .2:.1f} {-side * length * .06:.1f}z' fill='{leaf[(i + k) % 2]}' stroke='{pal.paper}' stroke-width='1'/>")
+        out.append("</g>")
+
+    sprig(8, 130, 150, rng.uniform(-6, 6) + 12, 0)
+    sprig(130, 8, 150, rng.uniform(-6, 6) + 78, 1)
+    sprig(10, 10, 170, 45, 0)
+    for k, (cx, cy, r, n) in enumerate(((86, 92, 66, 7), (172, 48, 40, 6), (46, 188, 42, 6), (146, 150, 30, 5), (212, 108, 22, 5), (96, 236, 20, 5))):
+        bloom(cx + rng.uniform(-6, 6), cy + rng.uniform(-6, 6), r, n, k)
+    sx, sy = (-1 if "x" in flip else 1), (-1 if "y" in flip else 1)
+    return (f"<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'><g opacity='{FLORAL_OPACITY[strength]}' "
+            f"transform='translate({300 if sx < 0 else 0} {300 if sy < 0 else 0}) scale({sx} {sy})'>{''.join(out)}</g></svg>")
+
+
 def _flip(svg: str, how: str) -> str:
     if not how:
         return svg
@@ -364,16 +423,25 @@ def css(style: Style, page=None) -> str:
                    f"background-image:{','.join(imgs)};background-position:{','.join(p for p, _ in _corner_pos(d.corner_at))};"
                    f"background-size:{','.join(['24em 24em'] * len(imgs))};background-repeat:no-repeat;}}")
     rec = _recipe(d)
-    if _kind(d) in FILLS:   # behind everything; cards keep their own white, so writing areas stay clean
+    if d.background == "floral":   # bouquets in the corners, over the page so the white writing boxes do not hide them; light enough to write on
+        corners = [("left top", "", 21), ("right bottom", "xy", 32), ("right top", "x", 15), ("left bottom", "y", 24)]
+        imgs = [f"url('{_uri(floral_art(pal, style.seed + k, d.strength, how))}')" for k, (_, how, _) in enumerate(corners)]
+        out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;"
+                   f"background-image:{','.join(imgs)};background-position:{','.join(c[0] for c in corners)};"
+                   f"background-size:{','.join(f'{c[2]}em {c[2]}em' for c in corners)};background-repeat:no-repeat;}}")
+    elif _kind(d) in FILLS:   # behind everything; cards keep their own white, so writing areas stay clean
         out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;" + _fill_css(pal, d) + "}")
     elif d.background != NONE:
         if d.background == "watercolor":
             size, rep = "100% 100%", "no-repeat"
         elif d.background == "themed":
             size, rep = "9em 9em", "repeat"
+        elif d.background.startswith(PIC_PREFIX):
+            size, rep = "22em 22em", "repeat"
         else:
             size, rep = f"{rec['size'] if rec else 12}em {rec['size'] if rec else 12}em", "repeat"
-        out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;z-index:-1;"
+        out.append(".page{z-index:0;}\n.page::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;"
+                   f"z-index:{2 if d.background.startswith(PIC_PREFIX) else -1};"
                    f"background-image:url('{_uri(_bg_tile(d, pal, style.seed))}');background-position:0 0;background-size:{size};background-repeat:{rep};}}")
     if d.header != NONE:
         band = style.header == "band"
@@ -400,5 +468,5 @@ def describe(d: Decor) -> str:
     if d.background != NONE:
         bits.append({"watercolor": "a pale watercolour background", "solid": "a soft colour background", "gradient": "a soft colour fade background",
                      "grid": "a graph-paper grid background", "stripes": "a soft striped background", "frame": "a coloured page border",
-                     "paper": "a cream paper background"}.get(_kind(d), "a pale decorative background"))
+                     "paper": "a cream paper background", "floral": "large flower bouquets in the page corners"}.get(_kind(d), f"a pale background of repeated {d.background[len(PIC_PREFIX):]} pictures" if d.background.startswith(PIC_PREFIX) else "a pale decorative background"))
     return "Decorated pages: " + ", ".join(bits) if bits else ""
